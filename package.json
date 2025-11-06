@@ -1,0 +1,70 @@
+{
+  "name": "riot-web-extension",
+  "displayName": "RIOT Web Extension",
+  "description": "flashing riot from a browser",
+  "publisher": "cheater78&Barkolores",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.105.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "browser": "./dist/web/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "riot-web-extension.helloWorld",
+        "title": "Hello World"
+      }
+    ],
+    "views": {
+      "riot": [
+        {
+          "id": "riot-web",
+          "name": "RIOT Web"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "riot",
+          "title": "RIOT",
+          "icon": "resources/riot-logo/riot-logo-R.svg"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "test": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/suite/extensionTests.js",
+    "pretest": "npm run compile-web",
+    "vscode:prepublish": "npm run package-web",
+    "compile-web": "npm run check-types && npm run lint && node esbuild.js",
+    "watch-web": "npm-run-all -p watch-web:*",
+    "watch-web:esbuild": "node esbuild.js --watch",
+    "watch-web:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package-web": "npm run check-types && npm run lint && node esbuild.js --production",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "run-in-browser": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. ."
+  },
+  "devDependencies": {
+    "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
+    "@types/assert": "^1.5.11",
+    "@types/mocha": "^10.0.10",
+    "@types/vscode": "^1.105.0",
+    "@types/w3c-web-serial": "^1.0.8",
+    "@typescript-eslint/eslint-plugin": "^8.45.0",
+    "@typescript-eslint/parser": "^8.45.0",
+    "@vscode/test-web": "^0.0.74",
+    "assert": "^2.1.0",
+    "esbuild": "^0.25.10",
+    "eslint": "^9.36.0",
+    "glob": "^11.0.3",
+    "mocha": "^11.7.4",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.9.3"
+  }
+}

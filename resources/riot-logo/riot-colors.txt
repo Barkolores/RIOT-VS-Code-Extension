@@ -1,0 +1,37 @@
+Red color
+==========
+
+R 188
+G 32
+B 42
+-------
+C 18
+M 100
+Y 94
+K 9
+-------
+#bc202a
+-------
+Pantone: Solid coated 7621 c
+
+Green color
+===========
+
+R 64
+G 166
+B 135
+-------
+C 73
+M 13
+Y 58
+K 0
+-------
+#40a687
+-------
+Pantone: Solid coated 7723 c
+
+
+Font
+====
+Miso bold
+(http://martennettelbladt.se/miso/)
