@@ -30,7 +30,7 @@ export class TerminalProvider implements vscode.WebviewViewProvider {
             <body>
                 <input type="text" placeholder="Input"/>
                 <br/>
-                <textarea id="terminal"></textarea>
+                <textarea id="terminal" readonly></textarea>
             </body>
             <script>
                 window.addEventListener("message", (event) => {

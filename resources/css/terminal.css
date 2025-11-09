@@ -8,8 +8,13 @@ body {
 textarea {
     flex: 1 1 auto;
     min-height: 2em;
+    background-color: var(--vscode-selection-background);
+    color: var(--vscode-foreground);
+    cursor: default;
 }
 
 input {
     flex: 0 0 2em;
+    background-color: var(--vscode-selection-background);
+    color: var(--vscode-foreground)
 }
