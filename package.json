@@ -35,8 +35,8 @@
         }
       },
       {
-        "command": "riot-web.serial.openFlashTerminal",
-        "title": "Open Flash Terminal",
+        "command": "riot-web.serial.flash",
+        "title": "Flash Device",
         "icon": {
           "dark": "resources/icons/upload-minimalistic-svgrepo-com-light.svg",
           "light": "resources/icons/upload-minimalistic-svgrepo-com-dark.svg"
@@ -48,7 +48,7 @@
       },
       {
         "command": "riot-web.serial.closeTerminal",
-        "title": "Close Serial Terminal",
+        "title": "Close Terminal",
         "icon": {
           "dark": "resources/icons/cross-svgrepo-com-light.svg",
           "light": "resources/icons/cross-svgrepo-com-dark.svg"
@@ -97,7 +97,7 @@
           "when": "false"
         },
         {
-          "command": "riot-web.serial.openFlashTerminal",
+          "command": "riot-web.serial.flash",
           "when": "false"
         },
         {
@@ -127,7 +127,7 @@
           "group": "inline"
         },
         {
-          "command": "riot-web.serial.openFlashTerminal",
+          "command": "riot-web.serial.flash",
           "when": "view == riot-web.serial.devices && (viewItem not in riot-web.openDevice)",
           "group": "inline"
         },

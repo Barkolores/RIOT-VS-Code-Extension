@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import {SerialDevice} from "./serial";
 import {DevicesProvider, SerialTreeItem} from "./providers/devicesProvider";
 import {TerminalProvider, TerminalState} from "./providers/terminalProvider";
+import {type FlashOptions, type LoaderOptions} from "esptool-js";
+import {FileProvider} from "./providers/fileProvider";
 
 export function activate(context: vscode.ExtensionContext) {
     if ((navigator as any).serial === undefined) {
@@ -17,11 +19,11 @@ export function activate(context: vscode.ExtensionContext) {
 
     const terminalProvider = new TerminalProvider(context.extensionUri);
 
+    const fileProvider = new FileProvider();
+
     let devices: SerialDevice[] = [];
 
     let serialPorts: SerialPort[] = [];
-
-    let deviceIdentifier = 0;
 
     function updateDevices(add:boolean, index?: number) {
         if (add) {
@@ -30,8 +32,7 @@ export function activate(context: vscode.ExtensionContext) {
                 for (const port of ports) {
                     if (!serialPorts.includes(port)) {
                         serialPorts.push(port);
-                        devices.push(new SerialDevice(port, deviceIdentifier.toString()));
-                        deviceIdentifier++;
+                        devices.push(new SerialDevice(port, crypto.randomUUID()));
                         devicesProvider.refresh(devices);
                     }
                 }
@@ -62,8 +63,7 @@ export function activate(context: vscode.ExtensionContext) {
     navigator.serial.getPorts().then((ports) => {
         serialPorts = ports;
         for (const port of ports) {
-            devices.push(new SerialDevice(port, deviceIdentifier.toString()));
-            deviceIdentifier++;
+            devices.push(new SerialDevice(port, crypto.randomUUID()));
         }
         devicesProvider.refresh(devices);
     });
@@ -115,7 +115,56 @@ export function activate(context: vscode.ExtensionContext) {
         terminalProvider.setTerminalState(TerminalState.NONE);
     }));
 
+    context.subscriptions.push(vscode.commands.registerCommand('riot-web.serial.flash', async (serialTreeItem: SerialTreeItem) => {
+        console.log('start');
+        vscode.commands.executeCommand('riot-web.serial.terminal.focus');
+        terminalProvider.setTerminalState(TerminalState.FLASH);
+        const json = await fileProvider.loadJson(vscode.Uri.joinPath(context.extensionUri, 'flash', 'flasherArgs.json')) as FlasherArgsJson;
+        const loaderOptions: LoaderOptions = {
+            transport: devices[serialTreeItem.index].getTransport(),
+            baudrate: json.baud_rate,
+            terminal: {
+                clean() {
+                    terminalProvider.clearTerminal();
+                },
+                write(data: string) {
+                    terminalProvider.postMessage(data);
+                },
+                writeLine(data: string) {
+                    terminalProvider.postMessage(data + '\n');
+                }
+            },
+            debugLogging: true
+        } as LoaderOptions;
 
+        // process binary data to flash
+        let file_array: { address: number; data: string }[] = [];
+        for (const [key, value] of Object.entries(json.data)) {
+            console.log(key, value);
+            const address: number = parseInt(key, 16);
+            if(isNaN(address)) {
+                throw new Error(`importFlasherArgs: Invalid address for file ${key}!`);
+            }
+            const data: string = await fileProvider.loadBinary(vscode.Uri.joinPath(context.extensionUri, 'flash', value));
+            file_array.push({ address, data });
+        }
+
+        // determine flash size
+        let flashSize = json.flash_size;
+        if(flashSize === "detect") {
+            flashSize = "keep";
+        }
+
+        const flashOptions = {
+            fileArray: file_array,
+            flashSize: flashSize,
+            flashMode: json.flash_mode,
+            flashFreq: json.flash_freq,
+            compress: json.compress,
+            eraseAll: json.erase_all
+        } as FlashOptions;
+        await devices[serialTreeItem.index].flash(loaderOptions, flashOptions);
+    }));
 
     //Views
     context.subscriptions.push(
@@ -130,4 +179,14 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {
     console.log('RIOT Web Extension deactivated');
+}
+
+type FlasherArgsJson = {
+    baud_rate: number;
+    flash_size: string;
+    flash_mode: string;
+    flash_freq: string;
+    compress: boolean;
+    erase_all: boolean;
+    data: Record<string, string>;
 }

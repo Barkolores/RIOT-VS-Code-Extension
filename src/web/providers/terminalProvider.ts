@@ -93,6 +93,7 @@ export class TerminalProvider implements vscode.WebviewViewProvider {
                             break;
                         case "message":
                             terminal.value += event.data.message
+                            terminal.scrollTop = terminal.scrollHeight;
                             break;
                     }
                 })

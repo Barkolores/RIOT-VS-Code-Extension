@@ -1,18 +1,24 @@
 import vscode from "vscode";
 import {TerminalProvider} from "./providers/terminalProvider";
+import {ESPLoader, FlashOptions, LoaderOptions, Transport} from "esptool-js";
 
 export class SerialDevice {
     public _open: boolean;
-
     private _reader?: ReadableStreamDefaultReader<string>;
-
     private _readableStreamClosed?: Promise<void>;
-
     private readonly _encoder = new TextEncoder();
-
     public readonly label:string;
-
     private _flashing: boolean;
+    private _transport?: Transport;
+
+    constructor(
+        private readonly _port: SerialPort,
+        public readonly contextValue: string,
+    ) {
+        this.label = 'Device: ' + _port.getInfo().usbVendorId + '|' + _port.getInfo().usbProductId;
+        this._open = false;
+        this._flashing = false;
+    }
 
     async open(baudrate: number) {
         if (!this._open) {
@@ -73,12 +79,25 @@ export class SerialDevice {
         }
     }
 
-    constructor(
-        private readonly _port: SerialPort,
-        public readonly contextValue: string,
-    ) {
-        this.label = 'Device: ' + _port.getInfo().usbVendorId + '|' + _port.getInfo().usbProductId;
-        this._open = false;
-        this._flashing = false;
+    getTransport() {
+        if (this._transport) {
+            return this._transport;
+        }
+        return new Transport(this._port);
+    }
+
+    freeTransport() {
+        this._transport?.disconnect();
+    }
+
+    async flash(loaderOptions: LoaderOptions, flashOptions: FlashOptions) {
+        if (!this._open) {
+            loaderOptions.transport = new Transport(this._port);
+            const espLoader: ESPLoader = new ESPLoader(loaderOptions);
+            await espLoader.main().then(value => console.log(value)).catch(e => console.error(e));
+            await espLoader.writeFlash(flashOptions).then(() => console.log('Programming Done')).catch(e => console.error(e));
+            await espLoader.after();
+            await espLoader.transport.disconnect();
+        }
     }
 }
