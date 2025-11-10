@@ -27,11 +27,19 @@
         "title": "Remove Serial Device"
       },
       {
-        "command": "riot-web.serial.openTerminal",
-        "title": "Open Terminal",
+        "command": "riot-web.serial.openCommunicationTerminal",
+        "title": "Open Communication Terminal",
         "icon": {
           "dark": "resources/icons/terminal-svgrepo-com-light.svg",
           "light": "resources/icons/terminal-svgrepo-com-dark.svg"
+        }
+      },
+      {
+        "command": "riot-web.serial.openFlashTerminal",
+        "title": "Open Flash Terminal",
+        "icon": {
+          "dark": "resources/icons/upload-minimalistic-svgrepo-com-light.svg",
+          "light": "resources/icons/upload-minimalistic-svgrepo-com-dark.svg"
         }
       },
       {
@@ -85,7 +93,11 @@
           "when": "false"
         },
         {
-          "command": "riot-web.serial.openTerminal",
+          "command": "riot-web.serial.openCommunicationTerminal",
+          "when": "false"
+        },
+        {
+          "command": "riot-web.serial.openFlashTerminal",
           "when": "false"
         },
         {
@@ -110,7 +122,12 @@
           "when": "view == riot-web.serial.devices"
         },
         {
-          "command": "riot-web.serial.openTerminal",
+          "command": "riot-web.serial.openCommunicationTerminal",
+          "when": "view == riot-web.serial.devices && (viewItem not in riot-web.openDevice)",
+          "group": "inline"
+        },
+        {
+          "command": "riot-web.serial.openFlashTerminal",
           "when": "view == riot-web.serial.devices && (viewItem not in riot-web.openDevice)",
           "group": "inline"
         },
@@ -123,7 +140,7 @@
       "webview/context": [
         {
           "command": "riot-web.serial.clearTerminal",
-          "when": "webviewId == riot-web.serial.terminal"
+          "when": "webviewId == riot-web.serial.terminal && riot-web.openDevice != none"
         }
       ]
     }

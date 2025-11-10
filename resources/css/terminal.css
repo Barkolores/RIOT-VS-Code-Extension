@@ -3,6 +3,22 @@ body {
     display: flex;
     flex-flow: column-reverse;
     overflow: hidden;
+
+    &.none {
+        flex-flow: column;
+        & *:not(.welcome) {
+            display: none;
+        }
+    }
+
+    &:not(.none) > .welcome {
+        display: none
+    }
+
+    &.flash > .inputArea {
+        display: none
+    }
+
 }
 
 textarea {
@@ -60,6 +76,8 @@ button {
     }
 }
 
-.hidden{
-    display: none !important;
+.welcome {
+    text-align: center;
+    font-size: 1em;
+
 }

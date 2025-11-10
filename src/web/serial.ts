@@ -4,8 +4,6 @@ import {TerminalProvider} from "./providers/terminalProvider";
 export class SerialDevice {
     public _open: boolean;
 
-    private readonly _decoder;
-
     private _reader?: ReadableStreamDefaultReader<string>;
 
     private _readableStreamClosed?: Promise<void>;
@@ -14,15 +12,14 @@ export class SerialDevice {
 
     public readonly label:string;
 
+    private _flashing: boolean;
+
     async open(baudrate: number) {
         if (!this._open) {
             await this._port.open({baudRate: baudrate}).then(() => {
                 console.log('Connected to ' + this.label);
                 this._open = true;
                 vscode.commands.executeCommand('setContext', 'riot-web.openDevice', [this.contextValue]);
-                //@ts-ignore
-                this._readableStreamClosed = this._port.readable?.pipeTo(this._decoder.writable);
-                this._reader = this._decoder.readable.getReader();
             });
         }
     }
@@ -36,7 +33,7 @@ export class SerialDevice {
             this._port.close().then(() => {
                 console.log('Connection to ' + this.label + ' closed');
                 this._open = false;
-                vscode.commands.executeCommand('setContext', 'riot-web.openDevice', []);
+                vscode.commands.executeCommand('setContext', 'riot-web.openDevice', 'none');
             });
         }
     }
@@ -58,18 +55,18 @@ export class SerialDevice {
     }
 
     async read(terminal: TerminalProvider) {
-        if (this._open && this._reader) {
-            console.log('message');
+        if (this._open) {
+            const decoder = new TextDecoderStream();
+            //@ts-ignore
+            this._readableStreamClosed = this._port.readable?.pipeTo(decoder.writable);
+            this._reader = decoder.readable.getReader();
             while (true) {
                 const {value, done} = await this._reader.read();
                 if (value) {
-                    terminal.postMessage({
-                        action: "message",
-                        message: value
-                    });
+                    terminal.postMessage(value);
                 }
                 if (done || !value) {
-                    this._reader?.releaseLock();
+                    this._reader.releaseLock();
                     break;
                 }
             }
@@ -82,6 +79,6 @@ export class SerialDevice {
     ) {
         this.label = 'Device: ' + _port.getInfo().usbVendorId + '|' + _port.getInfo().usbProductId;
         this._open = false;
-        this._decoder = new TextDecoderStream();
+        this._flashing = false;
     }
 }

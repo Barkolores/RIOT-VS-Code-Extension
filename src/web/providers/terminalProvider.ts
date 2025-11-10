@@ -2,21 +2,46 @@ import * as vscode from "vscode";
 import {SerialDevice} from "../serial";
 
 export class TerminalProvider implements vscode.WebviewViewProvider {
-    constructor(private readonly basePath: vscode.Uri) {}
+    constructor(private readonly basePath: vscode.Uri) {
+        this._currentTerminalState = TerminalState.NONE;
+    }
 
     private _webviewView?: vscode.WebviewView;
 
     private _device?: SerialDevice;
 
-    postMessage(message: object): Thenable<boolean> {
-        if (this._webviewView !== undefined) {
-            return this._webviewView.webview.postMessage(message);
-        }
-        return new Promise(() => false);
-    }
+    private _currentTerminalState: TerminalState;
 
     setDevice(device?: SerialDevice) {
         this._device = device;
+    }
+
+    postMessage(message: string) {
+        if (this._webviewView !== undefined) {
+            this._webviewView.webview.postMessage({
+                action: 'message',
+                message: message
+            });
+        }
+    }
+
+    clearTerminal() {
+        if (this._webviewView !== undefined) {
+            this._webviewView.webview.postMessage({
+                action: 'clearTerminal'
+            });
+        }
+    }
+
+    setTerminalState(newTerminalState: TerminalState) {
+        this._currentTerminalState = newTerminalState;
+        if (this._webviewView !== undefined) {
+            this._webviewView.webview.postMessage({
+                action: 'updateTerminal',
+                newTerminalState: newTerminalState
+            });
+            this.clearTerminal();
+        }
     }
 
     resolveWebviewView(webviewView: vscode.WebviewView, context: vscode.WebviewViewResolveContext, token: vscode.CancellationToken): Thenable<void> | void {
@@ -35,7 +60,6 @@ export class TerminalProvider implements vscode.WebviewViewProvider {
             },
         );
 
-
         webviewView.webview.html = `
         <!DOCTYPE html>
         <html lang="de">
@@ -45,28 +69,23 @@ export class TerminalProvider implements vscode.WebviewViewProvider {
                 <title>Terminal</title>
                 <link rel="stylesheet" href="${cssSrc}">
             </head>
-            <body data-vscode-context='{"preventDefaultContextMenuItems": true}'>
-                <div class="inputArea hidden" id="inputArea">
+            <body data-vscode-context='{"preventDefaultContextMenuItems": true}' class="${this._currentTerminalState}">
+                <div class="inputArea" id="inputArea">
                      <button onclick="sendInput()">Send Input</button>
                      <input type="text" placeholder="Input" id="input"/>
                 </div>
                 <br/>
-                <textarea class="hidden" id="terminal" readonly></textarea>
+                <textarea id="terminal" readonly></textarea>
+                <p class="welcome">No Serial Device open</p>
             </body>
             <script>
                 const vscode = acquireVsCodeApi();
                 const terminal = document.getElementById('terminal')
                 const input = document.getElementById('input')
-                const inputArea = document.getElementById('inputArea')
                 window.addEventListener("message", (event) => {
                     switch (event.data.action) {
-                        case "hideTerminal":
-                            terminal.className = "inputArea hidden";
-                            inputArea.className = "hidden"
-                            break;
-                        case "showTerminal":
-                            terminal.className = "";
-                            inputArea.className = "inputArea"
+                        case "updateTerminal":
+                            document.body.className = event.data.newTerminalState
                             break;
                         case "clearTerminal":
                             terminal.value = ''
@@ -86,4 +105,10 @@ export class TerminalProvider implements vscode.WebviewViewProvider {
         </html>
         `;
     }
+}
+
+export enum TerminalState {
+    NONE= "none",
+    COMMUNICATION = "communication",
+    FLASH = "flash"
 }

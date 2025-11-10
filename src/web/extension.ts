@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import {SerialDevice} from "./serial";
 import {DevicesProvider, SerialTreeItem} from "./providers/devicesProvider";
-import {TerminalProvider} from "./providers/terminalProvider";
+import {TerminalProvider, TerminalState} from "./providers/terminalProvider";
 
 export function activate(context: vscode.ExtensionContext) {
     if ((navigator as any).serial === undefined) {
@@ -11,7 +11,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     console.log('RIOT Web Extension activated');
 
-    vscode.commands.executeCommand('setContext', 'riot-web.openDevice', []);
+    vscode.commands.executeCommand('setContext', 'riot-web.openDevice', 'none');
 
     const devicesProvider = new DevicesProvider();
 
@@ -97,23 +97,22 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand('riot-web.serial.clearTerminal', () => {
-            terminalProvider.postMessage({action: "clearTerminal"});
+            terminalProvider.clearTerminal();
         })
     );
 
-    context.subscriptions.push(vscode.commands.registerCommand('riot-web.serial.openTerminal', async (serialTreeItem: SerialTreeItem) => {
+    context.subscriptions.push(vscode.commands.registerCommand('riot-web.serial.openCommunicationTerminal', async (serialTreeItem: SerialTreeItem) => {
         await devices[serialTreeItem.index].open(115200);
         terminalProvider.setDevice(devices[serialTreeItem.index]);
         vscode.commands.executeCommand('riot-web.serial.terminal.focus');
-        terminalProvider.postMessage({action: "showTerminal"});
+        terminalProvider.setTerminalState(TerminalState.COMMUNICATION);
         devices[serialTreeItem.index].read(terminalProvider);
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand('riot-web.serial.closeTerminal', (serialTreeItem: SerialTreeItem) => {
-        devices[serialTreeItem.index].close();
+    context.subscriptions.push(vscode.commands.registerCommand('riot-web.serial.closeTerminal', async (serialTreeItem: SerialTreeItem) => {
+        await devices[serialTreeItem.index].close();
         terminalProvider.setDevice();
-        terminalProvider.postMessage({action: "hideTerminal"});
-        terminalProvider.postMessage({action: "clearTerminal"});
+        terminalProvider.setTerminalState(TerminalState.NONE);
     }));
 
 
