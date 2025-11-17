@@ -1,5 +1,5 @@
 import vscode from "vscode";
-import {RiotTerminal} from "../providers/terminalProvider";
+import {type RiotTerminal} from "../providers/terminalProvider";
 
 export type Port = SerialPort | USBDevice
 

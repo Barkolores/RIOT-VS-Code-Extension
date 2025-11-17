@@ -106,6 +106,7 @@ export class TerminalProvider implements vscode.WebviewViewProvider, RiotTermina
 
     resolveWebviewView(webviewView: vscode.WebviewView, context: vscode.WebviewViewResolveContext, token: vscode.CancellationToken): Thenable<void> | void {
         const css = webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this.basePath, 'resources', 'css', 'terminal.css'));
+        const script = webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this.basePath, 'dist', 'web', 'webviews', 'terminalWebview.js'));
         webviewView.webview.options = {
             enableScripts: true,
         };
@@ -136,7 +137,7 @@ export class TerminalProvider implements vscode.WebviewViewProvider, RiotTermina
                 }
             },
         );
-        webviewView.webview.html = getHTML(css, JSON.stringify(this._webviewState));
+        webviewView.webview.html = getHTML(css, script, JSON.stringify(this._webviewState));
     }
 }
 
@@ -150,9 +151,8 @@ export interface RiotTerminal {
     clearTerminal(): void;
 }
 
-function getHTML(css: vscode.Uri, webviewState: string) {
-    return (
-`
+function getHTML(css: vscode.Uri, script: vscode.Uri, webviewState: string) {
+    return (`
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -160,186 +160,9 @@ function getHTML(css: vscode.Uri, webviewState: string) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Riot Terminal</title>
         <link rel="stylesheet" href="${css}">
+        <script src="${script}" id="script" data-json='${webviewState}'></script>
     </head>
-    <body data-vscode-context='{"preventDefaultContextMenuItems": true}' class="none">
-        <div id="tabContent">
-            <div class="inputArea">
-                <button class="submitButton" onclick="sendInput()">Submit</button>
-                <input type="text" placeholder="Input" id="input" oninput="updateInput()"/>
-            </div>
-            <textarea id="terminal" readonly></textarea>
-        </div>
-        <div id="tabs" class="tabs"></div>
-        <p class="noSelection">No Device open</p>
-    </body>
-    <script>
-        const vscode = acquireVsCodeApi();
-        const tabs = document.getElementById("tabs");
-        const tabContent = document.getElementById("tabContent");
-        const terminal = document.getElementById("terminal");
-        const input = document.getElementById("input");
-        const currentState = ${webviewState}
-        if (currentState.devices.length !== 0) initialize();
-        window.addEventListener("message", (event) => {
-            switch (event.data.action) {
-                case "clearTerminal":
-                    for (const device of currentState.devices) {
-                        if (device.uuid === currentState.selectedTab) {
-                            device.terminalData = '';
-                            break;
-                        }
-                    }
-                    terminal.value = ''
-                    break;
-                case "message":
-                    for (const device of currentState.devices) {
-                        if (device.uuid === event.data.uuid) {
-                            device.terminalData += event.data.message
-                            break;
-                        }
-                    }
-                    if (currentState.selectedTab === event.data.uuid) {
-                        const scrollDown = terminal.scrollTop === (terminal.scrollHeight - terminal.clientHeight)
-                        terminal.value += event.data.message
-                        if (scrollDown) {
-                            terminal.scrollTop = terminal.scrollHeight;
-                        }
-                    }
-                    break;
-                case "addDevice":
-                    if (currentState.devices.length === 0) document.body.className = "shown";
-                    currentState.devices.push({
-                        uuid: event.data.uuid,
-                        label: event.data.label,
-                        terminalState: event.data.terminalState,
-                        terminalData: event.data.terminalData,
-                        inputData: event.data.inputData,
-                    })
-                    if (currentState.selectedTab) document.getElementById(currentState.selectedTab).className = "tab"
-                    createTab(event.data.uuid, event.data.label, true);
-                    tabContent.className = event.data.terminalState
-                    break;
-                case "removeDevice":
-                    for (let i = 0; i < currentState.devices.length; i++) {
-                        if (currentState.devices[i].uuid === event.data.uuid) {
-                            currentState.devices.splice(i, 1)
-                            if (currentState.selectedTab === event.data.uuid) {
-                                if (currentState.devices.length === 0) {
-                                    currentState.selectedTab = '';
-                                } else {
-                                    selectTab(currentState.devices[0])
-                                }
-                                document.getElementById(event.data.uuid).remove()
-                            }
-                            break;
-                        }
-                    }
-                    if (currentState.devices.length === 0) {
-                        document.body.className = "none"
-                    }
-                    break;
-                case "updateDevice":
-                    for (let i = 0; i < currentState.devices.length; i++) {
-                        if (currentState.devices[i].uuid === event.data.uuid) {
-                            currentState.devices[i] = new Object({
-                                    ...currentState.devices[i],
-                                    terminalState: event.data.terminalState,
-                                    terminalData: "",
-                                    inputData: "",
-                                });
-                            break;
-                        }
-                    }
-                   if (currentState.selectedTab === event.data.uuid) {
-                       terminal.value = '';
-                       input.value = '';
-                       tabContent.className = event.data.terminalState
-                   } 
-            }
-        })
-        
-        function initialize() {
-            document.body.className = "shown"
-            let j = undefined;
-            for (let i = 0; i < currentState.devices.length; i++) {
-                const selected = currentState.devices[i].uuid === currentState.selectedTab;
-                createTab(currentState.devices[i].uuid, currentState.devices[i].label, selected)
-                if (selected) j = i;
-            }
-            if (j !== undefined) {
-                terminal.value = currentState.devices[j].terminalData;
-                input.value = currentState.devices[j].inputData;
-                tabContent.className = currentState.devices[j].terminalState
-            }
-        }
-        
-        function createTab(uuid, label, setFocus) {
-            const tab = document.createElement("button");
-            tab.className = "tab" + (setFocus ? " selected" : "")
-            tab.id = uuid
-            tab.innerText = label
-            tab.onclick = () => selectTab(tab)
-            if (setFocus) {
-                currentState.selectedTab = tab.id;
-                vscode.postMessage({
-                    action: "selectTab",
-                    tab: tab.id
-                })
-            }
-            tabs.appendChild(tab);
-        }
-        
-        function selectTab(tab) {
-            if (currentState.selectedTab === tab.id) return;
-            document.getElementById(currentState.selectedTab).className = "tab"
-            tab.className = "tab selected"
-            currentState.selectedTab = tab.id;
-            vscode.postMessage({
-                action: "selectTab",
-                tab: tab.id
-            })
-            for (const device of currentState.devices) {
-                if (device.uuid === tab.id) {
-                    terminal.value = device.terminalData;
-                    input.value = device.inputData;
-                    tabContent.className = device.terminalState
-                    break;
-                }
-            }
-        }
-        
-        function updateInput() {
-            for (const device of currentState.devices) {
-                if (device.uuid === currentState.selectedTab) {
-                    device.inputData = input.value
-                    break;
-                }
-            }
-            vscode.postMessage({
-                action: 'updateInput',
-                uuid: currentState.selectedTab,
-                input: input.value
-            })
-        }
-        
-        function sendInput() {
-            let uuid = undefined;
-            let message = '';
-            for (const device of currentState.devices) {
-                if (device.uuid === currentState.selectedTab) {
-                    uuid = device.uuid;
-                    message = device.inputData;
-                    break;
-                }
-            }
-            if (!uuid) return;
-            vscode.postMessage({
-                action: 'message',
-                uuid: uuid,
-                message: message,
-            })
-        }
-    </script>
+    <body data-vscode-context='{"preventDefaultContextMenuItems": true}' class="none"></body>
 </html>
 `);
 }

@@ -1,4 +1,4 @@
-import {Device, Port} from "./device";
+import {Device, type Port} from "./device";
 import {SerialDevice} from "./serialDevice";
 import {DevicesProvider} from "../providers/devicesProvider";
 

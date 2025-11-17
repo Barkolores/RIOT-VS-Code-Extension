@@ -1,7 +1,7 @@
 import vscode from "vscode";
 import {Device} from "./device";
-import {ESPLoader, FlashOptions, LoaderOptions, Transport} from "esptool-js";
-import {RiotTerminal} from "../providers/terminalProvider";
+import {ESPLoader, type FlashOptions, type LoaderOptions, Transport} from "esptool-js";
+import {type RiotTerminal} from "../providers/terminalProvider";
 
 export class SerialDevice extends Device {
 
