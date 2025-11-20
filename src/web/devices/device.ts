@@ -6,6 +6,7 @@ export type Port = SerialPort | USBDevice
 export abstract class Device extends vscode.TreeItem {
     protected _open: boolean = false;
     protected _flashing: boolean = false;
+    activeProject: vscode.WorkspaceFolder | undefined = undefined;
 
     protected constructor(
         protected _port: Port,

@@ -27,6 +27,11 @@
         "title": "Remove Serial Device"
       },
       {
+        "command": "riot-web-extension.device.selectProject",
+        "title": "Select Device Project",
+        "icon": "$(folder)"
+      },
+      {
         "command": "riot-web-extension.terminal.openCommunication",
         "title": "Open Communication Terminal",
         "icon": {
@@ -101,6 +106,10 @@
           "when": "false"
         },
         {
+          "command": "riot-web-extension.device.selectProject",
+          "when": "false"
+        },
+        {
           "command": "riot-web-extension.terminal.openCommunication",
           "when": "false"
         },
@@ -136,6 +145,11 @@
         {
           "command": "riot-web-extension.serial.remove",
           "when": "view == riot-web-extension.view.devices"
+        },
+        {
+          "command": "riot-web-extension.device.selectProject",
+          "when": "view == riot-web-extension.view.devices",
+          "group": "inline"
         },
         {
           "command": "riot-web-extension.terminal.openCommunication",

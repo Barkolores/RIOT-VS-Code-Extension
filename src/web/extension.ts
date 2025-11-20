@@ -6,6 +6,7 @@ import {Device} from "./devices/device";
 import {SerialDevice} from "./devices/serialDevice";
 import {DeviceManager} from "./devices/deviceManager";
 import {RiotTerminalState, TerminalProvider} from "./providers/terminalProvider";
+import { CommandSocket } from "./command/commandSocket";
 
 export function activate(context: vscode.ExtensionContext) {
     if ((navigator as any).serial === undefined) {
@@ -27,6 +28,9 @@ export function activate(context: vscode.ExtensionContext) {
     let openDevices: string[] = [];
     vscode.commands.executeCommand('setContext', 'riot-web-extension.openDevices', []);
     vscode.commands.executeCommand('setContext', 'riot-web-extension.flashingDevices', []);
+    
+    console.log(`Host: ${self.location.hostname}`);
+    const commandSocket = new CommandSocket(self.location.hostname);
 
     //Commands
     context.subscriptions.push(
@@ -53,6 +57,30 @@ export function activate(context: vscode.ExtensionContext) {
         //clear Terminal
         vscode.commands.registerCommand('riot-web-extension.terminal.clear', () => {
             terminalProvider.clearTerminal();
+        }),
+
+        // Select Device Project
+        vscode.commands.registerCommand('riot-web-extension.device.selectProject', async (device: Device) => {
+            const folders = vscode.workspace.workspaceFolders;
+            if (!folders) {
+                vscode.window.showWarningMessage("No open projects.");
+                return;
+            }
+            
+            const pick = await vscode.window.showQuickPick(
+                folders.map(f => ({ label: f.name, folder: f })), {
+                    placeHolder: `Select project for ${device.label}`
+                }
+            );
+
+            if (!pick) {
+                vscode.window.showWarningMessage(`No Selection: ${device.label} still uses ${(device.activeProject) ? device.activeProject.name : "none"}`);
+                return;
+            }
+            device.activeProject = pick.folder;
+            vscode.window.showInformationMessage(
+                `Project '${pick.folder.name}' assigned to ${device.label}`
+            );
         }),
 
         //open Terminal for Communication
@@ -154,6 +182,10 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.registerTreeDataProvider("riot-web-extension.view.devices", devicesProvider)
     );
 
+    //CleanUp
+    context.subscriptions.push(
+        { dispose: commandSocket.close }
+    );
 
 }
 
