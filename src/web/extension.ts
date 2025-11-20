@@ -150,8 +150,6 @@ export function activate(context: vscode.ExtensionContext) {
         }),
     );
 
-
-
     //Views
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider("riot-web-extension.view.terminal", terminalProvider, {webviewOptions: {retainContextWhenHidden: true}}),
