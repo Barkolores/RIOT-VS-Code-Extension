@@ -1,110 +1,128 @@
 import * as vscode from "vscode";
 import {Device} from "../devices/device";
+import {CancellationToken, WebviewView, WebviewViewResolveContext} from "vscode";
+
+export type RiotTerminalState = 'none' | 'communication' | 'flash';
+
+export interface RiotTerminal {
+    postMessage(uuid: string, message: string): void;
+    clearTerminal(): void;
+}
+
+export type TabStates = {
+    [uuid: string]: {
+        label: string,
+        terminalState: RiotTerminalState,
+        terminalData: string,
+        inputData: string,
+    }
+}
 
 export class TerminalProvider implements vscode.WebviewViewProvider, RiotTerminal {
+    private _webviewView?: vscode.WebviewView;
+    private _tabs: {
+        [uuid: string]: {
+            device: Device,
+            terminalState: RiotTerminalState,
+            terminalData: string,
+            inputData: string,
+        }
+    } = {};
+    private _selectedTab?: string;
     constructor(private readonly basePath: vscode.Uri) {}
 
-    private _webviewView?: vscode.WebviewView;
-
-    private _devices: Device[] = [];
-
-    private _webviewState: {devices: {uuid: string, label: string, terminalState: RiotTerminalState, terminalData: string, inputData: string}[], selectedTab?: string} = {
-        devices: [],
-        selectedTab: '',
-    };
-
-    addDevice(device: Device, terminalState: RiotTerminalState) {
-        const index = this._devices.indexOf(device);
-        if (index === -1) {
-            this._devices.push(device);
-            this._webviewView?.webview.postMessage({
-                action: 'addDevice',
-                uuid: device.contextValue,
-                label: device.label,
-                terminalState: terminalState,
-                terminalData: "",
-                inputData: ""
-            });
-            this._webviewState.devices.push({
-                uuid: device.contextValue,
-                label: device.label as string,
-                terminalState: terminalState,
-                terminalData: "",
-                inputData: ""
-            });
-        } else {
-            this._webviewView?.webview.postMessage({
-                action: 'updateDevice',
-                uuid: device.contextValue,
-                terminalState: terminalState,
-            });
-            for (let i = 0; i < this._webviewState.devices.length; i++) {
-                if (this._webviewState.devices[i].uuid === device.contextValue) {
-                    this._webviewState.devices[i] = {
-                        ...this._webviewState.devices[i],
-                        terminalState: terminalState,
-                        terminalData: "",
-                        inputData: "",
-                    };
-                    break;
-                }
-            }
+    openTab(device: Device) {
+        if (device.contextValue in this._tabs) {
+            console.error('Tab for this device is already open');
+            return;
         }
+        this._tabs[device.contextValue] = {
+            device: device,
+            terminalState: 'none',
+            terminalData: '',
+            inputData: ''
+        };
+        this._webviewView?.webview.postMessage({
+            action: 'openTab',
+            uuid: device.contextValue,
+            label: device.label
+        });
+        this.selectTab(device.contextValue);
+        vscode.commands.executeCommand('setContext', 'riot-web-extension.context.openTabs', Object.keys(this._tabs));
     }
 
-    removeDevice(device: Device) {
-        const index = this._devices.indexOf(device);
-        if (index !== -1) {
-            this._devices.splice(index, 1);
-            this._webviewView?.webview.postMessage({
-                action: 'removeDevice',
-                uuid: device.contextValue,
-            });
-            for (let i = 0; i < this._webviewState.devices.length; i++) {
-                if (this._webviewState.devices[i].uuid === device.contextValue) {
-                    this._webviewState.devices.splice(i, 1);
-                    break;
-                }
-            }
-            if (device.contextValue === this._webviewState.selectedTab) {
-                if (this._devices.length === 0) {
-                    this._webviewState.selectedTab = undefined;
-                } else {
-                    this._webviewState.selectedTab = this._devices[0].contextValue;
-                }
+    async closeTab(uuid: string) {
+        if (!(uuid in this._tabs)) {
+            console.error('There is no open tab for this device');
+            return;
+        }
+        if (!(await this._tabs[uuid].device.close())) {
+            return;
+        }
+        delete this._tabs[uuid];
+        if (uuid === this._selectedTab) {
+            if (Object.keys(this._tabs).length === 0) {
+                this.selectTab(undefined);
+            } else {
+                this.selectTab(Object.keys(this._tabs)[0]);
             }
         }
+        this._webviewView?.webview.postMessage({
+            action: 'closeTab',
+            uuid: uuid
+        });
+        vscode.commands.executeCommand('setContext', 'riot-web-extension.context.openTabs', Object.keys(this._tabs));
+        return;
+    }
+
+    selectTab(uuid: string | undefined) {
+        if (uuid && !(uuid in this._tabs)) {
+            return;
+        }
+        this._selectedTab = uuid;
+        this._webviewView?.webview.postMessage({
+            action: 'selectTab',
+            uuid: uuid,
+        });
+        vscode.commands.executeCommand('setContext', 'riot-web-extension.context.terminalVisible', uuid && this._tabs[uuid].terminalState !== 'none');
+    }
+
+    private _stringifyState(): string {
+        const tabStates: TabStates = {};
+        for (const [uuid, tabState] of Object.entries(this._tabs)) {
+            tabStates[uuid] = {
+                label: tabState.device.label as string,
+                terminalState: tabState.terminalState,
+                terminalData: tabState.terminalData,
+                inputData: tabState.inputData
+            };
+        }
+        return JSON.stringify({
+            tabStates: tabStates,
+            selectedTab: this._selectedTab
+        });
     }
 
     postMessage(uuid: string, message: string) {
-        if (this._webviewView !== undefined) {
+        this._tabs[uuid].terminalData += message;
+        if (this._webviewView) {
             this._webviewView.webview.postMessage({
                 action: 'message',
                 uuid: uuid,
-                message: message
+                message: message,
             });
-            for (const device of this._webviewState.devices) {
-                if (device.uuid === this._webviewState.selectedTab) {
-                    device.terminalData += message;
-                }
-            }
         }
     }
 
     clearTerminal() {
-        if (this._webviewView !== undefined) {
+        if (this._webviewView) {
             this._webviewView.webview.postMessage({
                 action: 'clearTerminal'
             });
-            for (const device of this._webviewState.devices) {
-                if (device.uuid === this._webviewState.selectedTab) {
-                    device.terminalData = '';
-                }
-            }
         }
     }
 
-    resolveWebviewView(webviewView: vscode.WebviewView, context: vscode.WebviewViewResolveContext, token: vscode.CancellationToken): Thenable<void> | void {
+    resolveWebviewView(webviewView: WebviewView, context: WebviewViewResolveContext, token: CancellationToken): Thenable<void> | void {
         const css = webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this.basePath, 'resources', 'css', 'terminal.css'));
         const script = webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this.basePath, 'dist', 'web', 'webviews', 'terminalWebview.js'));
         webviewView.webview.options = {
@@ -112,57 +130,70 @@ export class TerminalProvider implements vscode.WebviewViewProvider, RiotTermina
         };
         this._webviewView = webviewView;
         webviewView.webview.onDidReceiveMessage(
-            message => {
+            async (message) => {
                 switch (message.action) {
                     case 'selectTab':
-                        this._webviewState.selectedTab = message.tab;
+                        this._selectedTab = message.selectedTab;
                         break;
-                    case 'message': {
-                        for (const device of this._devices) {
-                            if (device.contextValue === message.uuid) {
-                                device.write(message.message);
-                                break;
+                    case 'requestUpdateTerminalState':
+                        if (!this._selectedTab) {
+                            return;
+                        }
+                        const hasClosed = await this._tabs[this._selectedTab].device.close();
+                        if (hasClosed) {
+                            this._tabs[this._selectedTab].terminalState = message.newTerminalState;
+                            this._tabs[this._selectedTab].terminalData = '';
+                            this._tabs[this._selectedTab].inputData = '';
+                            this._webviewView?.webview.postMessage({
+                                action: 'updateTerminalState',
+                                newTerminalState: message.newTerminalState
+                            });
+                            if (message.newTerminalState === 'communication') {
+                                await this._tabs[this._selectedTab].device.open({
+                                    baudRate: 115200
+                                });
+                                this._tabs[this._selectedTab].device.read(this);
+                            }
+                            if (message.newTerminalState === 'flash') {
+                                vscode.commands.executeCommand('riot-web-extension.serial.flash', this._tabs[this._selectedTab].device);
                             }
                         }
                         break;
-                    }
-                    case "updateInput":
-                        for (const device of this._webviewState.devices) {
-                            if (device.uuid === message.uuid) {
-                                device.inputData = message.input;
-                                break;
-                            }
+                    case 'updateInput':
+                        if (!this._selectedTab) {
+                            return;
                         }
+                        this._tabs[this._selectedTab].inputData = message.inputData;
+                        break;
+                    case "sendInput":
+                        if (!this._selectedTab) {
+                            return;
+                        }
+                        this._tabs[this._selectedTab].device.write(this._tabs[this._selectedTab].inputData);
+                        break;
+                    case "requestCloseTab":
+                        this.closeTab(message.uuid);
                         break;
                 }
             },
         );
-        webviewView.webview.html = getHTML(css, script, JSON.stringify(this._webviewState));
+        webviewView.webview.html = this._getHTML(css, script, this._stringifyState());
     }
-}
 
-export enum RiotTerminalState {
-    COMMUNICATION = "communication",
-    FLASH = "flash"
-}
-
-export interface RiotTerminal {
-    postMessage(uuid: string, message: string): void;
-    clearTerminal(): void;
-}
-
-function getHTML(css: vscode.Uri, script: vscode.Uri, webviewState: string) {
-    return (`
-<!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Riot Terminal</title>
-        <link rel="stylesheet" href="${css}">
-        <script src="${script}" id="script" data-json='${webviewState}'></script>
-    </head>
-    <body data-vscode-context='{"preventDefaultContextMenuItems": true}' class="none"></body>
-</html>
-`);
+    private _getHTML(css: vscode.Uri, script: vscode.Uri, webviewState: string) {
+        console.log(webviewState);
+        return (`
+            <!DOCTYPE html>
+            <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Riot Terminal</title>
+                    <link rel="stylesheet" href="${css}">
+                    <script src="${script}" id="script" data-state='${webviewState}'></script>
+                </head>
+                <body data-vscode-context='{"preventDefaultContextMenuItems": true}' class="none"></body>
+            </html>
+        `);
+    }
 }

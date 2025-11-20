@@ -6,14 +6,22 @@ body {
 
     &.none {
         flex-flow: column;
-        & *:not(.noSelection) {
+        & *:not(#noSelection) {
             display: none !important;
         }
     }
 
-    &.shown > .noSelection {
+    &.shown > #noSelection {
         display: none
     }
+}
+
+::-webkit-scrollbar {
+    display: none !important;
+}
+
+html {
+    scrollbar-color: unset;
 }
 
 textarea {
@@ -72,32 +80,78 @@ input {
     }
 }
 
-.noSelection {
+#noSelection {
     text-align: center;
     font-size: 1em;
 }
 
-.tabs {
+.tabSelection {
     overflow: hidden;
     display: flex;
     flex-flow: row;
     flex: 0 0 auto;
+    position: relative;
+
+    &>.scrollButton {
+        display: none;
+        height: 100%;
+        border: none;
+        &>button {
+            background: none;
+            border: none;
+            color: var(--vscode-panelTitle-inactiveForeground);
+            &:hover {
+                color: var(--vscode-panelTitle-activeForeground);
+                cursor: pointer;
+            }
+        }
+        &.active {
+            display:flex
+        }
+    }
+}
+
+.tabs {
+    scroll-behavior: smooth;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none;
+    overflow: hidden;
+    overflow-x: scroll;
+    display: flex;
+    flex-flow: row;
+    flex: 1 1 auto;
 }
 
 .tab {
-    padding: 2px 10px;
+    user-select: none;
     color: var(--vscode-panelTitle-inactiveForeground);
     background-color: var(--vscode-panel-background);
     border: none;
+    margin: 0 10px;
+    padding: 0 2px;
+    height: 1.5em;
+    display: flex;
+    flex-flow: row;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    white-space: nowrap;
+    & > * {
+        &:hover {
+            color: var(--vscode-panelTitle-activeForeground);
+        }
+    }
     &.selected {
         border-bottom: solid 1px;
         border-bottom-color: var(--vscode-panelTitle-activeBorder);
         color: var(--vscode-panelTitle-activeForeground);
     }
-    &:hover {
-        color: var(--vscode-panelTitle-activeForeground);
-        cursor: pointer;
-    }
+}
+
+.closeButton {
+    background: none;
+    border: none;
+    color: var(--vscode-panelTitle-inactiveForeground);
 }
 
 #tabContent {
@@ -105,8 +159,50 @@ input {
     display: flex;
     flex-flow: column-reverse;
     overflow: hidden;
+    position: relative;
+
+    &.none > *:not(#terminalSelection) {
+        display: none;
+    }
+
+    &:not(.none) > #terminalSelection {
+        display: none;
+    }
 
     &.flash > .inputArea {
         display: none
+    }
+
+    &>button {
+        background: none;
+        color: var(--vscode-panelTitle-inactiveForeground);
+        border: none;
+        position: absolute;
+        margin-top: 5px;
+        padding: 5px 5px;
+        top: 0;
+        right: 0;
+        &:hover {
+            color: var(--vscode-panelTitle-activeForeground);
+        }
+    }
+}
+
+#terminalSelection {
+    flex: 1 1 auto;
+    text-align: center;
+    font-size: 1em;
+
+    &>button {
+        height: 2em;
+        width: fit-content;
+        padding: 0 30px;
+        background-color: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
+        border-color: var(--vscode-button-border);
+
+        &:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
     }
 }

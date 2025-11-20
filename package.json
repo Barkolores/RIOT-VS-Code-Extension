@@ -24,6 +24,10 @@
         }
       },
       {
+        "command": "riot-web-extension.serial.flash",
+        "title": "Flash Serial Device"
+      },
+      {
         "command": "riot-web-extension.serial.remove",
         "title": "Remove Serial Device"
       },
@@ -33,19 +37,11 @@
         "icon": "$(folder)"
       },
       {
-        "command": "riot-web-extension.terminal.openCommunication",
-        "title": "Open Communication Terminal",
+        "command": "riot-web-extension.terminal.openTab",
+        "title": "Open Tab",
         "icon": {
           "dark": "resources/icons/terminal-svgrepo-com-light.svg",
           "light": "resources/icons/terminal-svgrepo-com-dark.svg"
-        }
-      },
-      {
-        "command": "riot-web-extension.serial.flash",
-        "title": "Flash Device",
-        "icon": {
-          "dark": "resources/icons/upload-minimalistic-svgrepo-com-light.svg",
-          "light": "resources/icons/upload-minimalistic-svgrepo-com-dark.svg"
         }
       },
       {
@@ -53,20 +49,12 @@
         "title": "Clear Terminal"
       },
       {
-        "command": "riot-web-extension.terminal.close",
-        "title": "Close Terminal",
+        "command": "riot-web-extension.terminal.closeTab",
+        "title": "Close Tab",
         "icon": {
           "dark": "resources/icons/cross-svgrepo-com-light.svg",
           "light": "resources/icons/cross-svgrepo-com-dark.svg"
         }
-      },
-      {
-        "command": "riot-web-extension.context.connect",
-        "title": "Connect"
-      },
-      {
-        "command": "riot-web-extension.context.disconnect",
-        "title": "Disconnect"
       }
     ],
     "viewsContainers": {
@@ -103,6 +91,10 @@
     "menus": {
       "commandPalette": [
         {
+          "command": "riot-web-extension.serial.flash",
+          "when": "false"
+        },
+        {
           "command": "riot-web-extension.serial.remove",
           "when": "false"
         },
@@ -111,11 +103,7 @@
           "when": "false"
         },
         {
-          "command": "riot-web-extension.terminal.openCommunication",
-          "when": "false"
-        },
-        {
-          "command": "riot-web-extension.serial.flash",
+          "command": "riot-web-extension.terminal.openTab",
           "when": "false"
         },
         {
@@ -123,15 +111,7 @@
           "when": "false"
         },
         {
-          "command": "riot-web-extension.terminal.close",
-          "when": "false"
-        },
-        {
-          "command": "riot-web-extension.context.connect",
-          "when": "false"
-        },
-        {
-          "command": "riot-web-extension.context.disconnect",
+          "command": "riot-web-extension.terminal.closeTab",
           "when": "false"
         }
       ],
@@ -153,25 +133,20 @@
           "group": "inline"
         },
         {
-          "command": "riot-web-extension.terminal.openCommunication",
-          "when": "view == riot-web-extension.view.devices && (viewItem not in riot-web-extension.openDevices)",
+          "command": "riot-web-extension.terminal.openTab",
+          "when": "view == riot-web-extension.view.devices && (viewItem not in riot-web-extension.context.openTabs)",
           "group": "inline"
         },
         {
-          "command": "riot-web-extension.serial.flash",
-          "when": "view == riot-web-extension.view.devices && (viewItem not in riot-web-extension.openDevices)",
-          "group": "inline"
-        },
-        {
-          "command": "riot-web-extension.terminal.close",
-          "when": "view == riot-web-extension.view.devices && (viewItem in riot-web-extension.openDevices)",
+          "command": "riot-web-extension.terminal.closeTab",
+          "when": "view == riot-web-extension.view.devices && (viewItem in riot-web-extension.context.openTabs)",
           "group": "inline"
         }
       ],
       "webview/context": [
         {
           "command": "riot-web-extension.terminal.clear",
-          "when": "webviewId == riot-web-extension.view.terminal && riot-web-extension.openDevice != 'none'"
+          "when": "webviewId == riot-web-extension.view.terminal && riot-web-extension.context.terminalVisible"
         }
       ]
     }

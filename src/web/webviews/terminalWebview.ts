@@ -1,4 +1,4 @@
-import {RiotTerminalState} from "../providers/terminalProvider";
+import {type TabStates, type RiotTerminalState} from "../providers/terminalProvider";
 
 declare var acquireVsCodeApi: any;
 let vscode: any;
@@ -6,7 +6,11 @@ let tabs: HTMLDivElement;
 let tabContent: HTMLDivElement;
 let terminal: HTMLTextAreaElement;
 let input: HTMLInputElement;
-let currentState: any;
+let tabStates: TabStates;
+let selectedTab: string | undefined;
+let bodyShown: boolean = false;
+let scrollButtonLeft: HTMLDivElement;
+let scrollButtonRight: HTMLDivElement;
 
 window.onload = () => {
     document.body.innerHTML = `
@@ -16,42 +20,52 @@ window.onload = () => {
             <input type="text" placeholder="Input" id="input" oninput="updateInput()"/>
         </div>
         <textarea id="terminal" readonly></textarea>
+        <div id="terminalSelection">
+            <p>Select an Action for the Device:</p>
+            <button onclick="requestUpdateTerminalState('flash')">Flash</button>
+            <button onclick="requestUpdateTerminalState('communication')">Communication</button>
+        </div>
+        <button onclick="requestUpdateTerminalState('none')">X</button>
     </div>
-    <div id="tabs" class="tabs"></div>
-    <p class="noSelection">No Device open</p>
+    <div id="tabSelection" class="tabSelection">
+        <div class="scrollButton" id="scrollButtonLeft">
+            <button onclick="scrollTabs(true)"><</button>
+        </div>
+        <div id="tabs" class="tabs"></div>
+        <div class="scrollButton" id="scrollButtonRight">
+            <button onclick="scrollTabs(false)">></button>
+        </div>
+    </div>
+    <p id="noSelection">No Tabs open</p>
     `;
     vscode = acquireVsCodeApi();
     tabs = document.getElementById("tabs") as HTMLDivElement;
     tabContent = document.getElementById("tabContent") as HTMLDivElement;
     terminal = document.getElementById("terminal") as HTMLTextAreaElement;
     input = document.getElementById("input") as HTMLInputElement;
+    scrollButtonLeft = document.getElementById('scrollButtonLeft') as HTMLDivElement;
+    scrollButtonRight = document.getElementById('scrollButtonRight') as HTMLDivElement;
     const script = document.getElementById("script") as HTMLScriptElement;
-    currentState = JSON.parse(script.dataset.json ? script.dataset.json : '{}');
-    if (currentState.devices.length !== 0) {
+    const state = JSON.parse(script.dataset.state ? script.dataset.state : '{}');
+    tabStates = state.tabStates;
+    selectedTab = state.selectedTab;
+    if (Object.keys(tabStates).length !== 0) {
         initialize();
     }
 };
 
 window.addEventListener("message", (event) => {
-    console.log(event.data.action);
     switch (event.data.action) {
         case "clearTerminal":
-            for (const device of currentState.devices) {
-                if (device.uuid === currentState.selectedTab) {
-                    device.terminalData = '';
-                    break;
-                }
+            if (!selectedTab) {
+                return;
             }
+            tabStates[selectedTab].terminalData = '';
             terminal.value = '';
             break;
         case "message":
-            for (const device of currentState.devices) {
-                if (device.uuid === event.data.uuid) {
-                    device.terminalData += event.data.message;
-                    break;
-                }
-            }
-            if (currentState.selectedTab === event.data.uuid) {
+            tabStates[event.data.uuid].terminalData += event.data.message;
+            if (selectedTab === event.data.uuid) {
                 const scrollDown = terminal.scrollTop === (terminal.scrollHeight - terminal.clientHeight);
                 terminal.value += event.data.message;
                 if (scrollDown) {
@@ -59,152 +73,158 @@ window.addEventListener("message", (event) => {
                 }
             }
             break;
-        case "addDevice":
-            if (currentState.devices.length === 0) {
-                document.body.className = "shown";
-            }
-            currentState.devices.push({
-                uuid: event.data.uuid as string,
-                label: event.data.label as string,
-                terminalState: event.data.terminalState as RiotTerminalState,
-                terminalData: event.data.terminalData as string,
-                inputData: event.data.inputData as string,
-            });
-            if (currentState.selectedTab) {
-                (document.getElementById(currentState.selectedTab) as HTMLButtonElement).className = "tab";
-            }
-            createTab(event.data.uuid, event.data.label, true);
-            tabContent.className = event.data.terminalState;
+        case "openTab":
+            createTab(event.data.uuid, event.data.label, true, true);
             break;
-        case "removeDevice":
-            for (let i = 0; i < currentState.devices.length; i++) {
-                if (currentState.devices[i].uuid === event.data.uuid) {
-                    currentState.devices.splice(i, 1);
-                    if (currentState.selectedTab === event.data.uuid) {
-                        if (currentState.devices.length === 0) {
-                            currentState.selectedTab = '';
-                        } else {
-                            selectTab(currentState.devices[0]);
-                        }
-                        (document.getElementById(event.data.uuid) as HTMLButtonElement).remove();
-                    }
-                    break;
-                }
-            }
-            if (currentState.devices.length === 0) {
-                document.body.className = "none";
-            }
+        case "selectTab":
+            selectTab(event.data.uuid);
             break;
-        case "updateDevice":
-            for (let i = 0; i < currentState.devices.length; i++) {
-                if (currentState.devices[i].uuid === event.data.uuid) {
-                    currentState.devices[i] = new Object({
-                        ...currentState.devices[i],
-                        terminalState: event.data.terminalState,
-                        terminalData: "",
-                        inputData: "",
-                    });
-                    break;
-                }
-            }
-            if (currentState.selectedTab === event.data.uuid) {
-                terminal.value = '';
-                input.value = '';
-                tabContent.className = event.data.terminalState;
-            }
+        case "updateTerminalState":
+            updateTerminalState(event.data.newTerminalState);
+            break;
+        case "closeTab":
+            closeTab(event.data.uuid);
+            break;
     }
 });
 
+function scrollTabs(toLeft: boolean) {
+    tabs.scrollLeft += 100 * (toLeft ? -1 : 1);
+    updateScrollButtons();
+}
+
+function updateScrollButtons() {
+    if (tabs.clientWidth >= tabs.scrollWidth) {
+        scrollButtonLeft.className = "scrollButton";
+        scrollButtonRight.className = "scrollButton";
+    } else {
+        scrollButtonLeft.className = "scrollButton active";
+        scrollButtonRight.className = "scrollButton active";
+    }
+}
+
+window.addEventListener('resize', () => {
+    if (selectedTab) {
+        updateScrollButtons();
+    }
+});
+
+function updateBody(show: boolean) {
+    if (bodyShown !== show) {
+        document.body.className = show ? 'shown' : 'none';
+        bodyShown = show;
+    }
+}
+
 function initialize() {
     document.body.className = "shown";
-    let j = undefined;
-    for (let i = 0; i < currentState.devices.length; i++) {
-        const selected = currentState.devices[i].uuid === currentState.selectedTab;
-        createTab(currentState.devices[i].uuid, currentState.devices[i].label, selected);
-        if (selected) {
-            j = i;
-        }
-    }
-    if (j !== undefined) {
-        terminal.value = currentState.devices[j].terminalData;
-        input.value = currentState.devices[j].inputData;
-        tabContent.className = currentState.devices[j].terminalState;
+    for (const [uuid, state] of Object.entries(tabStates)) {
+        createTab(uuid, state.label, uuid === selectedTab, false);
     }
 }
 
-function createTab(uuid: string, label: string, setFocus: boolean) {
-    const tab = document.createElement("button");
-    tab.className = "tab" + (setFocus ? " selected" : "");
-    tab.id = uuid;
-    tab.innerText = label;
-    tab.onclick = () => selectTab(tab);
+function createTab(uuid: string, label: string, setFocus: boolean, newTabState: boolean) {
+    updateBody(true);
+    tabs.insertAdjacentHTML("beforeend", `
+        <div id="${uuid}" class="tab" onclick="selectTab('${uuid}')">
+            <p>${label}</p>
+            <a class="closeButton" onclick="event.stopPropagation(); requestCloseTab('${uuid}')">X</a>
+        </div>
+    `);
+    if (newTabState) {
+        tabStates[uuid] = {
+            label: label,
+            terminalState: 'none',
+            terminalData: '',
+            inputData: '',
+        };
+    }
     if (setFocus) {
-        currentState.selectedTab = tab.id;
-        vscode.postMessage({
-            action: "selectTab",
-            tab: tab.id
-        });
+        selectTab(uuid);
     }
-    tabs.appendChild(tab);
+    updateScrollButtons();
 }
 
-function selectTab(tab: HTMLButtonElement) {
-    if (currentState.selectedTab === tab.id) {
+function selectTab(uuid: string | undefined) {
+    if (!uuid) {
+        selectedTab = undefined;
+        updateBody(false);
         return;
     }
-    (document.getElementById(currentState.selectedTab) as HTMLButtonElement).className = "tab";
-    tab.className = "tab selected";
-    currentState.selectedTab = tab.id;
-    vscode.postMessage({
-        action: "selectTab",
-        tab: tab.id
-    });
-    for (const device of currentState.devices) {
-        if (device.uuid === tab.id) {
-            terminal.value = device.terminalData;
-            input.value = device.inputData;
-            tabContent.className = device.terminalState;
-            break;
-        }
+    if (selectedTab !== undefined) {
+        (document.getElementById(selectedTab) as HTMLDivElement).className = 'tab';
     }
+    (document.getElementById(uuid) as HTMLDivElement).className = 'tab selected';
+    selectedTab = uuid;
+    console.log(tabStates[selectedTab].terminalState);
+    tabContent.className = tabStates[selectedTab].terminalState;
+    terminal.value = tabStates[selectedTab].terminalData;
+    input.value = tabStates[selectedTab].inputData;
+    vscode.postMessage({
+        action: 'selectTab',
+        selectedTab: selectedTab
+    });
+}
+
+function requestCloseTab(uuid: string) {
+    vscode.postMessage({
+        action: 'requestCloseTab',
+        uuid: uuid
+    });
+}
+
+function closeTab(uuid: string) {
+    document.getElementById(uuid)?.remove();
+    delete tabStates[uuid];
+}
+
+function requestUpdateTerminalState(newTerminalState: RiotTerminalState) {
+    console.log('requestUpdateTerminalStateWeb');
+    vscode.postMessage({
+        action: 'requestUpdateTerminalState',
+        newTerminalState: newTerminalState
+    });
+}
+
+function updateTerminalState(newTerminalState: RiotTerminalState) {
+    if (!selectedTab) {
+        return;
+    }
+    tabContent.className = newTerminalState;
+    tabStates[selectedTab].terminalState = newTerminalState;
+    tabStates[selectedTab].terminalData = '';
+    tabStates[selectedTab].inputData = '';
+    terminal.value = '';
+    input.value = '';
 }
 
 function updateInput(): void {
-    for (const device of currentState.devices) {
-        if (device.uuid === currentState.selectedTab) {
-            device.inputData = input.value;
-            break;
-        }
+    if (!selectedTab) {
+        return;
     }
+    tabStates[selectedTab].inputData = input.value;
     vscode.postMessage({
         action: 'updateInput',
-        uuid: currentState.selectedTab,
-        input: input.value
+        inputData: input.value
     });
 }
 
 function sendInput(): void {
-    let uuid = undefined;
-    let message = '';
-    for (const device of currentState.devices) {
-        if (device.uuid === currentState.selectedTab) {
-            uuid = device.uuid;
-            message = device.inputData;
-            break;
-        }
-    }
-    if (!uuid) {
-        return;
-    }
     vscode.postMessage({
-        action: 'message',
-        uuid: uuid,
-        message: message,
+        action: 'sendInput'
     });
 }
 
-//fix because unused functions (not seen in html string) don't get compiled
+//Fix, because some compiler (either tsc oder esbuild, i dont know) doesn't include unused functions and it doesnt
+//realize its used in the html strings
+
 //@ts-ignore
-global.sendInput = sendInput;
+window.requestCloseTab = requestCloseTab;
 //@ts-ignore
-global.updateInput = updateInput;
+window.scrollTabs = scrollTabs;
+//@ts-ignore
+window.sendInput = sendInput;
+//@ts-ignore
+window.updateInput = updateInput;
+//@ts-ignore
+window.requestUpdateTerminalState = requestUpdateTerminalState;

@@ -20,7 +20,7 @@ export abstract class Device extends vscode.TreeItem {
 
     abstract open(param?: object): Promise<void>;
 
-    abstract close(): Promise<void>;
+    abstract close(): Promise<boolean>;
 
     abstract forget(): void;
 

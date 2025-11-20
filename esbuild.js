@@ -75,7 +75,6 @@ function getMainBuildOptions() {
 		sourcesContent: false,
         platform: 'node',
 		outdir: 'dist/main',
-        minify: false,
         external: ['vscode'],
 		logLevel: 'info',
         define: {
@@ -97,7 +96,7 @@ function getWebBuildOptions() {
         entryPoints: [
 			'src/web/extension.ts',
 			'src/web/test/suite/extensionTests.ts',
-            "./src/web/webviews/*"
+            'src/web/webviews/*'
 		],
         bundle: true,
 		format: 'cjs',

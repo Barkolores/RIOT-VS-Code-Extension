@@ -1,11 +1,11 @@
 import vscode from "vscode";
-import {type FlashOptions, type LoaderOptions} from "esptool-js";
-import {FileProvider} from "./providers/fileProvider";
 import {DevicesProvider} from "./providers/devicesProvider";
 import {Device} from "./devices/device";
-import {SerialDevice} from "./devices/serialDevice";
 import {DeviceManager} from "./devices/deviceManager";
-import {RiotTerminalState, TerminalProvider} from "./providers/terminalProvider";
+import {TerminalProvider} from "./providers/terminalProvider";
+import {SerialDevice} from "./devices/serialDevice";
+import {FlashOptions, LoaderOptions} from "esptool-js";
+import {FileProvider} from "./providers/fileProvider";
 import { CommandSocket } from "./command/commandSocket";
 
 export function activate(context: vscode.ExtensionContext) {
@@ -25,9 +25,9 @@ export function activate(context: vscode.ExtensionContext) {
     navigator.serial.addEventListener('disconnect', (event) => {
         deviceManager.handleDisconnectEvent(event.target as SerialPort);
     });
-    let openDevices: string[] = [];
-    vscode.commands.executeCommand('setContext', 'riot-web-extension.openDevices', []);
-    vscode.commands.executeCommand('setContext', 'riot-web-extension.flashingDevices', []);
+
+    vscode.commands.executeCommand('setContext', 'riot-web-extension.context.openTabs', []);
+    vscode.commands.executeCommand('setContext', 'riot-web-extension.context.terminalVisible', false);
     
     console.log(`Host: ${self.location.hostname}`);
     const commandSocket = new CommandSocket(self.location);
@@ -83,30 +83,22 @@ export function activate(context: vscode.ExtensionContext) {
             );
         }),
 
-        //open Terminal for Communication
-        vscode.commands.registerCommand('riot-web-extension.terminal.openCommunication', async (device: Device) => {
-            if (!(device instanceof SerialDevice)) {
-                return;
-            }
-            await device.open({
-                baudRate: 115200
-            });
-            terminalProvider.addDevice(device, RiotTerminalState.COMMUNICATION);
-            device.read(terminalProvider);
+        //open Tab
+        vscode.commands.registerCommand('riot-web-extension.terminal.openTab', async (device: Device) => {
+            vscode.commands.executeCommand('riot-web-extension.view.terminal.focus');
+            terminalProvider.openTab(device);
         }),
 
-        //close Terminal
-        vscode.commands.registerCommand('riot-web-extension.terminal.close', async (device: Device) => {
-            await device.close();
-            terminalProvider.removeDevice(device);
+        //close Tab
+        vscode.commands.registerCommand('riot-web-extension.terminal.closeTab', async (device: Device) => {
+            terminalProvider.closeTab(device.contextValue);
         }),
 
-        //flash Device
+        // //flash Device
         vscode.commands.registerCommand('riot-web-extension.serial.flash', async (device: Device) => {
             if (!(device instanceof SerialDevice)) {
                 return;
             }
-            terminalProvider.addDevice(device, RiotTerminalState.FLASH);
             const json = await fileProvider.loadJson(vscode.Uri.joinPath(context.extensionUri, 'flash', 'flasherArgs.json')) as FlasherArgsJson;
             const loaderOptions: LoaderOptions = {
                 transport: device.getTransport(),
@@ -155,22 +147,6 @@ export function activate(context: vscode.ExtensionContext) {
                 loaderOptions: loaderOptions,
                 flashOptions: flashOptions
             });
-        }),
-        //context connect
-        vscode.commands.registerCommand('riot-web-extension.context.connect', (contextValue: string) => {
-            openDevices = [
-                ...openDevices,
-                contextValue
-            ];
-            vscode.commands.executeCommand('setContext', 'riot-web-extension.openDevices', openDevices);
-        }),
-        //context disconnect
-        vscode.commands.registerCommand('riot-web-extension.context.disconnect', (contextValue: string) => {
-            const index = openDevices.indexOf(contextValue);
-            if (index !== -1) {
-                openDevices.splice(index, 1);
-                vscode.commands.executeCommand('setContext', 'riot-web-extension.openDevices', openDevices);
-            }
         }),
     );
 

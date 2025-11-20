@@ -24,26 +24,32 @@ export class SerialDevice extends Device {
             await this._port.open(param).then(() => {
                 console.log('Connected to ' + this.label);
                 this._open = true;
-                vscode.commands.executeCommand('riot-web-extension.context.connect', this.contextValue);
             });
         }
     }
-    async close(): Promise<void> {
+    async close(): Promise<boolean> {
         if (this._flashing) {
             vscode.window.showErrorMessage(this.label + ' is currently flashing. Please wait until flashing is completed.');
-            return;
+            return false;
         }
         if (this._reader) {
             this._reader.cancel();
             await this._readableStreamClosed?.catch(() => {console.log('Read canceled');});
+            this._reader = undefined;
+            this._readableStreamClosed = undefined;
         }
         if (this._open) {
-            this._port.close().then(() => {
+            return this._port.close().then(() => {
                 console.log('Connection to ' + this.label + ' closed');
                 this._open = false;
-                vscode.commands.executeCommand('riot-web-extension.context.disconnect', this.contextValue);
+                return true;
+            }).catch((e) => {
+                console.error(e);
+                console.error('Connection to ' + this.label + ' could not be closed');
+                return false;
             });
         }
+        return true;
     }
     forget(): void {
         this.close();
@@ -83,14 +89,12 @@ export class SerialDevice extends Device {
     }): Promise<void> {
         if (!this._open) {
             this._flashing = true;
-            vscode.commands.executeCommand('riot-web-extension.context.connect', this.contextValue);
             options.loaderOptions.transport = new Transport(this._port as SerialPort);
             const espLoader: ESPLoader = new ESPLoader(options.loaderOptions);
             await espLoader.main().then(value => console.log(value)).catch(e => console.error(e));
             await espLoader.writeFlash(options.flashOptions).then(() => console.log('Programming Done')).catch(e => console.error(e));
             await espLoader.after();
             await espLoader.transport.disconnect();
-            vscode.commands.executeCommand('riot-web-extension.context.disconnect', this.contextValue);
             this._flashing = false;
         }
     }
