@@ -140,6 +140,28 @@ export class TerminalProvider implements vscode.WebviewViewProvider, RiotTermina
                         }
                         const hasClosed = await this._tabs[this._selectedTab].device.close();
                         if (hasClosed) {
+                            if (message.newTerminalState === 'communication') {
+                                const baudRate = await vscode.window.showInputBox({
+                                    title: 'Choose a BaudRate',
+                                    placeHolder: 'BaudRate'
+                                });
+                                if (!baudRate) {
+                                    vscode.window.showErrorMessage('No Baudrate has been specified');
+                                    return;
+                                }
+                                const baudRateNumber = parseInt(baudRate, 10);
+                                if (Number.isNaN(baudRateNumber)) {
+                                    vscode.window.showErrorMessage('The specified Baudrate could not be parsed');
+                                    return;
+                                }
+                                await this._tabs[this._selectedTab].device.open({
+                                    baudRate: baudRateNumber
+                                });
+                                this._tabs[this._selectedTab].device.read(this);
+                            }
+                            if (message.newTerminalState === 'flash') {
+                                vscode.commands.executeCommand('riot-web-extension.device.flash', this._tabs[this._selectedTab].device);
+                            }
                             this._tabs[this._selectedTab].terminalState = message.newTerminalState;
                             this._tabs[this._selectedTab].terminalData = '';
                             this._tabs[this._selectedTab].inputData = '';
@@ -147,15 +169,6 @@ export class TerminalProvider implements vscode.WebviewViewProvider, RiotTermina
                                 action: 'updateTerminalState',
                                 newTerminalState: message.newTerminalState
                             });
-                            if (message.newTerminalState === 'communication') {
-                                await this._tabs[this._selectedTab].device.open({
-                                    baudRate: 115200
-                                });
-                                this._tabs[this._selectedTab].device.read(this);
-                            }
-                            if (message.newTerminalState === 'flash') {
-                                vscode.commands.executeCommand('riot-web-extension.device.flash', this._tabs[this._selectedTab].device);
-                            }
                             vscode.commands.executeCommand('setContext', 'riot-web-extension.context.terminalVisible', this._tabs[this._selectedTab].terminalState !== 'none');
                         }
                         break;
@@ -195,7 +208,7 @@ export class TerminalProvider implements vscode.WebviewViewProvider, RiotTermina
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <title>Riot Terminal</title>
                     <link rel="stylesheet" href="${css}">
-                    <script src="${script}" id="script"></script>
+                    <script src="${script}"></script>
                 </head>
                 <body data-vscode-context='{"preventDefaultContextMenuItems": true}' class="none"></body>
             </html>
