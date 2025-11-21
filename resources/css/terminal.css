@@ -184,6 +184,7 @@ input {
         right: 0;
         &:hover {
             color: var(--vscode-panelTitle-activeForeground);
+            cursor: pointer;
         }
     }
 }

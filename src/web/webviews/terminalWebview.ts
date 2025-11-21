@@ -45,13 +45,9 @@ window.onload = () => {
     input = document.getElementById("input") as HTMLInputElement;
     scrollButtonLeft = document.getElementById('scrollButtonLeft') as HTMLDivElement;
     scrollButtonRight = document.getElementById('scrollButtonRight') as HTMLDivElement;
-    const script = document.getElementById("script") as HTMLScriptElement;
-    const state = JSON.parse(script.dataset.state ? script.dataset.state : '{}');
-    tabStates = state.tabStates;
-    selectedTab = state.selectedTab;
-    if (Object.keys(tabStates).length !== 0) {
-        initialize();
-    }
+    vscode.postMessage({
+        action: 'requestState'
+    });
 };
 
 window.addEventListener("message", (event) => {
@@ -74,7 +70,7 @@ window.addEventListener("message", (event) => {
             }
             break;
         case "openTab":
-            createTab(event.data.uuid, event.data.label, true, true);
+            createTab(event.data.uuid, event.data.label, false, true);
             break;
         case "selectTab":
             selectTab(event.data.uuid);
@@ -84,6 +80,13 @@ window.addEventListener("message", (event) => {
             break;
         case "closeTab":
             closeTab(event.data.uuid);
+            break;
+        case "setState":
+            tabStates = event.data.state.tabStates;
+            selectedTab = event.data.state.selectedTab;
+            if (Object.keys(tabStates).length !== 0) {
+                initialize();
+            }
             break;
     }
 });
@@ -156,9 +159,9 @@ function selectTab(uuid: string | undefined) {
     }
     (document.getElementById(uuid) as HTMLDivElement).className = 'tab selected';
     selectedTab = uuid;
-    console.log(tabStates[selectedTab].terminalState);
     tabContent.className = tabStates[selectedTab].terminalState;
     terminal.value = tabStates[selectedTab].terminalData;
+    terminal.scrollTop = terminal.scrollHeight;
     input.value = tabStates[selectedTab].inputData;
     vscode.postMessage({
         action: 'selectTab',
@@ -179,7 +182,6 @@ function closeTab(uuid: string) {
 }
 
 function requestUpdateTerminalState(newTerminalState: RiotTerminalState) {
-    console.log('requestUpdateTerminalStateWeb');
     vscode.postMessage({
         action: 'requestUpdateTerminalState',
         newTerminalState: newTerminalState

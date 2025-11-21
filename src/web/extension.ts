@@ -23,7 +23,10 @@ export function activate(context: vscode.ExtensionContext) {
         deviceManager.handleConnectEvent(event.target as SerialPort);
     });
     navigator.serial.addEventListener('disconnect', (event) => {
-        deviceManager.handleDisconnectEvent(event.target as SerialPort);
+        const uuid = deviceManager.handleDisconnectEvent(event.target as SerialPort);
+        if (uuid) {
+            terminalProvider.closeTab(uuid, true);
+        }
     });
 
     vscode.commands.executeCommand('setContext', 'riot-web-extension.context.openTabs', []);
@@ -35,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
     //Commands
     context.subscriptions.push(
         //add new Device
-        vscode.commands.registerCommand('riot-web-extension.serial.add', async () => {
+        vscode.commands.registerCommand('riot-web-extension.device.add', async () => {
             console.log('RIOT Web Extension is registering new Device...');
             const serialPortInfo: SerialPortInfo = await vscode.commands.executeCommand(
                 "workbench.experimental.requestSerialPort"
@@ -49,7 +52,7 @@ export function activate(context: vscode.ExtensionContext) {
         }),
 
         //remove Device
-        vscode.commands.registerCommand('riot-web-extension.serial.remove', (device: Device) => {
+        vscode.commands.registerCommand('riot-web-extension.device.remove', (device: Device) => {
             console.log('RIOT Web Extension is removing Device...');
             deviceManager.removeDevice(device);
         }),
@@ -91,11 +94,11 @@ export function activate(context: vscode.ExtensionContext) {
 
         //close Tab
         vscode.commands.registerCommand('riot-web-extension.terminal.closeTab', async (device: Device) => {
-            terminalProvider.closeTab(device.contextValue);
+            terminalProvider.closeTab(device.contextValue, false);
         }),
 
         // //flash Device
-        vscode.commands.registerCommand('riot-web-extension.serial.flash', async (device: Device) => {
+        vscode.commands.registerCommand('riot-web-extension.device.flash', async (device: Device) => {
             if (!(device instanceof SerialDevice)) {
                 return;
             }

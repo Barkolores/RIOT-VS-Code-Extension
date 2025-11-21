@@ -51,12 +51,11 @@ export class TerminalProvider implements vscode.WebviewViewProvider, RiotTermina
         vscode.commands.executeCommand('setContext', 'riot-web-extension.context.openTabs', Object.keys(this._tabs));
     }
 
-    async closeTab(uuid: string) {
+    async closeTab(uuid: string, closeBypass: boolean) {
         if (!(uuid in this._tabs)) {
-            console.error('There is no open tab for this device');
             return;
         }
-        if (!(await this._tabs[uuid].device.close())) {
+        if (!(closeBypass || await this._tabs[uuid].device.close())) {
             return;
         }
         delete this._tabs[uuid];
@@ -72,7 +71,6 @@ export class TerminalProvider implements vscode.WebviewViewProvider, RiotTermina
             uuid: uuid
         });
         vscode.commands.executeCommand('setContext', 'riot-web-extension.context.openTabs', Object.keys(this._tabs));
-        return;
     }
 
     selectTab(uuid: string | undefined) {
@@ -87,7 +85,7 @@ export class TerminalProvider implements vscode.WebviewViewProvider, RiotTermina
         vscode.commands.executeCommand('setContext', 'riot-web-extension.context.terminalVisible', uuid && this._tabs[uuid].terminalState !== 'none');
     }
 
-    private _stringifyState(): string {
+    private _getState(): object {
         const tabStates: TabStates = {};
         for (const [uuid, tabState] of Object.entries(this._tabs)) {
             tabStates[uuid] = {
@@ -97,29 +95,29 @@ export class TerminalProvider implements vscode.WebviewViewProvider, RiotTermina
                 inputData: tabState.inputData
             };
         }
-        return JSON.stringify({
+        return {
             tabStates: tabStates,
             selectedTab: this._selectedTab
-        });
+        };
     }
 
     postMessage(uuid: string, message: string) {
         this._tabs[uuid].terminalData += message;
-        if (this._webviewView) {
-            this._webviewView.webview.postMessage({
-                action: 'message',
-                uuid: uuid,
-                message: message,
-            });
-        }
+        this._webviewView?.webview.postMessage({
+            action: 'message',
+            uuid: uuid,
+            message: message,
+        });
     }
 
     clearTerminal() {
-        if (this._webviewView) {
-            this._webviewView.webview.postMessage({
-                action: 'clearTerminal'
-            });
+        if (!this._selectedTab) {
+            return;
         }
+        this._tabs[this._selectedTab].terminalData = '';
+        this._webviewView?.webview.postMessage({
+            action: 'clearTerminal'
+        });
     }
 
     resolveWebviewView(webviewView: WebviewView, context: WebviewViewResolveContext, token: CancellationToken): Thenable<void> | void {
@@ -134,6 +132,7 @@ export class TerminalProvider implements vscode.WebviewViewProvider, RiotTermina
                 switch (message.action) {
                     case 'selectTab':
                         this._selectedTab = message.selectedTab;
+                        vscode.commands.executeCommand('setContext', 'riot-web-extension.context.terminalVisible', this._tabs[message.selectedTab].terminalState !== 'none');
                         break;
                     case 'requestUpdateTerminalState':
                         if (!this._selectedTab) {
@@ -155,8 +154,9 @@ export class TerminalProvider implements vscode.WebviewViewProvider, RiotTermina
                                 this._tabs[this._selectedTab].device.read(this);
                             }
                             if (message.newTerminalState === 'flash') {
-                                vscode.commands.executeCommand('riot-web-extension.serial.flash', this._tabs[this._selectedTab].device);
+                                vscode.commands.executeCommand('riot-web-extension.device.flash', this._tabs[this._selectedTab].device);
                             }
+                            vscode.commands.executeCommand('setContext', 'riot-web-extension.context.terminalVisible', this._tabs[this._selectedTab].terminalState !== 'none');
                         }
                         break;
                     case 'updateInput':
@@ -172,16 +172,21 @@ export class TerminalProvider implements vscode.WebviewViewProvider, RiotTermina
                         this._tabs[this._selectedTab].device.write(this._tabs[this._selectedTab].inputData);
                         break;
                     case "requestCloseTab":
-                        this.closeTab(message.uuid);
+                        this.closeTab(message.uuid, false);
+                        break;
+                    case "requestState":
+                        this._webviewView?.webview.postMessage({
+                            action: 'setState',
+                            state: this._getState()
+                        });
                         break;
                 }
             },
         );
-        webviewView.webview.html = this._getHTML(css, script, this._stringifyState());
+        webviewView.webview.html = this._getHTML(css, script);
     }
 
-    private _getHTML(css: vscode.Uri, script: vscode.Uri, webviewState: string) {
-        console.log(webviewState);
+    private _getHTML(css: vscode.Uri, script: vscode.Uri) {
         return (`
             <!DOCTYPE html>
             <html lang="en">
@@ -190,7 +195,7 @@ export class TerminalProvider implements vscode.WebviewViewProvider, RiotTermina
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <title>Riot Terminal</title>
                     <link rel="stylesheet" href="${css}">
-                    <script src="${script}" id="script" data-state='${webviewState}'></script>
+                    <script src="${script}" id="script"></script>
                 </head>
                 <body data-vscode-context='{"preventDefaultContextMenuItems": true}' class="none"></body>
             </html>

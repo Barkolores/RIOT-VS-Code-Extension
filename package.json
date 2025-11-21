@@ -16,7 +16,7 @@
   "contributes": {
     "commands": [
       {
-        "command": "riot-web-extension.serial.add",
+        "command": "riot-web-extension.device.add",
         "title": "Add Serial Device",
         "icon": {
           "dark": "resources/icons/plus-svgrepo-com-light.svg",
@@ -24,11 +24,11 @@
         }
       },
       {
-        "command": "riot-web-extension.serial.flash",
+        "command": "riot-web-extension.device.flash",
         "title": "Flash Serial Device"
       },
       {
-        "command": "riot-web-extension.serial.remove",
+        "command": "riot-web-extension.device.remove",
         "title": "Remove Serial Device"
       },
       {
@@ -91,11 +91,11 @@
     "menus": {
       "commandPalette": [
         {
-          "command": "riot-web-extension.serial.flash",
+          "command": "riot-web-extension.device.flash",
           "when": "false"
         },
         {
-          "command": "riot-web-extension.serial.remove",
+          "command": "riot-web-extension.device.remove",
           "when": "false"
         },
         {
@@ -117,14 +117,14 @@
       ],
       "view/title": [
         {
-          "command": "riot-web-extension.serial.add",
+          "command": "riot-web-extension.device.add",
           "group": "navigation",
           "when": "view == riot-web-extension.view.devices"
         }
       ],
       "view/item/context": [
         {
-          "command": "riot-web-extension.serial.remove",
+          "command": "riot-web-extension.device.remove",
           "when": "view == riot-web-extension.view.devices"
         },
         {

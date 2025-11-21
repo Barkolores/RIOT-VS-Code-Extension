@@ -52,13 +52,14 @@ export class DeviceManager {
         this.updateDevicesProvider();
     }
 
-    handleDisconnectEvent(port: Port) {
+    handleDisconnectEvent(port: Port): string | undefined {
         const index = this.includesPort(port);
         if (index === undefined) {
             return;
         }
-        this._devices.splice(index, 1);
+        const uuid: string = this._devices.splice(index, 1)[0].contextValue;
         this.updateDevicesProvider();
+        return uuid;
     }
 
     removeDevice(device: Device) {
