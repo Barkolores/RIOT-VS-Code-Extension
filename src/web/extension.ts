@@ -6,7 +6,7 @@ import {TerminalProvider} from "./providers/terminalProvider";
 import {SerialDevice} from "./devices/serialDevice";
 import {FlashOptions, LoaderOptions} from "esptool-js";
 import {FileProvider} from "./providers/fileProvider";
-import { CommandSocket } from "./command/commandSocket";
+//import { CommandSocket } from "./command/commandSocket";
 
 export function activate(context: vscode.ExtensionContext) {
     if ((navigator as any).serial === undefined) {
@@ -32,8 +32,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.executeCommand('setContext', 'riot-web-extension.context.openTabs', []);
     vscode.commands.executeCommand('setContext', 'riot-web-extension.context.terminalVisible', false);
     
-    console.log(`Host: ${self.location.hostname}`);
-    const commandSocket = new CommandSocket(self.location);
+    //console.log(`Host: ${self.location.hostname}`);
+    //const commandSocket = new CommandSocket(self.location);
 
     //Commands
     context.subscriptions.push(
@@ -162,10 +162,9 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     //CleanUp
-    context.subscriptions.push(
-        { dispose: commandSocket.close }
-    );
-
+    //context.subscriptions.push(
+    //    { dispose: commandSocket.close }
+    //);
 }
 
 

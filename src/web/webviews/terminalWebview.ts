@@ -62,7 +62,7 @@ window.addEventListener("message", (event) => {
         case "message":
             tabStates[event.data.uuid].terminalData += event.data.message;
             if (selectedTab === event.data.uuid) {
-                const scrollDown = terminal.scrollTop === (terminal.scrollHeight - terminal.clientHeight);
+                const scrollDown = Math.abs(terminal.scrollTop - (terminal.scrollHeight - terminal.clientHeight)) < 10;
                 terminal.value += event.data.message;
                 if (scrollDown) {
                     terminal.scrollTop = terminal.scrollHeight;

@@ -12,6 +12,7 @@ export abstract class Device extends vscode.TreeItem {
         protected _port: Port,
         label: string,
         public readonly contextValue: string,
+        protected readonly _updateTreeviewEventEmitter: vscode.EventEmitter<Device | undefined>
     ) {
         super(label, vscode.TreeItemCollapsibleState.Collapsed);
     }
@@ -32,4 +33,7 @@ export abstract class Device extends vscode.TreeItem {
 
     abstract flash(param?: object): void;
 
+    updateTreeview(): void {
+        this._updateTreeviewEventEmitter.fire(undefined);
+    };
 }

@@ -11,7 +11,7 @@ export class DeviceManager {
         //initialize Devices
         navigator.serial.getPorts().then((ports) => {
             for (const port of ports) {
-                this._devices.push(new SerialDevice(port, crypto.randomUUID(), this._counter++));
+                this._devices.push(new SerialDevice(port, crypto.randomUUID(), this._counter++, this._devicesProvider.onDidChangeTreeDataEventEmitter));
             }
             this.updateDevicesProvider();
         });
@@ -31,7 +31,7 @@ export class DeviceManager {
             let newDeviceFound = false;
             for (const port of ports) {
                 if (this.includesPort(port) === undefined) {
-                    this._devices.push(new SerialDevice(port, crypto.randomUUID(), this._counter++));
+                    this._devices.push(new SerialDevice(port, crypto.randomUUID(), this._counter++, this._devicesProvider.onDidChangeTreeDataEventEmitter));
                     newDeviceFound = true;
                 }
             }
@@ -47,7 +47,7 @@ export class DeviceManager {
             return;
         }
         if (port instanceof SerialPort) {
-            this._devices.push(new SerialDevice(port, crypto.randomUUID(), this._counter++));
+            this._devices.push(new SerialDevice(port, crypto.randomUUID(), this._counter++, this._devicesProvider.onDidChangeTreeDataEventEmitter));
         }
         this.updateDevicesProvider();
     }

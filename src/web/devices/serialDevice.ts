@@ -14,16 +14,18 @@ export class SerialDevice extends Device {
         port: SerialPort,
         contextValue: string,
         id: number,
+        eventEmitter: vscode.EventEmitter<Device | undefined>,
     ) {
-        super(port, 'Device ' + id, contextValue);
+        super(port, 'Device ' + id, contextValue, eventEmitter);
     }
     getDescription(): string[] {
         const port = this._port as SerialPort;
         return [
+            'Status: ' + (this._flashing ? 'Flashing' : (this._open ? 'Connection open' : 'Connection closed')),
+            'CurrentWorkingDirectory: ' + (this.activeProject ? this.activeProject.name : 'Not specified'),
             'USBVendorID: ' + port.getInfo().usbVendorId,
             'USBProductID: ' + port.getInfo().usbProductId,
             'BluetoothServiceClassID: ' + (port.getInfo().bluetoothServiceClassId ? port.getInfo().bluetoothServiceClassId : 'Not specified'),
-            'CurrentWorkingDirectory: ' + (this.activeProject ? this.activeProject.name : 'Not specified'),
         ];
     }
 
@@ -36,6 +38,7 @@ export class SerialDevice extends Device {
             await this._port.open(param).then(() => {
                 console.log('Connected to ' + this.label);
                 this._open = true;
+                this.updateTreeview();
             });
         }
     }
@@ -54,6 +57,7 @@ export class SerialDevice extends Device {
             return this._port.close().then(() => {
                 console.log('Connection to ' + this.label + ' closed');
                 this._open = false;
+                this.updateTreeview();
                 return true;
             }).catch((e) => {
                 console.error(e);
@@ -101,6 +105,7 @@ export class SerialDevice extends Device {
     }): Promise<void> {
         if (!this._open) {
             this._flashing = true;
+            this.updateTreeview();
             options.loaderOptions.transport = new Transport(this._port as SerialPort);
             const espLoader: ESPLoader = new ESPLoader(options.loaderOptions);
             await espLoader.main().then(value => console.log(value)).catch(e => console.error(e));
@@ -108,6 +113,7 @@ export class SerialDevice extends Device {
             await espLoader.after();
             await espLoader.transport.disconnect();
             this._flashing = false;
+            this.updateTreeview();
         }
     }
     getTransport() {

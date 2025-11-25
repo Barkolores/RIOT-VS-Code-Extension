@@ -16,12 +16,12 @@ export class DevicesProvider implements vscode.TreeDataProvider<Device> {
         }
     }
 
-    private _onDidChangeTreeData: vscode.EventEmitter<Device | undefined> = new vscode.EventEmitter<Device | undefined>();
+    readonly onDidChangeTreeDataEventEmitter: vscode.EventEmitter<Device | undefined> = new vscode.EventEmitter<Device | undefined>();
 
-    readonly onDidChangeTreeData: vscode.Event<Device | undefined> = this._onDidChangeTreeData.event;
+    readonly onDidChangeTreeData: vscode.Event<Device | undefined> = this.onDidChangeTreeDataEventEmitter.event;
 
     refresh(): void {
-        this._onDidChangeTreeData.fire(undefined);
+        this.onDidChangeTreeDataEventEmitter.fire(undefined);
     }
 
     setDevices(devices: Device[]): void {
