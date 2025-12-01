@@ -17,10 +17,7 @@
       {
         "command": "riot-web-extension.device.add",
         "title": "Add Serial Device",
-        "icon": {
-          "dark": "resources/icons/plus-svgrepo-com-light.svg",
-          "light": "resources/icons/plus-svgrepo-com-dark.svg"
-        }
+        "icon": "$(add)"
       },
       {
         "command": "riot-web-extension.device.flash",
@@ -38,10 +35,7 @@
       {
         "command": "riot-web-extension.terminal.openTab",
         "title": "Open Tab",
-        "icon": {
-          "dark": "resources/icons/terminal-svgrepo-com-light.svg",
-          "light": "resources/icons/terminal-svgrepo-com-dark.svg"
-        }
+        "icon": "$(terminal)"
       },
       {
         "command": "riot-web-extension.terminal.clear",
@@ -50,10 +44,17 @@
       {
         "command": "riot-web-extension.terminal.closeTab",
         "title": "Close Tab",
-        "icon": {
-          "dark": "resources/icons/cross-svgrepo-com-light.svg",
-          "light": "resources/icons/cross-svgrepo-com-dark.svg"
-        }
+        "icon": "$(close)"
+      },
+      {
+        "command": "riot-web-extension.websocket.open",
+        "title": "Open Websocket",
+        "icon": "$(rss)"
+      },
+      {
+        "command": "riot-web-extension.websocket.close",
+        "title": "Close Websocket",
+        "icon": "$(stop)"
       }
     ],
     "viewsContainers": {
@@ -112,6 +113,14 @@
         {
           "command": "riot-web-extension.terminal.closeTab",
           "when": "false"
+        },
+        {
+          "command": "riot-web-extension.websocket.open",
+          "when": "!riot-web-extension.context.websocketOpen"
+        },
+        {
+          "command": "riot-web-extension.websocket.close",
+          "when": "riot-web-extension.context.websocketOpen"
         }
       ],
       "view/title": [
@@ -119,6 +128,16 @@
           "command": "riot-web-extension.device.add",
           "group": "navigation",
           "when": "view == riot-web-extension.view.devices"
+        },
+        {
+          "command": "riot-web-extension.websocket.open",
+          "group": "navigation",
+          "when": "view == riot-web-extension.view.terminal && !riot-web-extension.context.websocketOpen"
+        },
+        {
+          "command": "riot-web-extension.websocket.close",
+          "group": "navigation",
+          "when": "view == riot-web-extension.view.terminal && riot-web-extension.context.websocketOpen"
         }
       ],
       "view/item/context": [

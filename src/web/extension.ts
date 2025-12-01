@@ -6,7 +6,7 @@ import {TerminalProvider} from "./providers/terminalProvider";
 import {SerialDevice} from "./devices/serialDevice";
 import {FlashOptions, LoaderOptions} from "esptool-js";
 import {FileProvider} from "./providers/fileProvider";
-//import { CommandSocket } from "./command/commandSocket";
+import {CommandSocket} from "./command/commandSocket";
 
 export function activate(context: vscode.ExtensionContext) {
     if ((navigator as any).serial === undefined) {
@@ -19,6 +19,8 @@ export function activate(context: vscode.ExtensionContext) {
     const fileProvider = new FileProvider();
     const deviceManager = new DeviceManager(devicesProvider);
     const terminalProvider = new TerminalProvider(context.extensionUri);
+    let commandSocket: CommandSocket | undefined = undefined;
+
     navigator.serial.addEventListener('connect', (event) => {
         deviceManager.handleConnectEvent(event.target as SerialPort);
     });
@@ -31,9 +33,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     vscode.commands.executeCommand('setContext', 'riot-web-extension.context.openTabs', []);
     vscode.commands.executeCommand('setContext', 'riot-web-extension.context.terminalVisible', false);
-    
-    //console.log(`Host: ${self.location.hostname}`);
-    //const commandSocket = new CommandSocket(self.location);
+    vscode.commands.executeCommand('setContext', 'riot-web-extension.context.websocketOpen', false);
 
     //Commands
     context.subscriptions.push(
@@ -88,17 +88,17 @@ export function activate(context: vscode.ExtensionContext) {
         }),
 
         //open Tab
-        vscode.commands.registerCommand('riot-web-extension.terminal.openTab', async (device: Device) => {
+        vscode.commands.registerCommand('riot-web-extension.terminal.openTab', (device: Device) => {
             vscode.commands.executeCommand('riot-web-extension.view.terminal.focus');
             terminalProvider.openTab(device);
         }),
 
         //close Tab
-        vscode.commands.registerCommand('riot-web-extension.terminal.closeTab', async (device: Device) => {
+        vscode.commands.registerCommand('riot-web-extension.terminal.closeTab', (device: Device) => {
             terminalProvider.closeTab(device.contextValue, false);
         }),
 
-        // //flash Device
+        //flash Device
         vscode.commands.registerCommand('riot-web-extension.device.flash', async (device: Device) => {
             if (!(device instanceof SerialDevice)) {
                 return;
@@ -153,6 +153,26 @@ export function activate(context: vscode.ExtensionContext) {
             });
             deviceManager.refreshDevicesProvider();
         }),
+        //Open Websocket
+        vscode.commands.registerCommand('riot-web-extension.websocket.open', () => {
+            if (commandSocket) {
+                return;
+            }
+            //Returns protocol in Regex Group 1 and host in Group 2 without first subdomain and path (because it is added by vscode executing the extension in a webworker)
+            const url = /^(.*?):.*\.([^;]*?)[:|\/]/.exec(location.pathname);
+            if (!url) {
+                vscode.window.showErrorMessage('URL could not be parsed');
+                return;
+            }
+            commandSocket = new CommandSocket(url[1], url[2]);
+        }),
+        //Close Websocket
+        vscode.commands.registerCommand('riot-web-extension.websocket.close', () => {
+            if (commandSocket) {
+                commandSocket.close();
+            }
+            commandSocket = undefined;
+        })
     );
 
     //Views
