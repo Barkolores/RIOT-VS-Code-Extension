@@ -62,14 +62,14 @@
         {
           "id": "riot-sidebar",
           "title": "RIOT",
-          "icon": "resources/icons/riot-logo-R.svg"
+          "icon": "dist/assets/icons/riot-logo-R.svg"
         }
       ],
       "panel": [
         {
           "id": "riot-panel",
           "title": "RIOT Terminal",
-          "icon": "resources/icons/riot-logo-R.svg"
+          "icon": "dist/assets/icons/riot-logo-R.svg"
         }
       ]
     },
@@ -196,6 +196,7 @@
     "@vscode/vsce": "^3.7.0",
     "assert": "^2.1.0",
     "esbuild": "^0.25.12",
+    "esbuild-plugin-copy": "^2.1.1",
     "eslint": "^9.39.1",
     "mocha": "^11.7.5",
     "npm-run-all": "^4.1.5",
@@ -203,6 +204,7 @@
   },
   "dependencies": {
     "esptool-js": "^0.5.7",
+    "shared": "../../shared",
     "ws": "^8.18.3"
   },
   "overrides": {

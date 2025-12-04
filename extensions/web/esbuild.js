@@ -2,6 +2,7 @@ const esbuild = require('esbuild');
 const glob = require('glob');
 const path = require('path');
 const polyfill = require('@esbuild-plugins/node-globals-polyfill');
+const copy = require('esbuild-plugin-copy').copy;
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
@@ -83,7 +84,15 @@ function getWebBuildOptions() {
 				buffer: true,
 			}),
 			testBundlePlugin,
-			esbuildProblemMatcherPlugin, /* add to the end of plugins array */
+			esbuildProblemMatcherPlugin,
+            copy({
+                resolveFrom: 'cwd',
+                assets: {
+                    from: ['../../shared/assets/**/*'],
+                    to: ['./dist/assets'],
+                },
+                watch: true,
+            }),
 		],
 	};
 }
