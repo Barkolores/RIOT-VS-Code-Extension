@@ -1,0 +1,13 @@
+{
+	"baud_rate": 460800,
+	"flash_size": "detect",
+	"flash_mode": "keep",
+	"flash_freq": "40m",
+	"compress": true,
+	"erase_all": false,
+	"data" : {
+		"0x1000": "sketch_oct30a.ino.bootloader.bin",
+		"0x8000": "sketch_oct30a.ino.partitions.bin",
+		"0x10000": "sketch_oct30a.ino.bin"
+	}
+}

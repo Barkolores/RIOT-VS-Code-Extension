@@ -1,0 +1,213 @@
+{
+  "name": "riot-web-extension",
+  "displayName": "RIOT Web Extension",
+  "description": "flashing riot from a browser",
+  "publisher": "Barkolores78",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.106.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "browser": "./dist/web/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "riot-web-extension.device.add",
+        "title": "Add Serial Device",
+        "icon": "$(add)"
+      },
+      {
+        "command": "riot-web-extension.device.flash",
+        "title": "Flash Serial Device"
+      },
+      {
+        "command": "riot-web-extension.device.remove",
+        "title": "Remove Serial Device"
+      },
+      {
+        "command": "riot-web-extension.device.selectProject",
+        "title": "Select Device Project",
+        "icon": "$(folder)"
+      },
+      {
+        "command": "riot-web-extension.terminal.openTab",
+        "title": "Open Tab",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "riot-web-extension.terminal.clear",
+        "title": "Clear Terminal"
+      },
+      {
+        "command": "riot-web-extension.terminal.closeTab",
+        "title": "Close Tab",
+        "icon": "$(close)"
+      },
+      {
+        "command": "riot-web-extension.websocket.open",
+        "title": "Open Websocket",
+        "icon": "$(rss)"
+      },
+      {
+        "command": "riot-web-extension.websocket.close",
+        "title": "Close Websocket",
+        "icon": "$(stop)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "riot-sidebar",
+          "title": "RIOT",
+          "icon": "resources/icons/riot-logo-R.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "riot-panel",
+          "title": "RIOT Terminal",
+          "icon": "resources/icons/riot-logo-R.svg"
+        }
+      ]
+    },
+    "views": {
+      "riot-sidebar": [
+        {
+          "id": "riot-web-extension.view.devices",
+          "name": "Connected Devices"
+        }
+      ],
+      "riot-panel": [
+        {
+          "id": "riot-web-extension.view.terminal",
+          "name": "Riot Terminal",
+          "type": "webview"
+        }
+      ]
+    },
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "riot-web-extension.device.flash",
+          "when": "false"
+        },
+        {
+          "command": "riot-web-extension.device.remove",
+          "when": "false"
+        },
+        {
+          "command": "riot-web-extension.device.selectProject",
+          "when": "false"
+        },
+        {
+          "command": "riot-web-extension.terminal.openTab",
+          "when": "false"
+        },
+        {
+          "command": "riot-web-extension.terminal.clear",
+          "when": "false"
+        },
+        {
+          "command": "riot-web-extension.terminal.closeTab",
+          "when": "false"
+        },
+        {
+          "command": "riot-web-extension.websocket.open",
+          "when": "!riot-web-extension.context.websocketOpen"
+        },
+        {
+          "command": "riot-web-extension.websocket.close",
+          "when": "riot-web-extension.context.websocketOpen"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "riot-web-extension.device.add",
+          "group": "navigation",
+          "when": "view == riot-web-extension.view.devices"
+        },
+        {
+          "command": "riot-web-extension.websocket.open",
+          "group": "navigation",
+          "when": "view == riot-web-extension.view.terminal && !riot-web-extension.context.websocketOpen"
+        },
+        {
+          "command": "riot-web-extension.websocket.close",
+          "group": "navigation",
+          "when": "view == riot-web-extension.view.terminal && riot-web-extension.context.websocketOpen"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "riot-web-extension.device.remove",
+          "when": "view == riot-web-extension.view.devices && viewItem != description"
+        },
+        {
+          "command": "riot-web-extension.device.selectProject",
+          "when": "view == riot-web-extension.view.devices && viewItem != description",
+          "group": "inline"
+        },
+        {
+          "command": "riot-web-extension.terminal.openTab",
+          "when": "view == riot-web-extension.view.devices && viewItem != description && (viewItem not in riot-web-extension.context.openTabs)",
+          "group": "inline"
+        },
+        {
+          "command": "riot-web-extension.terminal.closeTab",
+          "when": "view == riot-web-extension.view.devices && viewItem != description && (viewItem in riot-web-extension.context.openTabs)",
+          "group": "inline"
+        }
+      ],
+      "webview/context": [
+        {
+          "command": "riot-web-extension.terminal.clear",
+          "when": "webviewId == riot-web-extension.view.terminal && riot-web-extension.context.terminalVisible"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "test": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/suite/extensionTests.js",
+    "compile-web": "npm run check-types && npm run lint && node esbuild.js",
+    "compile-web-production": "npm run check-types && npm run lint && node esbuild.js --production",
+    "watch-web": "npm-run-all -p watch-web:*",
+    "watch-web:esbuild": "node esbuild.js --watch",
+    "watch-web:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "run-in-browser": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. .",
+    "package": "vsce package --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
+    "@types/assert": "^1.5.11",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^24.10.1",
+    "@types/vscode": "^1.106.0",
+    "@types/w3c-web-serial": "^1.0.8",
+    "@types/w3c-web-usb": "^1.0.13",
+    "@types/ws": "^8.18.1",
+    "@typescript-eslint/eslint-plugin": "^8.46.4",
+    "@typescript-eslint/parser": "^8.46.4",
+    "@vscode/test-web": "^0.0.74",
+    "@vscode/vsce": "^3.7.0",
+    "assert": "^2.1.0",
+    "esbuild": "^0.25.12",
+    "eslint": "^9.39.1",
+    "mocha": "^11.7.5",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "esptool-js": "^0.5.7",
+    "ws": "^8.18.3"
+  },
+  "overrides": {
+    "@vscode/vsce": {
+      "js-yaml": "^4.1.1"
+    }
+  }
+}
