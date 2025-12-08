@@ -1,5 +1,5 @@
 import vscode from "vscode";
-import {DevicesProvider} from "./providers/devicesProvider";
+import {Button, DevicesProvider} from "./providers/devicesProvider";
 import {WebDevice} from "./devices/webDevice";
 import {DeviceManager} from "./devices/deviceManager";
 import {TerminalProvider} from "./providers/terminalProvider";
@@ -175,11 +175,28 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    const treeView = vscode.window.createTreeView('riot-web-extension.view.devices', {
+        treeDataProvider: devicesProvider,
+        canSelectMany: false,
+    });
+
     //Views
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider("riot-web-extension.view.terminal", terminalProvider, {webviewOptions: {retainContextWhenHidden: true}}),
-        vscode.window.registerTreeDataProvider("riot-web-extension.view.devices", devicesProvider)
+        treeView
     );
+
+    treeView.onDidChangeSelection((e) => {
+        const selectedItem = e.selection[0] as vscode.TreeItem;
+        console.log(selectedItem.contextValue);
+        if (selectedItem.contextValue === 'button') {
+            vscode.window.showInformationMessage('Button: ' + selectedItem.label + ' pressed');
+            treeView.reveal((selectedItem as Button).parent, {
+                select: true,
+                focus: true
+            });
+        }
+    });
 
     //CleanUp
     //context.subscriptions.push(

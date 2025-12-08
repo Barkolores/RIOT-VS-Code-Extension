@@ -27,7 +27,13 @@
       },
       {
         "command": "riot-web-extension.device.remove",
-        "title": "Remove Serial Device"
+        "title": "Remove Serial Device",
+        "icon": "$(close)"
+      },
+      {
+        "command": "riot-web-extension.device.dummy",
+        "title": "Change Label",
+        "icon": "$(pencil)"
       },
       {
         "command": "riot-web-extension.device.selectProject",
@@ -145,21 +151,17 @@
       "view/item/context": [
         {
           "command": "riot-web-extension.device.remove",
-          "when": "view == riot-web-extension.view.devices && viewItem != description"
+          "when": "view == riot-web-extension.view.devices && viewItem != description && viewItem != workingDirectory && viewItem != button",
+          "group": "inline@2"
+        },
+        {
+          "command": "riot-web-extension.device.dummy",
+          "when": "view == riot-web-extension.view.devices && viewItem != description && viewItem != workingDirectory && viewItem != button",
+          "group": "inline@1"
         },
         {
           "command": "riot-web-extension.device.selectProject",
-          "when": "view == riot-web-extension.view.devices && viewItem != description",
-          "group": "inline"
-        },
-        {
-          "command": "riot-web-extension.terminal.openTab",
-          "when": "view == riot-web-extension.view.devices && viewItem != description && (viewItem not in riot-web-extension.context.openTabs)",
-          "group": "inline"
-        },
-        {
-          "command": "riot-web-extension.terminal.closeTab",
-          "when": "view == riot-web-extension.view.devices && viewItem != description && (viewItem in riot-web-extension.context.openTabs)",
+          "when": "view == riot-web-extension.view.devices && viewItem == workingDirectory",
           "group": "inline"
         }
       ],
