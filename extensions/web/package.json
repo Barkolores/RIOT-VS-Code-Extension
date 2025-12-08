@@ -27,7 +27,23 @@
       },
       {
         "command": "riot-web-extension.device.remove",
-        "title": "Remove Serial Device"
+        "title": "Remove Serial Device",
+        "icon": "$(close)"
+      },
+      {
+        "command": "riot-web-extension.device.dummy1",
+        "title": "Flash",
+        "icon": "$(play)"
+      },
+      {
+        "command": "riot-web-extension.device.dummy2",
+        "title": "Flash with Debugging",
+        "icon": "$(debug-alt)"
+      },
+      {
+        "command": "riot-web-extension.device.dummy3",
+        "title": "Rename Label",
+        "icon": "$(pencil)"
       },
       {
         "command": "riot-web-extension.device.selectProject",
@@ -145,17 +161,33 @@
       "view/item/context": [
         {
           "command": "riot-web-extension.device.remove",
-          "when": "view == riot-web-extension.view.devices && viewItem != description"
+          "when": "view == riot-web-extension.view.devices && viewItem != description",
+          "group": "inline@6"
+        },
+        {
+          "command": "riot-web-extension.device.dummy1",
+          "when": "view == riot-web-extension.view.devices && viewItem != description",
+          "group": "inline@4"
+        },
+        {
+          "command": "riot-web-extension.device.dummy2",
+          "when": "view == riot-web-extension.view.devices && viewItem != description",
+          "group": "inline@3"
+        },
+        {
+          "command": "riot-web-extension.device.dummy3",
+          "when": "view == riot-web-extension.view.devices && viewItem != description",
+          "group": "inline@1"
         },
         {
           "command": "riot-web-extension.device.selectProject",
           "when": "view == riot-web-extension.view.devices && viewItem != description",
-          "group": "inline"
+          "group": "inline@2"
         },
         {
           "command": "riot-web-extension.terminal.openTab",
           "when": "view == riot-web-extension.view.devices && viewItem != description && (viewItem not in riot-web-extension.context.openTabs)",
-          "group": "inline"
+          "group": "inline@5"
         },
         {
           "command": "riot-web-extension.terminal.closeTab",
