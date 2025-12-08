@@ -1,9 +1,9 @@
-import {Device, type Port} from "./device";
+import {WebDevice, type Port} from "./webDevice";
 import {SerialDevice} from "./serialDevice";
 import {DevicesProvider} from "../providers/devicesProvider";
 
 export class DeviceManager {
-    private _devices: Device[] = [];
+    private _devices: WebDevice[] = [];
     private _counter: number = 1;
     constructor(
         private _devicesProvider: DevicesProvider
@@ -62,7 +62,7 @@ export class DeviceManager {
         return uuid;
     }
 
-    removeDevice(device: Device) {
+    removeDevice(device: WebDevice) {
         device.forget();
         this._devices.splice(this._devices.indexOf(device), 1);
         this.updateDevicesProvider();

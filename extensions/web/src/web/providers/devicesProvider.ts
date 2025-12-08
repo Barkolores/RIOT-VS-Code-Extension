@@ -1,14 +1,14 @@
 import * as vscode from "vscode";
-import {Device} from "../devices/device";
+import {WebDevice} from "../devices/webDevice";
 
-export class DevicesProvider implements vscode.TreeDataProvider<Device> {
-    private _devices?: Device[];
+export class DevicesProvider implements vscode.TreeDataProvider<WebDevice> {
+    private _devices?: WebDevice[];
 
     getTreeItem(element: vscode.TreeItem | Thenable<vscode.TreeItem>) {
         return element;
     }
 
-    getChildren(element?: Device): vscode.ProviderResult<any[]> {
+    getChildren(element?: WebDevice): vscode.ProviderResult<any[]> {
         if (element) {
             return element.getDescription().map<DeviceDescription>((label) => new DeviceDescription(label));
         } else {
@@ -16,15 +16,15 @@ export class DevicesProvider implements vscode.TreeDataProvider<Device> {
         }
     }
 
-    readonly onDidChangeTreeDataEventEmitter: vscode.EventEmitter<Device | undefined> = new vscode.EventEmitter<Device | undefined>();
+    readonly onDidChangeTreeDataEventEmitter: vscode.EventEmitter<WebDevice | undefined> = new vscode.EventEmitter<WebDevice | undefined>();
 
-    readonly onDidChangeTreeData: vscode.Event<Device | undefined> = this.onDidChangeTreeDataEventEmitter.event;
+    readonly onDidChangeTreeData: vscode.Event<WebDevice | undefined> = this.onDidChangeTreeDataEventEmitter.event;
 
     refresh(): void {
         this.onDidChangeTreeDataEventEmitter.fire(undefined);
     }
 
-    setDevices(devices: Device[]): void {
+    setDevices(devices: WebDevice[]): void {
         this._devices = devices;
     }
 }

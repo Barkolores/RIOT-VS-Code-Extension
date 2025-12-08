@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import {Device} from "../devices/device";
+import {WebDevice} from "../devices/webDevice";
 import {CancellationToken, WebviewView, WebviewViewResolveContext} from "vscode";
 
 export type RiotTerminalState = 'none' | 'communication' | 'flash';
@@ -22,7 +22,7 @@ export class TerminalProvider implements vscode.WebviewViewProvider, RiotTermina
     private _webviewView?: vscode.WebviewView;
     private _tabs: {
         [uuid: string]: {
-            device: Device,
+            device: WebDevice,
             terminalState: RiotTerminalState,
             terminalData: string,
             inputData: string,
@@ -31,7 +31,7 @@ export class TerminalProvider implements vscode.WebviewViewProvider, RiotTermina
     private _selectedTab?: string;
     constructor(private readonly _basePath: vscode.Uri) {}
 
-    openTab(device: Device) {
+    openTab(device: WebDevice) {
         if (device.contextValue in this._tabs) {
             console.error('Tab for this device is already open');
             return;

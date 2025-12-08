@@ -1,6 +1,6 @@
 import vscode from "vscode";
 import {DevicesProvider} from "./providers/devicesProvider";
-import {Device} from "./devices/device";
+import {WebDevice} from "./devices/webDevice";
 import {DeviceManager} from "./devices/deviceManager";
 import {TerminalProvider} from "./providers/terminalProvider";
 import {SerialDevice} from "./devices/serialDevice";
@@ -52,7 +52,7 @@ export function activate(context: vscode.ExtensionContext) {
         }),
 
         //remove Device
-        vscode.commands.registerCommand('riot-web-extension.device.remove', (device: Device) => {
+        vscode.commands.registerCommand('riot-web-extension.device.remove', (device: WebDevice) => {
             console.log('RIOT Web Extension is removing Device...');
             deviceManager.removeDevice(device);
         }),
@@ -63,7 +63,7 @@ export function activate(context: vscode.ExtensionContext) {
         }),
 
         // Select Device Project
-        vscode.commands.registerCommand('riot-web-extension.device.selectProject', async (device: Device) => {
+        vscode.commands.registerCommand('riot-web-extension.device.selectProject', async (device: WebDevice) => {
             const folders = vscode.workspace.workspaceFolders;
             if (!folders) {
                 vscode.window.showWarningMessage("No open projects.");
@@ -88,18 +88,18 @@ export function activate(context: vscode.ExtensionContext) {
         }),
 
         //open Tab
-        vscode.commands.registerCommand('riot-web-extension.terminal.openTab', (device: Device) => {
+        vscode.commands.registerCommand('riot-web-extension.terminal.openTab', (device: WebDevice) => {
             vscode.commands.executeCommand('riot-web-extension.view.terminal.focus');
             terminalProvider.openTab(device);
         }),
 
         //close Tab
-        vscode.commands.registerCommand('riot-web-extension.terminal.closeTab', (device: Device) => {
+        vscode.commands.registerCommand('riot-web-extension.terminal.closeTab', (device: WebDevice) => {
             terminalProvider.closeTab(device.contextValue, false);
         }),
 
         //flash Device
-        vscode.commands.registerCommand('riot-web-extension.device.flash', async (device: Device) => {
+        vscode.commands.registerCommand('riot-web-extension.device.flash', async (device: WebDevice) => {
             if (!(device instanceof SerialDevice)) {
                 return;
             }

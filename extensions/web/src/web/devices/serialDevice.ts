@@ -1,9 +1,9 @@
 import vscode from "vscode";
-import {Device} from "./device";
+import {WebDevice} from "./webDevice";
 import {ESPLoader, type FlashOptions, type LoaderOptions, Transport} from "esptool-js";
 import {type RiotTerminal} from "../providers/terminalProvider";
 
-export class SerialDevice extends Device {
+export class SerialDevice extends WebDevice {
 
     private _reader?: ReadableStreamDefaultReader<string>;
     private _readableStreamClosed?: Promise<void>;
@@ -14,7 +14,7 @@ export class SerialDevice extends Device {
         port: SerialPort,
         contextValue: string,
         id: number,
-        eventEmitter: vscode.EventEmitter<Device | undefined>,
+        eventEmitter: vscode.EventEmitter<WebDevice | undefined>,
     ) {
         super(port, 'Device ' + id, contextValue, eventEmitter);
     }
