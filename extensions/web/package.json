@@ -162,17 +162,17 @@
         {
           "command": "riot-web-extension.device.remove",
           "when": "view == riot-web-extension.view.devices && viewItem != description",
-          "group": "inline@6"
+          "group": "nav3@1"
         },
         {
           "command": "riot-web-extension.device.dummy1",
           "when": "view == riot-web-extension.view.devices && viewItem != description",
-          "group": "inline@4"
+          "group": "nav2@2"
         },
         {
           "command": "riot-web-extension.device.dummy2",
           "when": "view == riot-web-extension.view.devices && viewItem != description",
-          "group": "inline@3"
+          "group": "nav2@3"
         },
         {
           "command": "riot-web-extension.device.dummy3",
@@ -182,12 +182,12 @@
         {
           "command": "riot-web-extension.device.selectProject",
           "when": "view == riot-web-extension.view.devices && viewItem != description",
-          "group": "inline@2"
+          "group": "nav2@1"
         },
         {
           "command": "riot-web-extension.terminal.openTab",
           "when": "view == riot-web-extension.view.devices && viewItem != description && (viewItem not in riot-web-extension.context.openTabs)",
-          "group": "inline@5"
+          "group": "nav1@1"
         },
         {
           "command": "riot-web-extension.terminal.closeTab",
