@@ -209,6 +209,7 @@ export async function activate(context: vscode.ExtensionContext) {
 						return;
 					}
 					vscode.tasks.executeTask(compileTask);
+					configureCompiledCommands();
 				}
 				const currentFolders = vscode.workspace.workspaceFolders || [];	
 				/* This would ensure that examples opened within the RIOT folder would 
@@ -269,6 +270,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				return;
 			}
 			vscode.tasks.executeTask(compileTask);
+			configureCompiledCommands();
 		}
 		vscode.window.showInformationMessage(`Set Active Example Folder to: ${activeFolderPath}` + ' with Board: ' + (selectedDevice ?? 'None'));
 		context.workspaceState.update(ACTIVE_FOLDER_KEY, activeFolderPath);
@@ -439,6 +441,27 @@ export async function activate(context: vscode.ExtensionContext) {
 			!path.isAbsolute(relative)
 		);
 	}
+
+	async function configureCompiledCommands(){
+		if(!riotBasePath || !activeFolderPath) {
+			return; 
+		}
+		const config = vscode.workspace.getConfiguration('C_Cpp', vscode.Uri.file(activeFolderPath));
+
+		const compileCommandsPath = path.join(riotBasePath, 'compile_commands.json');
+
+		const currentSetting = config.get<string>('default.compileCommands');
+
+		if(currentSetting !== compileCommandsPath) {
+			await config.update(
+				'default.compileCommands',
+				compileCommandsPath,
+				vscode.ConfigurationTarget.WorkspaceFolder
+			);
+			vscode.window.showInformationMessage("Compiled commands adapted");
+		}
+		
+	}
 }
 
 
@@ -537,5 +560,6 @@ class RiotFileDecorationProvider implements vscode.FileDecorationProvider {
 
 		return undefined;
 	}
+	
 }
 

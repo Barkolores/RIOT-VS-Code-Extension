@@ -85,7 +85,7 @@
         {
           "id": "riotContainer",
           "title": "RIOT",
-          "icon": "resources/icon.png"
+          "icon": "../../shared/assets/icons/riot-logo-R.svg"
         }
       ]
     },
