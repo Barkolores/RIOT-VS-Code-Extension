@@ -1,11 +1,11 @@
-import { Device } from "../device";
+import { DeviceModel } from "../boards/device";
 import { VsCodeAbstractRiotDeviceTask } from "./VsCodeAbstractRiotDeviceTask";
 
 export class VsCodeRiotFlashTask extends VsCodeAbstractRiotDeviceTask {
 
     constructor (
         applicationPath: string,
-        device : Device
+        device : DeviceModel
     ) {
         super(applicationPath, device, "RIOT Flash");
     }

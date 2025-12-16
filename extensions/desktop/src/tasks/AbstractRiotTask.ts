@@ -1,5 +1,5 @@
 import vscode from "vscode";
-import { Device } from "../device";
+import { DeviceModel } from "../boards/device";
 
 
 export abstract class AbstractRiotTask {
@@ -8,7 +8,7 @@ export abstract class AbstractRiotTask {
     constructor(
         public readonly applicationPath: string,
 
-        public readonly device : Device,
+        public readonly device : DeviceModel,
 
         protected readonly taskName: string,
     ) {

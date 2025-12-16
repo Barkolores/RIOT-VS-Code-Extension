@@ -12,16 +12,23 @@
   "activationEvents": [
     "*"
   ],
-  "main": "./out/extension.js",
+  "main": "out/RIOT-VS-Code-Extension/extensions/desktop/src/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "riot-launcher.riotFlash",
-        "title": "RIOT Flash"
+        "title": "RIOT Flash",
+        "icon": "$(zap)"
       },
       {
         "command": "riot-launcher.riotTerm",
-        "title": "RIOT Term"
+        "title": "RIOT Term",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "riot-launcher.riotDebug",
+        "title": "RIOT Debug",
+        "icon": "$(bug)" 
       },
       {
         "command": "riot-launcher.selectBoard",
@@ -93,49 +100,33 @@
       "riotContainer": [
         {
           "id": "riotView",
-          "name": "RIOT Tools"
-        },
-        {
-          "id": "deviceView",
-          "name": "Connected Devices"
+          "name": "Desktop Extension"
         }
       ]
     },
     "menus": {
-      "explorer/context": [
+      "view/title": [
         {
-          "command": "riot-launcher.setActiveExampleFolder",
-          "when": "explorerResourceIsRoot",
-          "group": "navigation"
-        },
-        {
-          "command": "riot-launcher.changeFolderDevice",
-          "when": "explorerResourceIsRoot",
+          "command": "riot-launcher.addDevice",
+          "when": "view == riotView",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "riot-launcher.changePortDevice",
-          "when": "view == deviceView && viewItem == riot-device",
-          "group": "1_modification"
+          "command": "riot-launcher.riotFlash",
+          "when": "view == riotView && viewItem == riot-device",
+          "group": "inline"
         },
         {
-          "command": "riot-launcher.changeBoardDevice",
-          "when": "view == deviceView && viewItem == riot-device",
-          "group": "1_modification"
+          "command": "riot-launcher.riotDebug",
+          "when": "view == riotView && viewItem == riot-device",
+          "group": "inline"
         },
         {
-          "command": "riot-launcher.removeDevice",
-          "when": "view == deviceView && viewItem == riot-device",
-          "group": "2_destructive"
-        }
-      ],
-      "view/title": [
-        {
-          "command": "riot-launcher.addDevice",
-          "when": "view == deviceView",
-          "group": "navigation"
+          "command": "riot-launcher.riotTerm",
+          "when": "view == riotView && viewItem == riot-device",
+          "group": "inline"
         }
       ]
     }

@@ -1,12 +1,12 @@
 import vscode from "vscode";
 import { AbstractRiotTask } from "./AbstractRiotTask";
-import { Device } from "../device";
+import { DeviceModel } from "../boards/device";
 
 export abstract class VsCodeAbstractRiotTask extends AbstractRiotTask{
 
     constructor(
         applicationPath: string,
-        device: Device,
+        device: DeviceModel,
         taskName : string
     ) {
         super(applicationPath, device, taskName);
