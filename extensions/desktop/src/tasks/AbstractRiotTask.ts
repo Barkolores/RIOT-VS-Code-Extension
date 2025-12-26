@@ -20,4 +20,5 @@ export abstract class AbstractRiotTask {
     public getVscodeTask() : vscode.Task | undefined {
         return this.task;
     }
+
 }

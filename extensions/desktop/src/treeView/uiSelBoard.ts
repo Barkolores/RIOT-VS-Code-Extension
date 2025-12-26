@@ -9,6 +9,19 @@ export class SelectedBoardTreeItem extends vscode.TreeItem {
         const labelStr = `${device.getBoardName() ?? 'Unknown board'} `;
         super(labelStr, vscode.TreeItemCollapsibleState.None);
         this.contextValue = 'riot-device-board';
+        this.command = {
+            command: 'riot-launcher.changeBoardDevice',
+            title: 'Change Board',
+            arguments: [this]
+        };
+        
     }
 
+    changeBoard(boardName : string) : void {
+        this.device.setBoardName(boardName);
+    }
+
+    getDevice() : DeviceModel {
+        return this.device;
+    }
 }

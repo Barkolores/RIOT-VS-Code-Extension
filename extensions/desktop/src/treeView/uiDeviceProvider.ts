@@ -3,6 +3,7 @@ import { DeviceTreeItem } from './uiDevice';
 import { DeviceModel } from '../boards/device';
 import { SelectedBoardTreeItem } from './uiSelBoard';
 import { SelectedFolderTreeItem } from './uiSelFolder';
+import { SelectedPortTreeItem } from './uiSelPort';
 
 export class DeviceTreeItemProvider implements vscode.TreeDataProvider<vscode.TreeItem>{
     private _changeEvent = new vscode.EventEmitter<DeviceTreeItem | undefined>();
@@ -32,8 +33,9 @@ export class DeviceTreeItemProvider implements vscode.TreeDataProvider<vscode.Tr
             const deviceItem = element as DeviceTreeItem;
             return [
                 new SelectedBoardTreeItem(deviceItem.getDevice()),
-                new SelectedFolderTreeItem(deviceItem.getDevice())
-            ];
+                new SelectedFolderTreeItem(deviceItem.getDevice()),
+                new SelectedPortTreeItem(deviceItem.getDevice())
+            ];  
         }
     }
 

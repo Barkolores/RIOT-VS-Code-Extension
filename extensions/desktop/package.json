@@ -35,10 +35,6 @@
         "title": "RIOT Board Selection"
       },
       {
-        "command": "riot-launcher.selectExampleFolder",
-        "title": "RIOT Example Folder Selection"
-      },
-      {
         "command": "riot-launcher.setRiotPath",
         "title": "RIOT Set Path"
       },
@@ -49,6 +45,10 @@
       {
         "command": "riot-launcher.detectPorts",
         "title": "RIOT Detect Ports"
+      },
+      {
+        "command": "riot-launcher.changeFolderDevice",
+        "title": "Change Application Folder"
       },
       {
         "command": "riot-launcher.changePortDevice",
@@ -69,13 +69,7 @@
         "command": "riot-launcher.addDevice",
         "title": "Add Device",
         "icon": "$(plus)"
-      },
-      {
-        "command": "riot-launcher.changeFolderDevice",
-        "title": "Change Device",
-        "icon": "$(gear)"
       }
-      
     ],
     "configuration": {
       "title": "RIOT Launcher",

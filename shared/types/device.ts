@@ -20,4 +20,7 @@ export abstract class Device extends vscode.TreeItem {
     updateTreeview(): void {
         this._updateTreeviewEventEmitter.fire(undefined);
     };
+
+    
+    
 }

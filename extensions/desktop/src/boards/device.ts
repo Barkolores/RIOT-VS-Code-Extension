@@ -16,6 +16,7 @@ export class DeviceModel {
 
         private description? : string,
             
+        private appPath?: string
     ) {
         const labelStr = `${boardName ?? 'Unknown board'}`;
         this.portPath = portPath;
@@ -60,4 +61,25 @@ export class DeviceModel {
     public getDescription() : string | undefined {
         return this.description;
     }
+
+    public getAppPath() : string | undefined {
+        return this.appPath;
+    }
+
+    public setPortPath(portPath: string | undefined) : void {
+        this.portPath = portPath;
+    }
+
+    public setBoardName(boardName : string): void {
+        this.boardName = boardName;
+    }
+
+    public setDescription(description : string): void {
+        this.description = description;
+    }
+
+    public setAppPath(appPath : string) : void {
+        this.appPath = appPath;
+    }
+
 }

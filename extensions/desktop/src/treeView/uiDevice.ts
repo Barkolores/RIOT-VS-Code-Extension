@@ -9,7 +9,7 @@ export class DeviceTreeItem extends Device {
         private device : DeviceModel,
         _updateTreeviewEventEmitter: vscode.EventEmitter<DeviceTreeItem | undefined>
     ){
-        const labelStr = `${device.getBoardName() ?? 'Unknown board'} `;
+        const labelStr = `${device.getBoardName() ?? 'New Board'} `;
         super(labelStr, "riot-device", _updateTreeviewEventEmitter);
     }
 
@@ -32,4 +32,7 @@ export class DeviceTreeItem extends Device {
     getDevice() : DeviceModel {
         return this.device;
     }
+
+        
+
 }
