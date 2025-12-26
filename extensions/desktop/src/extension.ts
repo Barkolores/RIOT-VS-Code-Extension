@@ -47,7 +47,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.StatusBarAlignment.Left, 101
 	);
 
-    
+	
 	context.subscriptions.push(riotDropDownBoard);
 
 
@@ -165,16 +165,16 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(searchPortsDisposable);
 
 	const changeBoardDisposable = vscode.commands.registerCommand('riot-launcher.changeBoardDevice', async (treeItem : SelectedBoardTreeItem) => {
-	 	if(!treeItem) {
+		if(!treeItem) {
 			vscode.window.showErrorMessage("Please execute this command via RIOT panel.");
 		}
 		const pick : string | undefined = await vscode.window.showQuickPick(boards, {
-	 		title: 'Device configuration',
-	 		placeHolder: 'Select new board for device'
+			title: 'Device configuration',
+			placeHolder: 'Select new board for device'
 		});
 		
 		if(pick) {
-	 		treeItem.changeBoard(pick);
+			treeItem.changeBoard(pick);
 			vscode.window.showInformationMessage(`Changed board of device to: ${pick}`);
 			devicesTreeItemProvider.refresh();
 			const device = treeItem.getDevice();
@@ -189,7 +189,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				configureCompiledCommands(riotBasePath, appPath);
 			}
 
-	 	}
+		}
 	});
 
 	context.subscriptions.push(changeBoardDisposable);
@@ -257,7 +257,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		const foundPorts = await PortDiscoverer.discoverPorts();
 		const portOptions = [
 			{ label: 'None', description: 'No port assigned' },
-    	];
+		];
 		portOptions.push(...foundPorts.map(p => ({ label: p, description: 'Found port' })));
 		portOptions.push({ label: 'Custom...', description: 'Type manually' });
 
@@ -302,7 +302,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// 	var execution : vscode.ShellExecution = new vscode.ShellExecution(cDir + " && " + cDetermineRiot);
 	// 	var task : vscode.Task = new vscode.Task({type: type} , vscode.TaskScope.Workspace,
-    //                 "Set Path", "riot-launcher", execution);
+	//                 "Set Path", "riot-launcher", execution);
 	// 	return task;
 	}
 
