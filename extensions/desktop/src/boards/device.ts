@@ -16,15 +16,11 @@ export class DeviceModel {
 
         private description? : string,
             
-        private appPath?: string
+        private appPath?: string,
+
+        private riotBasePath?: string
     ) {
         const labelStr = `${boardName ?? 'Unknown board'}`;
-        this.portPath = portPath;
-        this.description = description;
-        // this.tooltip = `${boardName ?? 'Board not set'}`; 
-        
-        // this.iconPath = new vscode.ThemeIcon('circuit-board');
-        // this.updateToolTip();
     }
 
     // public setPortPath(newPort : string) {
@@ -80,6 +76,14 @@ export class DeviceModel {
 
     public setAppPath(appPath : string) : void {
         this.appPath = appPath;
+    }
+
+    public getRiotBasePath() : string | undefined {
+        return this.riotBasePath;
+    }
+
+    public setRiotBasePath(riotBasePath : string) : void {
+        this.riotBasePath = riotBasePath;
     }
 
 }

@@ -60,7 +60,6 @@ export async function activate(context: vscode.ExtensionContext) {
 	// The commandId parameter must match the command field in package.json
 
 	const config = vscode.workspace.getConfiguration('riot-launcher');
-	var riotBasePath : string = config.get<string>('riotPath') || '';
 
 	const devicesTreeItemProvider = new DeviceTreeItemProvider();
 	context.subscriptions.push(vscode.window.registerTreeDataProvider('riotView', devicesTreeItemProvider));
@@ -71,30 +70,12 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(addDeviceDisposable);
 
-	const setRiotPathDisposable = vscode.commands.registerCommand('riot-launcher.setRiotPath', async () => {
-		const result = await vscode.window.showOpenDialog({
-			canSelectFiles: false,
-			canSelectFolders: true,
-			canSelectMany: false,
-			openLabel: 'Select RIOT Base Folder'
-		});
-
-		if (result && result.length > 0) {
-			riotBasePath = result[0].fsPath;
-			await config.update('riotPath', riotBasePath, vscode.ConfigurationTarget.Global);
-			vscode.window.showInformationMessage(`Set RIOT Path to: ${riotBasePath}`);
-		}
-		loadBoards().then( (loadedBoards : string[]) => boards = loadedBoards).catch( (_err) => {
-			vscode.window.showErrorMessage("Error loading boards from RIOT Path, using offline boards as fallback.");
-		});
-	});
-
 	const execAsync = util.promisify(exec);
 
-	async function loadBoards(): Promise<string[]> {
+	async function loadBoards(appPath: string): Promise<string[]> {
 		try {
 			const { stdout } = await execAsync(
-				`cd "${riotBasePath}" && make info-boards`
+				`cd "${appPath}" && make info-boards`
 			);
 
 			const boards: string[] = stdout
@@ -186,7 +167,10 @@ export async function activate(context: vscode.ExtensionContext) {
 					return;
 				}
 				vscode.tasks.executeTask(compileTask);
-				configureCompiledCommands(riotBasePath, appPath);
+				const riotBasePath = device.getRiotBasePath();
+				if(riotBasePath) {
+					configureCompiledCommands(riotBasePath, appPath);
+				}
 			}
 
 		}
@@ -209,38 +193,48 @@ export async function activate(context: vscode.ExtensionContext) {
 				const { stdout } = await execAsync(
 					`cd ${appFolderPath} && make info-debug-variable-RIOTBASE`
 				);
-				riotBasePath = stdout.toString().trim();
-				loadBoards().then((loadedBoards : string[]) => boards = loadedBoards);
-				/* Add folder to workspace*/ 
+				const riotBasePath = stdout.toString().trim();
+				loadBoards(appFolderPath).then((loadedBoards : string[]) => boards = loadedBoards);
+
 				const isAlreadyOpen = vscode.workspace.workspaceFolders?.some( 
 					folder => folder.uri.fsPath === appFolderPath
 				);
-				if(!isAlreadyOpen) {
-					vscode.workspace.updateWorkspaceFolders(
+			
+				treeItem.setAppPath(appFolderPath);
+				treeItem.setBasePath(riotBasePath);
+
+				/* Compile commands and configuring IntelliSense */
+				const device = treeItem.getDevice();
+				if(device.getBoardName())	 {
+					if(isAlreadyOpen) {
+						await executeCompileCommandsTask(device);
+					} else {
+						/* Set up event that ensures, compile-commands and configuring IntelliSense is
+						configured subsequentially after opening the workspace folder 
+						... Otherwise leads to a race condition */ 
+						const listener = vscode.workspace.onDidChangeWorkspaceFolders( async (e) => { 
+							const addedFolder = e.added.find(folder => folder.uri.fsPath === appFolderPath);
+							if(addedFolder) {
+								listener.dispose();
+								await executeCompileCommandsTask(device);
+							}
+						});
+					}
+				}
+
+				/* Add folder to workspace*/ 
+				vscode.workspace.updateWorkspaceFolders(
 						vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders.length : 0,
 						0,
 						{ uri: vscode.Uri.file(appFolderPath) }
-					);
-				}
-				treeItem.setAppPath(appFolderPath);
-				/* Compile commands and configuring IntelliSense */
-				const device = treeItem.getDevice();
-				vscode.window.showInformationMessage(`DEBUG: ${device.getBoardName()}`);
-				if(device.getBoardName()) {
-					const compileTask = new VsCodeCompileCommandsTask(appFolderPath, device).getVscodeTask();
-					if(!compileTask) {
-						vscode.window.showErrorMessage("Something went wrong creating the Flash Task");
-						return;
-					}
-					vscode.tasks.executeTask(compileTask);
-					configureCompiledCommands(riotBasePath, appFolderPath);
-				}
+				);
 				devicesTreeItemProvider.refresh();
-				// Include logic of inserting RIOT base folder here in case a nested RIOT example is selected
+				// TODO Include logic of inserting RIOT base folder here in case a nested RIOT example is selected
 			}catch (error) {
 				vscode.window.showErrorMessage(
 					'Error determining RIOT Base Path from Makefile'
 				);
+				console.error(error);
 			}
 		}
 	});
@@ -317,7 +311,23 @@ export async function activate(context: vscode.ExtensionContext) {
 		);
 	}
 
-	async function configureCompiledCommands(riotBasePath : string, appFolderPath : string) {
+	async function executeCompileCommandsTask(device: DeviceModel) {
+		const riotBasePath = device.getRiotBasePath();
+		const appFolderPath = device.getAppPath();
+		if(!appFolderPath || !riotBasePath) {
+			return;
+		}
+		const compileTask = new VsCodeCompileCommandsTask(appFolderPath, device).getVscodeTask();
+		if(!compileTask) {
+			vscode.window.showErrorMessage("Something went wrong creating the Compile Task");
+			return;
+		}
+		vscode.tasks.executeTask(compileTask);
+		await configureCompiledCommands(riotBasePath, appFolderPath);
+	}
+
+	async function configureCompiledCommands(riotBasePath : string, appFolderPath : string) {	
+		
 		const config = vscode.workspace.getConfiguration('C_Cpp', vscode.Uri.file(appFolderPath));
 
 		const compileCommandsPath = path.join(riotBasePath, 'compile_commands.json');
@@ -331,6 +341,8 @@ export async function activate(context: vscode.ExtensionContext) {
 				vscode.ConfigurationTarget.WorkspaceFolder
 			);
 			vscode.window.showInformationMessage("Compiled commands adapted");
+		}else {
+			vscode.window.showInformationMessage("Compiled commands already set");
 		}
 		
 	}

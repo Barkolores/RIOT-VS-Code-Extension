@@ -29,4 +29,8 @@ export class SelectedFolderTreeItem extends vscode.TreeItem{
         this.device.setAppPath(appPath);
     }
 
+    setBasePath(riotBasePath : string) : void {
+        this.device.setRiotBasePath(riotBasePath);
+    }
+
 }
