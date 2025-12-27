@@ -5,6 +5,8 @@ export interface DeviceConfig {
     portPath?: string;
     boardName?: string;
     description?: string;
+    appPath?: string;
+    riotBasePath?: string
 }
 
 export class DeviceModel {
@@ -23,27 +25,18 @@ export class DeviceModel {
         const labelStr = `${boardName ?? 'Unknown board'}`;
     }
 
-    // public setPortPath(newPort : string) {
-    //     this.portPath = newPort;
-    //     this.updateToolTip();
-    // }
-
-    // public setBoard(newBoard : string) {
-    //     this.boardName = newBoard;
-    //     this.label = this.boardName ?? newBoard;  
-    //     this.updateToolTip();
-    // }
-
     public toConfig(): DeviceConfig {
         return {
             portPath: this.portPath,
             boardName: this.boardName,
-            description: this.description
+            description: this.description,
+            appPath: this.appPath,
+            riotBasePath: this.riotBasePath
         };
     }
 
     public static fromConfig(config: DeviceConfig) {
-        return new DeviceModel(config.portPath, config.boardName, config.description);
+        return new DeviceModel(config.portPath, config.boardName, config.description, config.appPath, config.riotBasePath);
     }
 
     public getPortPath() : string | undefined {

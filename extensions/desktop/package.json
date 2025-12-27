@@ -35,16 +35,12 @@
         "title": "RIOT Board Selection"
       },
       {
-        "command": "riot-launcher.setRiotPath",
-        "title": "RIOT Set Path"
-      },
-      {
-        "command": "riot-launcher.setActiveExampleFolder",
-        "title": "RIOT Set Active"
-      },
-      {
         "command": "riot-launcher.detectPorts",
         "title": "RIOT Detect Ports"
+      },
+      {
+        "command": "riot-launcher.changeDescriptionDevice",
+        "title": "Change Device Description"
       },
       {
         "command": "riot-launcher.changeFolderDevice",
@@ -61,8 +57,8 @@
         "icon": "$(circuit)"
       },
       {
-        "command": "riot-launcher.removeDevice",
-        "title": "Delete Device",
+        "command": "riot-launcher.forgetDevice",
+        "title": "Forget Device",
         "icon": "$(trash)"
       },
       {
@@ -121,6 +117,21 @@
           "command": "riot-launcher.riotTerm",
           "when": "view == riotView && viewItem == riot-device",
           "group": "inline"
+        },
+        {
+          "command": "riot-launcher.forgetDevice",
+          "when": "view == riotView && viewItem == riot-device",
+          "group": "1_modification"
+        },
+        {
+          "command": "riot-launcher.forgetDevice",
+          "when": "view == riotView && viewItem == riot-device",
+          "group": "1_modification"
+        },
+        {
+          "command": "riot-launcher.changeDescriptionDevice",
+          "when": "view == riotView && viewItem == riot-device",
+          "group": "1_modification"
         }
       ]
     }

@@ -44,8 +44,16 @@ export class DeviceTreeItemProvider implements vscode.TreeDataProvider<vscode.Tr
         this.refresh();
     }
 
+    removeDevice (deviceItem : DeviceTreeItem) : void {
+        this.deviceItems = this.deviceItems.filter( di => di !== deviceItem);
+        this.refresh();
+    }
+
     refresh() : void {
         this._changeEvent.fire(undefined);
     }
      
+    getDevices() : DeviceModel[] {
+        return this.deviceItems.map( di => di.getDevice());
+    }
 }

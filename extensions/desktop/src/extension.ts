@@ -17,22 +17,25 @@ import { DeviceTreeItem } from './treeView/uiDevice';
 import { SelectedBoardTreeItem } from './treeView/uiSelBoard';
 import { SelectedPortTreeItem } from './treeView/uiSelPort';
 import { SelectedFolderTreeItem } from './treeView/uiSelFolder';
+import { Device } from '../../../shared/types/device';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
-	const FOLDER_DEVICE_CACHE_KEY = 'riot-launcher.folderDeviceMap';
 	const DEVICE_LIST_CACHE_KEY = 'riot-launcher.deviceList';
-
-
-	const storedMap = context.workspaceState.get<Record<string, DeviceConfig>>(FOLDER_DEVICE_CACHE_KEY, {});
-
-
-	// refreshWorkspaceFolderLabels();
-	// decorationProvider.updateState(activeFolderPath, folderDeviceMap);
-
+	
 	const initialDevicesConfig = context.workspaceState.get<DeviceConfig[]>(DEVICE_LIST_CACHE_KEY, []);
-	const initialDevices: DeviceModel[] = initialDevicesConfig.map(d => DeviceModel.fromConfig(d));
+
+	const initialDevices : DeviceModel[] = initialDevicesConfig.map(d => DeviceModel.fromConfig(d));
+	
+	const devicesTreeItemProvider = new DeviceTreeItemProvider(initialDevices);
+	devicesTreeItemProvider.onDidChangeTreeData( () => {
+		const currentDevices = devicesTreeItemProvider.getDevices();
+		const configsToSave = currentDevices.map(d => d.toConfig());
+		context.workspaceState.update(DEVICE_LIST_CACHE_KEY, configsToSave);
+	});
+	context.subscriptions.push(vscode.window.registerTreeDataProvider('riotView', devicesTreeItemProvider));
+
 
 	async function readBundledBoards(): Promise<string[]> {
 		const filePath = path.join(context.extensionPath, 'resources', 'boards.txt');
@@ -47,25 +50,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.StatusBarAlignment.Left, 101
 	);
 
-	
 	context.subscriptions.push(riotDropDownBoard);
 
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "riot-launcher" is now active!');
-
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-
-	const config = vscode.workspace.getConfiguration('riot-launcher');
-
-	const devicesTreeItemProvider = new DeviceTreeItemProvider();
-	context.subscriptions.push(vscode.window.registerTreeDataProvider('riotView', devicesTreeItemProvider));
-
 	const addDeviceDisposable = vscode.commands.registerCommand('riot-launcher.addDevice', async (device : DeviceModel) => {
-		console.log("button pressed");
 		devicesTreeItemProvider.addDevice(new DeviceModel(undefined, undefined, undefined));
 	});
 	context.subscriptions.push(addDeviceDisposable);
@@ -144,6 +132,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 
 	context.subscriptions.push(searchPortsDisposable);
+
 
 	const changeBoardDisposable = vscode.commands.registerCommand('riot-launcher.changeBoardDevice', async (treeItem : SelectedBoardTreeItem) => {
 		if(!treeItem) {
@@ -278,27 +267,29 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 	
 	context.subscriptions.push(changePortDisposable);
-	//TODO
-	async function saveFolderMapState() {
-	// 	const toSave: Record<string, DeviceConfig> = {};
-	
-	// 	for (const entry of folderDeviceMap) {
-	// 		toSave[entry[0]] = entry[1].toConfig();
-	// 	}
 
-	// 	await context.workspaceState.update(FOLDER_DEVICE_CACHE_KEY, toSave);
-	// }
+	const forgetDeviceDisposable = vscode.commands.registerCommand('riot-launcher.forgetDevice', async (d : DeviceTreeItem) => {
+		devicesTreeItemProvider.removeDevice(d);
+		devicesTreeItemProvider.refresh();
+	});
 
-	// async function receiveRiotBasePath() {
-	// 	var type : string 	= "riotTaskProvider";
-	// 	const cDir : string = "cd " + activeFolderPath;
-	// 	const cDetermineRiot : string = "make info-debug-variable-RIOTBASE";
+	const changeDescriptionDisposable = vscode.commands.registerCommand('riot-launcher.changeDescriptionDevice', async (d : DeviceTreeItem) => {
+		if(!d) {
+			vscode.window.showErrorMessage("Please execute this command via RIOT panel.");
+		}
+		const descriptionInput : string | undefined = await vscode.window.showInputBox({
+			title: 'Device configuration',
+			prompt: 'Enter new description for device',
+			value: d.getDesktopDescription()
+		});
+		
+		if(descriptionInput !== undefined) {
+			d.setDescription(descriptionInput);
+			vscode.window.showInformationMessage(`Changed description of device to: ${descriptionInput}`);
+			devicesTreeItemProvider.refresh();
+		}
+	});
 
-	// 	var execution : vscode.ShellExecution = new vscode.ShellExecution(cDir + " && " + cDetermineRiot);
-	// 	var task : vscode.Task = new vscode.Task({type: type} , vscode.TaskScope.Workspace,
-	//                 "Set Path", "riot-launcher", execution);
-	// 	return task;
-	}
 
 	function isSubDirecttory(parent: string, dir : string) : boolean {
 		const parentReal = realpathSync(parent);
