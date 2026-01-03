@@ -18,6 +18,8 @@ import { SelectedBoardTreeItem } from './treeView/uiSelBoard';
 import { SelectedPortTreeItem } from './treeView/uiSelPort';
 import { SelectedFolderTreeItem } from './treeView/uiSelFolder';
 import { Device } from '../../../shared/types/device';
+import { VsCodeRiotDebugTask } from './tasks/VsCodeRiotDebugTask';
+import { VsCodeRiotMakeTask } from './tasks/VsCodeRiotMakeTask';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -119,9 +121,26 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(termDisposable);
 	
-	const debugDisposable = vscode.commands.registerCommand('riot-launcher-riotDebug', (d: DeviceTreeItem) => {
-
+	const debugDisposable = vscode.commands.registerCommand('riot-launcher.riotDebug', (d: DeviceTreeItem) => {
+		if(!d) { return; }
+		const device = d.getDevice();
+		const appPath = device.getAppPath();
+		if(!appPath || !device) {
+			vscode.window.showErrorMessage("Application folder or device not properly selected.");
+			return;
+		}
+		
+		const debugTask = new VsCodeRiotDebugTask(appPath, device).getVscodeTask();
+		if(!debugTask) {
+			vscode.window.showErrorMessage("Something went wrong creating the Debug Task");
+			return;
+		}
+		vscode.tasks.executeTask(debugTask);
+		startDebugging(device);
 	});
+
+
+	context.subscriptions.push(debugDisposable);
 	//TODO
 	const searchPortsDisposable = vscode.commands.registerCommand('riot-launcher.detectPorts', async () => {
 		// const boardRegonizer = new BoardRecognizer (context, boards);
@@ -335,10 +354,81 @@ export async function activate(context: vscode.ExtensionContext) {
 		}else {
 			vscode.window.showInformationMessage("Compiled commands already set");
 		}
-		
+	}
+
+	async function startDebugging(device: DeviceModel) {
+		const appPath = device.getAppPath();
+		const boardName = device.getBoardName() || 'native64';
+		if(!appPath) {
+			vscode.window.showErrorMessage("Application folder not properly selected.");
+			return;
+		}
+		const vscodeFolderPath = path.join(appPath, '.vscode');
+		const launchJsonPath = path.join(vscodeFolderPath, 'launch.json');
+	
+		if(!fs.existsSync(vscodeFolderPath)){
+			await fs.promises.mkdir(vscodeFolderPath, { recursive: true});
+		}
+
+		const appName = path.basename(appPath);
+		const programPath = path.join(`\${workspaceFolder}/bin/${boardName}/${appName}.elf`);
+		const debugConfigName = `RIOT Debug (${boardName})`;
+
+		const launchConfig = {
+			name : debugConfigName,
+			type : 'cppdbg',
+			request : 'launch',
+			program : programPath,
+			args : [],
+			cwd : '${workspaceFolder}',
+			environment : [],
+			MIMode : 'gdb',
+			miDebuggerPath : 'gdb-multiarch',
+			setupCommands : [
+				{
+					description: 'Enable pretty-description for gdb',
+					text: '-enable pretty-printing',
+					ignoreFailures: true
+				},
+				{
+					description: 'Connect to GDB Server explicitely',
+					text: 'target remote localhost:3333',
+					ignoreFailures: false
+				},
+				{
+					description : 'Reset and halt the device',
+					text : 'monitor reset halt',
+					ignoreFailures : false
+				},
+				{
+					description : 'Load Symbols',
+					text: `file ${programPath}`,
+					ignoreFailures : true 
+				}
+			]
+		};
+		let launchConfigs : any = { version : '0.2.0', configurations : [] };
+		if(fs.existsSync(launchJsonPath)) {
+			const launchJsonText = await fs.promises.readFile(launchJsonPath, 'utf8');
+			launchConfigs = JSON.parse(launchJsonText);
+		}	
+		const configExists = launchConfigs.configurations.some( (c : any) => c.name === debugConfigName);
+		if(!configExists) {
+			launchConfigs.configurations.push(launchConfig);
+			await fs.promises.writeFile(launchJsonPath, JSON.stringify(launchConfigs, null, 2));
+			vscode.window.showInformationMessage(`Debug configuration added to ${launchJsonPath}`);
+		}
+		const workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(appPath));
+		if(workspaceFolder) {
+			await vscode.debug.startDebugging(
+				workspaceFolder,
+				debugConfigName
+			);
+		}else {
+			vscode.window.showErrorMessage("Workspace folder for debugging not found");
+		}
 	}
 }
-
 
 // This method is called when your extension is deactivated
 export function deactivate() {}
