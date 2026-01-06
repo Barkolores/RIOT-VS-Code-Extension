@@ -19,8 +19,7 @@ import { SelectedPortTreeItem } from './treeView/uiSelPort';
 import { SelectedFolderTreeItem } from './treeView/uiSelFolder';
 import { Device } from '../../../shared/types/device';
 import { VsCodeRiotDebugTask } from './tasks/VsCodeRiotDebugTask';
-import { VsCodeRiotMakeTask } from './tasks/VsCodeRiotMakeTask';
-
+					
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
@@ -359,6 +358,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	async function startDebugging(device: DeviceModel) {
 		const appPath = device.getAppPath();
 		const boardName = device.getBoardName() || 'native64';
+		const isNative : boolean = boardName.startsWith('native');
 		if(!appPath) {
 			vscode.window.showErrorMessage("Application folder not properly selected.");
 			return;
@@ -383,14 +383,17 @@ export async function activate(context: vscode.ExtensionContext) {
 			cwd : '${workspaceFolder}',
 			environment : [],
 			MIMode : 'gdb',
-			miDebuggerPath : 'gdb-multiarch',
+			miDebuggerPath : isNative ? 'gdb' :'gdb-multiarch',
 			setupCommands : [
 				{
 					description: 'Enable pretty-description for gdb',
 					text: '-enable pretty-printing',
 					ignoreFailures: true
 				},
-				{
+			]
+		};
+		if(!isNative) {
+			launchConfig.setupCommands.push(				{
 					description: 'Connect to GDB Server explicitely',
 					text: 'target remote localhost:3333',
 					ignoreFailures: false
@@ -405,8 +408,8 @@ export async function activate(context: vscode.ExtensionContext) {
 					text: `file ${programPath}`,
 					ignoreFailures : true 
 				}
-			]
-		};
+			);
+		}
 		let launchConfigs : any = { version : '0.2.0', configurations : [] };
 		if(fs.existsSync(launchJsonPath)) {
 			const launchJsonText = await fs.promises.readFile(launchJsonPath, 'utf8');

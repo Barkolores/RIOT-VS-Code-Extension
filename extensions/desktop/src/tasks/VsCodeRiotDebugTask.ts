@@ -12,6 +12,6 @@ export class VsCodeRiotDebugTask extends VsCodeAbstractRiotDeviceTask {
 
     protected getStringMakeCommand(): string {
         return 'make all && make debug-server';
-    }
+    }   
 
 }
