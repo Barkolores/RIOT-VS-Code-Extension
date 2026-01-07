@@ -1,17 +1,16 @@
 import * as vscode from 'vscode';
 import { DeviceModel } from '../boards/device';
+import { FolderTreeItem } from '../../../../shared/types/folderTreeItem';
 
-export class SelectedFolderTreeItem extends vscode.TreeItem{
-
+export class SelectedFolderTreeItem extends FolderTreeItem{
     public constructor (
         private device : DeviceModel
     ) {
         const labelStr = `${device.getAppPath() ?? 'Unknown application path'} `;
-        super(labelStr, vscode.TreeItemCollapsibleState.None);
-        this.contextValue = 'riot-device-folder';
+        super(labelStr, 'riot-device-folder');
         this.command = {
             command: 'riot-launcher.changeFolderDevice',
-            title: 'Change Port',
+            title: 'Change Folder',
             arguments: [this]
         };
 
@@ -33,4 +32,9 @@ export class SelectedFolderTreeItem extends vscode.TreeItem{
         this.device.setRiotBasePath(riotBasePath);
     }
 
+    changeDirectory(param?: object): void {
+        if(param && typeof param === 'string') {
+            this.device.setAppPath(param);
+        }
+    }
 }

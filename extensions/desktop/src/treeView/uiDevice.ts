@@ -2,12 +2,13 @@ import { WorkspaceFolder } from "vscode";
 import { Device } from "../../../../shared/types/device";
 import { DeviceModel } from "../boards/device";
 import * as vscode from 'vscode';
+import { VsCodeRiotFlashTask } from "../tasks/VsCodeRiotFlashTask";
 
 
 export class DeviceTreeItem extends Device {
     public constructor (
         private device : DeviceModel,
-        _updateTreeviewEventEmitter: vscode.EventEmitter<DeviceTreeItem | undefined>
+        _updateTreeviewEventEmitter: vscode.EventEmitter<Device | undefined>
     ){
         const labelStr = `${device.getDescription() ??'New Board'} `;
         super(labelStr, "riot-device", _updateTreeviewEventEmitter);
@@ -19,7 +20,7 @@ export class DeviceTreeItem extends Device {
     }
 
     getDescription(): string[] {
-        throw new Error("Method not implemented.");
+        return [this.device.getDescription() ?? 'New Board'];
     }
 
     getDesktopDescription(): string | undefined {
@@ -31,7 +32,18 @@ export class DeviceTreeItem extends Device {
     }
 
     flash(param?: object): void {
-        throw new Error("Method not implemented.");
+        const device = this.getDevice();
+        const appPath = device.getAppPath();
+        if(!appPath || !device) {
+            vscode.window.showErrorMessage("Application folder or device not properly selected.");
+            return;
+        }
+        const flashTask = new VsCodeRiotFlashTask(appPath, device).getVscodeTask();
+        if(!flashTask) {
+            vscode.window.showErrorMessage("Something went wrong creating the Flash Task");
+            return;
+        }
+        vscode.tasks.executeTask(flashTask);
     }
     
     getDevice() : DeviceModel {

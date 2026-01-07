@@ -31,7 +31,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	
 	const devicesTreeItemProvider = new DeviceTreeItemProvider(initialDevices);
 	devicesTreeItemProvider.onDidChangeTreeData( () => {
-		const currentDevices = devicesTreeItemProvider.getDevices();
+		const currentDevices = devicesTreeItemProvider.getDeviceModels();
 		const configsToSave = currentDevices.map(d => d.toConfig());
 		context.workspaceState.update(DEVICE_LIST_CACHE_KEY, configsToSave);
 	});
@@ -55,7 +55,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 
 	const addDeviceDisposable = vscode.commands.registerCommand('riot-launcher.addDevice', async (device : DeviceModel) => {
-		devicesTreeItemProvider.addDevice(new DeviceModel(undefined, undefined, undefined));
+		devicesTreeItemProvider.addDevice(devicesTreeItemProvider.createDeviceTreeItem(new DeviceModel(undefined, undefined, undefined, undefined)));
 	});
 	context.subscriptions.push(addDeviceDisposable);
 
@@ -86,18 +86,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	
 	const flashDisposable = vscode.commands.registerCommand('riot-launcher.riotFlash', (d : DeviceTreeItem)=> {
 		if(!d) { return; }
-		const device = d.getDevice();
-		const appPath = device.getAppPath();
-		if(!appPath || !device) {
-			vscode.window.showErrorMessage("Application folder or device not properly selected.");
-			return;
-		}
-		const flashTask = new VsCodeRiotFlashTask(appPath, device).getVscodeTask();
-		if(!flashTask) {
-			vscode.window.showErrorMessage("Something went wrong creating the Flash Task");
-			return;
-		}
-		vscode.tasks.executeTask(flashTask);
+		d.flash();
 	});
 
 	context.subscriptions.push(flashDisposable);
