@@ -1,6 +1,9 @@
 {
   "name": "riot-launcher",
-  "displayName": "RIOT Launcher",
+"repository": {
+    "type": "git",
+    "url": "https://github.com/Barkolores/RIOT-VS-Code-Extension.git"
+  },  "displayName": "RIOT Launcher",
   "description": "Through this extension the user will be able to build, flash and enter the RIOT console via the User Interface of VS-Code.",
   "version": "0.0.1",
   "engines": {
@@ -82,7 +85,7 @@
         {
           "id": "riotContainer",
           "title": "RIOT",
-          "icon": "../../shared/assets/icons/riot-logo-R.svg"
+          "icon": "./resources/icon.png"
         }
       ]
     },
