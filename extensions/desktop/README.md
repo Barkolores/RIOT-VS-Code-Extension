@@ -1,71 +1,68 @@
-# riot-launcher README
+# RIOT-Extension README
 
-This is the README for your extension "riot-launcher". After writing up a brief description, we recommend including the following sections.
+This extension aims to facilitate your RIOT-OS workflow by integrating essential make commands directly into the VS Code UI.
+
+**Note**: This is currently a beta version. We appreciate your feedbuck to help us improve the extension before the final release in late February/early March.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+Open the **RIOT-View** by clicking on the RIOT-icon in the activity bar to access the following features:
 
-For example if there is an image subfolder under your extension project workspace:
+0. Adding devices
+    <ul>
+        <li>Click the <b>+-icon</b> to add a new device</li>
+        <li>Select your board from all currently supported RIOT boards via the dropdown menu</li>
+        <li>Select your application folder via the file dialog</li>
+    </ul>
+1. Flashing Applications
+    Once your board and application are configured, hover over the device name and click the **Flash-icon** to build and flash your code.
 
-\!\[feature X\]\(images/feature-x.png\)
+2. Using board's Terminal
+    Click the **Terminal-icon** next to the previously mentioned flash-symbol to communicate via the serial connection.<br>
+    <ul><li>Note: Make sure your application is flashed before opening the terminal</li></ul>
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+3. Recognizing Serial Port that are in Use
+    Used ports are automatically detected and listed in the serial port dropdown menu. You can also manually enter a port or select 'None' if not required (which is mostly the case).
+
+4. Compile Commands and configuring VS-Code's IntelliSense
+    As soon as you select a board and an application, the extension automatically generates compile commands. This allows VS Code to resolve 'includes' and provides full IntelliSense support.
+
+![Demonstration features](resources/extension1.gif)
+
+5. Debug on Native and Embedded
+    You can debug on native (host) or your external board which requires an **On-Chip-Debugger**<br>
+    <ul>
+        <li>Flash the application</li>
+        <li>Set a breakpoint in your code</li>
+        <li>Press the <b>Bug-icon</b> in your tree view</li>
+    </ul>
+    (If debugging fails, please check the **Known Issues** section below.)
+
+6. Saving configured Devices
+    Your set up devices are automatically saved. When you reopen VS Code, your setup will be restored exactly as you left it.
+
+![Demonstration debugger](resources/extension2.gif)
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+OS: Linux or WSL are required since there is no gurantee that **make** or **gdb-multiarch** works on Windows installations.
+
+The C/C++-Extension from Microsoft is also required.
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+There are no particular extension settings you have to adjust so far.
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+This is just a beta version and some features, especially the debugger, work on bleeding edge.
+
+1. 'Compile-commands' only works for one device simultaniously. It executes automatically when a device's applicationa and board are configured. We plan to add an additional button for this in the future.
+
+2. If you stop debugging without using the **Stop**-button (red squre or Shift + F5), the OpenOCD server might keep running as a zombie process in the background which prevents new debug sessions. To fix this, please run **pkill openocd** or **killall openocd** in your terminal.
+3. Sometimes the extension fails to detect the required **.ELF**-file if the name varies from the expected one. You can manually fix the path in the generated **.vscode/launch.json** file according to the actual file name under **bin/your-board/debug-file.elf**.
+
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+The official release is planned in a couple months. Until then we are grateful for everyone using and testing the features and sharing your feedback on GitHub or the RIOT forum. Please let us know if you are missing some features or come up with other ideas that could be covered by this extension. This is vital for providing the best experience for RIOT veterans and newcomers!
