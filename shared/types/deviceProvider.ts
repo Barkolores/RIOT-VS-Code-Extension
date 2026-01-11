@@ -9,6 +9,7 @@ export abstract class DeviceProvider implements vscode.TreeDataProvider<vscode.T
     constructor(
         devices? : Device[]
     ) {
+        this.onDidChangeTreeData = this._changeEvent.event;
         this.devices = devices ?? [];
     }
 

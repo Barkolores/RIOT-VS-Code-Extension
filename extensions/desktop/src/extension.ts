@@ -37,6 +37,19 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(vscode.window.registerTreeDataProvider('riotView', devicesTreeItemProvider));
 
+	let currentDebugServerTaskExecution : vscode.TaskExecution | undefined = undefined;
+
+	context.subscriptions.push(vscode.debug.onDidTerminateDebugSession( (session) =>{
+		if(session.name.startsWith('RIOT Debug') && currentDebugServerTaskExecution) {
+			try {
+				currentDebugServerTaskExecution.terminate();
+				vscode.window.showInformationMessage("Debug server task terminated.");
+			}catch (error) {
+				console.error("Error terminating debug server task: ", error);
+			}
+			currentDebugServerTaskExecution = undefined;
+		}
+	}));
 
 	async function readBundledBoards(): Promise<string[]> {
 		const filePath = path.join(context.extensionPath, 'resources', 'boards.txt');
@@ -109,7 +122,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(termDisposable);
 	
-	const debugDisposable = vscode.commands.registerCommand('riot-launcher.riotDebug', (d: DeviceTreeItem) => {
+	const debugDisposable = vscode.commands.registerCommand('riot-launcher.riotDebug', async (d: DeviceTreeItem) => {
 		if(!d) { return; }
 		const device = d.getDevice();
 		const appPath = device.getAppPath();
@@ -123,8 +136,12 @@ export async function activate(context: vscode.ExtensionContext) {
 			vscode.window.showErrorMessage("Something went wrong creating the Debug Task");
 			return;
 		}
-		vscode.tasks.executeTask(debugTask);
-		startDebugging(device);
+		try {
+			currentDebugServerTaskExecution = await vscode.tasks.executeTask(debugTask);
+			startDebugging(device);
+		} catch (error) {
+			vscode.window.showErrorMessage("Error starting debug task: " + error);
+		}
 	});
 
 
