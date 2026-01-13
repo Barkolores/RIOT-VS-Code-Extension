@@ -9,6 +9,8 @@ import { Device } from '../../../../shared/types/device';
 
 export class DeviceTreeItemProvider extends DeviceProvider{
 
+    private activeDevice : DeviceModel | undefined;
+
     constructor(
         devices? : DeviceModel[]
     ) {
@@ -18,10 +20,27 @@ export class DeviceTreeItemProvider extends DeviceProvider{
         ) : [];
     }
 
-        
+    setActiveDevice(device : DeviceModel | undefined) : void {
+        this.activeDevice = device;
+
+        if(this.devices) {
+            this.devices.forEach( d => {
+                if(d instanceof DeviceTreeItem) {
+                    const isItemActive = d.getDevice() === this.activeDevice;
+                    d.setActiveState(isItemActive);
+                }
+            });
+        }
+        this.refresh();
+    }
+
+    getActiveDevice() : DeviceModel | undefined {
+        return this.activeDevice;
+    }
 
     createDeviceTreeItem(deviceModel: DeviceModel): DeviceTreeItem {
-        return new DeviceTreeItem(deviceModel, this._changeEvent);
+        const isActive = this.activeDevice === deviceModel;
+        return new DeviceTreeItem(deviceModel, this._changeEvent, isActive);
     }
 
     getTreeItem(element: vscode.TreeItem): vscode.TreeItem | Thenable<vscode.TreeItem> {

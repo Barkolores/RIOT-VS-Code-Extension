@@ -19,23 +19,43 @@ import { SelectedPortTreeItem } from './treeView/uiSelPort';
 import { SelectedFolderTreeItem } from './treeView/uiSelFolder';
 import { Device } from '../../../shared/types/device';
 import { VsCodeRiotDebugTask } from './tasks/VsCodeRiotDebugTask';
+import { RiotFileDecorationProvider } from './treeView/uiFileDecorationProvider';
 					
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
 	const DEVICE_LIST_CACHE_KEY = 'riot-launcher.deviceList';
-	
+	const ACTIVE_DEVICE_CACHE_KEY = 'riot-launcher.activeDevice';
+
 	const initialDevicesConfig = context.workspaceState.get<DeviceConfig[]>(DEVICE_LIST_CACHE_KEY, []	);
+	const activeDeviceConfig = context.workspaceState.get<DeviceConfig | undefined>(ACTIVE_DEVICE_CACHE_KEY, undefined);
 
 	const initialDevices : DeviceModel[] = initialDevicesConfig.map(d => DeviceModel.fromConfig(d));
-	
+
 	const devicesTreeItemProvider = new DeviceTreeItemProvider(initialDevices);
 	devicesTreeItemProvider.onDidChangeTreeData( () => {
 		const currentDevices = devicesTreeItemProvider.getDeviceModels();
 		const configsToSave = currentDevices.map(d => d.toConfig());
 		context.workspaceState.update(DEVICE_LIST_CACHE_KEY, configsToSave);
 	});
+
+	const colorProvider = new RiotFileDecorationProvider();
+
+	if(activeDeviceConfig) {
+		const matchedDevice = initialDevices.find( d => 
+			d.getAppPath()?.fsPath === activeDeviceConfig.appPath &&
+			d.getBoardName() === activeDeviceConfig.boardName &&
+			d.getPortPath() === activeDeviceConfig.portPath
+		);
+		if(matchedDevice) {
+			devicesTreeItemProvider.setActiveDevice(matchedDevice);
+			colorProvider.updateActiveUri(matchedDevice);
+		}
+	}
+
 	context.subscriptions.push(vscode.window.registerTreeDataProvider('riotView', devicesTreeItemProvider));
+
+	context.subscriptions.push(vscode.window.registerFileDecorationProvider(colorProvider));
 
 	let currentDebugServerTaskExecution : vscode.TaskExecution | undefined = undefined;
 
@@ -172,19 +192,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			devicesTreeItemProvider.refresh();
 			const device = treeItem.getDevice();
 			const appPath = device.getAppPath();
-			if(appPath) {
-				const compileTask = new VsCodeCompileCommandsTask(appPath.fsPath, treeItem.getDevice()).getVscodeTask();
-				if(!compileTask) {
-					vscode.window.showErrorMessage("Something went wrong creating the Flash Task");
-					return;
-				}
-				vscode.tasks.executeTask(compileTask);
-				const riotBasePath = device.getRiotBasePath();
-				if(riotBasePath) {
-					configureCompiledCommands(riotBasePath.fsPath, appPath.fsPath);
-				}
-			}
-
+			executeCompileCommandsTask(device);
 		}
 	});
 
@@ -338,6 +346,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 		vscode.tasks.executeTask(compileTask);
 		await configureCompiledCommands(riotBasePath.fsPath, appFolderPath.fsPath);
+	
+		devicesTreeItemProvider.setActiveDevice(device);
+		colorProvider.updateActiveUri(device);
+		context.workspaceState.update(ACTIVE_DEVICE_CACHE_KEY, device.toConfig());
 	}
 
 	async function configureCompiledCommands(riotBasePath : string, appFolderPath : string) {	

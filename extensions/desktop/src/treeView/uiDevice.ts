@@ -6,17 +6,25 @@ import { VsCodeRiotFlashTask } from "../tasks/VsCodeRiotFlashTask";
 
 
 export class DeviceTreeItem extends Device {
+
     public constructor (
         private device : DeviceModel,
-        _updateTreeviewEventEmitter: vscode.EventEmitter<Device | undefined>
+        _updateTreeviewEventEmitter: vscode.EventEmitter<Device | undefined>,
+        private isActive: boolean = false
     ){
-        const labelStr = `${device.getDescription() ??'New Board'} `;
+        const labelStr = `${device.getDescription() ??'New Board'} ${isActive ? '(active)' : ''}`;
         super(labelStr, "riot-device", _updateTreeviewEventEmitter);
     }
 
-    private updateToolTip() {
+    public setActiveState(isActive: boolean) : void {
+        this.isActive = isActive;
+        this.updateAppearance();
+    }
+
+    private updateAppearance() {
         this.tooltip = `${this.device.getBoardName() ?? 'Unknown board'} at ${this.device.getPortPath() ?? 'unknown port'}`;
         this.label = `${this.device.getDescription() ?? 'New Board'}`;
+        this.description = this.isActive ? ' (Active)' : '';
     }
 
     getDescription(): string[] {
@@ -52,7 +60,7 @@ export class DeviceTreeItem extends Device {
 
     setDescription(description : string) : void {
         this.device.setDescription(description);
-        this.updateToolTip();
+        this.updateAppearance();
     }
         
 
