@@ -23,12 +23,12 @@
       },
       {
         "command": "riot-web-extension.device.remove",
-        "title": "Remove",
+        "title": "Remove Device",
         "icon": "$(close)"
       },
       {
         "command": "riot-web-extension.device.rename",
-        "title": "Rename",
+        "title": "Rename Label",
         "icon": "$(pencil)"
       },
       {
@@ -133,12 +133,14 @@
       ],
       "view/item/context": [
         {
-          "command": "riot-web-extension.device.remove",
-          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != boardItem && viewItem != folderItem && viewItem != portItem"
+          "command": "riot-web-extension.device.rename",
+          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != boardItem && viewItem != folderItem && viewItem != portItem",
+          "group": "dummy@1"
         },
         {
-          "command": "riot-web-extension.device.rename",
-          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != boardItem && viewItem != folderItem && viewItem != portItem"
+          "command": "riot-web-extension.device.remove",
+          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != boardItem && viewItem != folderItem && viewItem != portItem",
+          "group": "dummy@2"
         },
         {
           "command": "riot-web-extension.device.term",
