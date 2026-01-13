@@ -1,4 +1,4 @@
-import vscode from "vscode";
+import vscode, { Uri } from "vscode";
 
 
 export interface DeviceConfig {
@@ -18,25 +18,25 @@ export class DeviceModel {
 
         private description? : string,
             
-        private appPath?: string,
+        private appPath?: vscode.Uri,
 
-        private riotBasePath?: string
-    ) {
-        const labelStr = `${boardName ?? 'Unknown board'}`;
-    }
+        private riotBasePath?: vscode.Uri
+    ) {}
 
     public toConfig(): DeviceConfig {
         return {
             portPath: this.portPath,
             boardName: this.boardName,
             description: this.description,
-            appPath: this.appPath,
-            riotBasePath: this.riotBasePath
+            appPath: this.appPath?.fsPath,
+            riotBasePath: this.riotBasePath?.fsPath
         };
     }
 
     public static fromConfig(config: DeviceConfig) {
-        return new DeviceModel(config.portPath, config.boardName, config.description, config.appPath, config.riotBasePath);
+        const appUri = config.appPath ? Uri.file(config.appPath) : undefined;
+        const riotBaseUri = config.riotBasePath ? Uri.file(config.riotBasePath) : undefined;
+        return new DeviceModel(config.portPath, config.boardName, config.description, appUri, riotBaseUri);
     }
 
     public getPortPath() : string | undefined {
@@ -51,7 +51,7 @@ export class DeviceModel {
         return this.description;
     }
 
-    public getAppPath() : string | undefined {
+    public getAppPath() : Uri | undefined {
         return this.appPath;
     }
 
@@ -67,15 +67,15 @@ export class DeviceModel {
         this.description = description;
     }
 
-    public setAppPath(appPath : string) : void {
+    public setAppPath(appPath : Uri) : void {
         this.appPath = appPath;
     }
 
-    public getRiotBasePath() : string | undefined {
+    public getRiotBasePath() : Uri | undefined {
         return this.riotBasePath;
     }
 
-    public setRiotBasePath(riotBasePath : string) : void {
+    public setRiotBasePath(riotBasePath : Uri) : void {
         this.riotBasePath = riotBasePath;
     }
 

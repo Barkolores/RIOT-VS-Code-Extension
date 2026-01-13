@@ -38,7 +38,7 @@ export class DeviceTreeItem extends Device {
             vscode.window.showErrorMessage("Application folder or device not properly selected.");
             return;
         }
-        const flashTask = new VsCodeRiotFlashTask(appPath, device).getVscodeTask();
+        const flashTask = new VsCodeRiotFlashTask(appPath.fsPath, device).getVscodeTask();
         if(!flashTask) {
             vscode.window.showErrorMessage("Something went wrong creating the Flash Task");
             return;

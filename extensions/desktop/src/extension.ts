@@ -25,7 +25,7 @@ import { VsCodeRiotDebugTask } from './tasks/VsCodeRiotDebugTask';
 export async function activate(context: vscode.ExtensionContext) {
 	const DEVICE_LIST_CACHE_KEY = 'riot-launcher.deviceList';
 	
-	const initialDevicesConfig = context.workspaceState.get<DeviceConfig[]>(DEVICE_LIST_CACHE_KEY, []);
+	const initialDevicesConfig = context.workspaceState.get<DeviceConfig[]>(DEVICE_LIST_CACHE_KEY, []	);
 
 	const initialDevices : DeviceModel[] = initialDevicesConfig.map(d => DeviceModel.fromConfig(d));
 	
@@ -52,20 +52,19 @@ export async function activate(context: vscode.ExtensionContext) {
 	}));
 
 	async function readBundledBoards(): Promise<string[]> {
-		const filePath = path.join(context.extensionPath, 'resources', 'boards.txt');
-		const text : string = await fs.promises.readFile(filePath, 'utf8');
+		const fileUri = vscode.Uri.joinPath(context.extensionUri, 'resources', 'boards.txt');
+		const text : string = await fs.promises.readFile(fileUri.fsPath, 'utf8');
 		console.log("read boards " + text);
 		return text.split('\n').filter(line => line.length > 0);
 	}
 
-	let boards : string[] = await readBundledBoards().catch<string[]>( (_err) => ['adafruit-feather-nrf52840-sense'] );
+	let boards : string[] = await readBundledBoards().catch<string[]>( (_err) => ['native64'] );
 
 	const riotDropDownBoard = vscode.window.createStatusBarItem(
 		vscode.StatusBarAlignment.Left, 101
 	);
 
 	context.subscriptions.push(riotDropDownBoard);
-
 
 	const addDeviceDisposable = vscode.commands.registerCommand('riot-launcher.addDevice', async (device : DeviceModel) => {
 		devicesTreeItemProvider.addDevice(devicesTreeItemProvider.createDeviceTreeItem(new DeviceModel(undefined, undefined, undefined, undefined)));
@@ -74,10 +73,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	const execAsync = util.promisify(exec);
 
-	async function loadBoards(appPath: string): Promise<string[]> {
+	async function loadBoards(appPath: vscode.Uri): Promise<string[]> {
 		try {
 			const { stdout } = await execAsync(
-				`cd "${appPath}" && make info-boards`
+				`cd "${appPath.fsPath}" && make info-boards`
 			);
 
 			const boards: string[] = stdout
@@ -112,7 +111,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			vscode.window.showErrorMessage("Application folder or device not properly selected.");
 			return;
 		}
-		const termTask = new VsCodeRiotTermTask(appPath, device).getVscodeTask();
+		const termTask = new VsCodeRiotTermTask(appPath.fsPath, device).getVscodeTask();
 		if(!termTask) {
 			vscode.window.showErrorMessage("Something went wrong creating the Flash Task");
 			return;
@@ -131,7 +130,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 		
-		const debugTask = new VsCodeRiotDebugTask(appPath, device).getVscodeTask();
+		const debugTask = new VsCodeRiotDebugTask(appPath.fsPath, device).getVscodeTask();
 		if(!debugTask) {
 			vscode.window.showErrorMessage("Something went wrong creating the Debug Task");
 			return;
@@ -174,7 +173,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			const device = treeItem.getDevice();
 			const appPath = device.getAppPath();
 			if(appPath) {
-				const compileTask = new VsCodeCompileCommandsTask(appPath, treeItem.getDevice()).getVscodeTask();
+				const compileTask = new VsCodeCompileCommandsTask(appPath.fsPath, treeItem.getDevice()).getVscodeTask();
 				if(!compileTask) {
 					vscode.window.showErrorMessage("Something went wrong creating the Flash Task");
 					return;
@@ -182,7 +181,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				vscode.tasks.executeTask(compileTask);
 				const riotBasePath = device.getRiotBasePath();
 				if(riotBasePath) {
-					configureCompiledCommands(riotBasePath, appPath);
+					configureCompiledCommands(riotBasePath.fsPath, appPath.fsPath);
 				}
 			}
 
@@ -200,22 +199,23 @@ export async function activate(context: vscode.ExtensionContext) {
 		});
 
 		if (result && result.length > 0) {
-			const appFolderPath = result[0].fsPath;
-			vscode.window.showInformationMessage(`Selected Example Folder: ${appFolderPath}`);
+			const appFolderUri = result[0];
+			vscode.window.showInformationMessage(`Selected Example Folder: ${appFolderUri}`);
 			try {
 				const { stdout } = await execAsync(
-					`cd ${appFolderPath} && make info-debug-variable-RIOTBASE`
+					`cd ${appFolderUri.fsPath} && make info-debug-variable-RIOTBASE`
 				);
-				const riotBasePath = stdout.toString().trim();
-				loadBoards(appFolderPath).then((loadedBoards : string[]) => boards = loadedBoards);
+				const riotBasePath = vscode.Uri.file(stdout.toString().trim());
+				loadBoards(appFolderUri).then((loadedBoards : string[]) => boards = loadedBoards);
 
 				const isAlreadyOpen = vscode.workspace.workspaceFolders?.some( 
-					folder => folder.uri.fsPath === appFolderPath
+					folder => folder.uri.fsPath === appFolderUri.fsPath
 				);
 			
-				treeItem.setAppPath(appFolderPath);
+				treeItem.setAppPath(appFolderUri);
 				treeItem.setBasePath(riotBasePath);
-
+				
+				devicesTreeItemProvider.refresh();
 				/* Compile commands and configuring IntelliSense */
 				const device = treeItem.getDevice();
 				if(device.getBoardName())	 {
@@ -226,7 +226,7 @@ export async function activate(context: vscode.ExtensionContext) {
 						configured subsequentially after opening the workspace folder 
 						... Otherwise leads to a race condition */ 
 						const listener = vscode.workspace.onDidChangeWorkspaceFolders( async (e) => { 
-							const addedFolder = e.added.find(folder => folder.uri.fsPath === appFolderPath);
+							const addedFolder = e.added.find(folder => folder.uri === appFolderUri);
 							if(addedFolder) {
 								listener.dispose();
 								await executeCompileCommandsTask(device);
@@ -239,9 +239,8 @@ export async function activate(context: vscode.ExtensionContext) {
 				vscode.workspace.updateWorkspaceFolders(
 						vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders.length : 0,
 						0,
-						{ uri: vscode.Uri.file(appFolderPath) }
+						{ uri: appFolderUri }
 				);
-				devicesTreeItemProvider.refresh();
 				// TODO Include logic of inserting RIOT base folder here in case a nested RIOT example is selected
 			}catch (error) {
 				vscode.window.showErrorMessage(
@@ -332,13 +331,13 @@ export async function activate(context: vscode.ExtensionContext) {
 		if(!appFolderPath || !riotBasePath) {
 			return;
 		}
-		const compileTask = new VsCodeCompileCommandsTask(appFolderPath, device).getVscodeTask();
+		const compileTask = new VsCodeCompileCommandsTask(appFolderPath.fsPath, device).getVscodeTask();
 		if(!compileTask) {
 			vscode.window.showErrorMessage("Something went wrong creating the Compile Task");
 			return;
 		}
 		vscode.tasks.executeTask(compileTask);
-		await configureCompiledCommands(riotBasePath, appFolderPath);
+		await configureCompiledCommands(riotBasePath.fsPath, appFolderPath.fsPath);
 	}
 
 	async function configureCompiledCommands(riotBasePath : string, appFolderPath : string) {	
@@ -369,14 +368,15 @@ export async function activate(context: vscode.ExtensionContext) {
 			vscode.window.showErrorMessage("Application folder not properly selected.");
 			return;
 		}
-		const vscodeFolderPath = path.join(appPath, '.vscode');
-		const launchJsonPath = path.join(vscodeFolderPath, 'launch.json');
+
+		const vscodeFolderUri = vscode.Uri.joinPath(appPath, '.vscode');
+		const launchJsonUri = vscode.Uri.joinPath(vscodeFolderUri, 'launch.json');
 	
-		if(!fs.existsSync(vscodeFolderPath)){
-			await fs.promises.mkdir(vscodeFolderPath, { recursive: true});
+		if(!fs.existsSync(vscodeFolderUri.fsPath)) {
+			await fs.promises.mkdir(vscodeFolderUri.fsPath, { recursive: true});
 		}
 
-		const appName = path.basename(appPath);
+		const appName = path.basename(appPath.fsPath);
 		const programPath = path.join(`\${workspaceFolder}/bin/${boardName}/${appName}.elf`);
 		const debugConfigName = `RIOT Debug (${boardName})`;
 
@@ -417,17 +417,17 @@ export async function activate(context: vscode.ExtensionContext) {
 			);
 		}
 		let launchConfigs : any = { version : '0.2.0', configurations : [] };
-		if(fs.existsSync(launchJsonPath)) {
-			const launchJsonText = await fs.promises.readFile(launchJsonPath, 'utf8');
+		if(fs.existsSync(launchJsonUri.fsPath)) {
+			const launchJsonText = await fs.promises.readFile(launchJsonUri.fsPath, 'utf8');
 			launchConfigs = JSON.parse(launchJsonText);
 		}	
 		const configExists = launchConfigs.configurations.some( (c : any) => c.name === debugConfigName);
 		if(!configExists) {
 			launchConfigs.configurations.push(launchConfig);
-			await fs.promises.writeFile(launchJsonPath, JSON.stringify(launchConfigs, null, 2));
-			vscode.window.showInformationMessage(`Debug configuration added to ${launchJsonPath}`);
+			await fs.promises.writeFile(launchJsonUri.fsPath, JSON.stringify(launchConfigs, null, 2));
+			vscode.window.showInformationMessage(`Debug configuration added to ${launchJsonUri.fsPath}`);
 		}
-		const workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(appPath));
+		const workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(appPath.fsPath));
 		if(workspaceFolder) {
 			await vscode.debug.startDebugging(
 				workspaceFolder,
