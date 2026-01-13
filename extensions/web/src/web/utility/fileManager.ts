@@ -1,6 +1,6 @@
 import vscode from "vscode";
 
-export class FileProvider {
+export class FileManager {
 
     async loadBinary(file: vscode.Uri): Promise<string> {
         return new Promise(
@@ -32,5 +32,11 @@ export class FileProvider {
                 );
             }
         );
+    }
+
+    async readBundledBoards(uri: vscode.Uri): Promise<string[]> {
+        const fileUri = vscode.Uri.joinPath(uri, 'dist', 'boards.txt');
+        const text = await vscode.workspace.fs.readFile(fileUri);
+        return new TextDecoder().decode(text).split('\n').filter(line => line.length > 0);
     }
 }

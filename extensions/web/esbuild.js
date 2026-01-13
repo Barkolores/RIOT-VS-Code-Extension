@@ -63,7 +63,6 @@ function getWebBuildOptions() {
         entryPoints: [
 			'src/web/extension.ts',
 			'src/web/test/suite/extensionTests.ts',
-            'src/web/webviews/*'
 		],
         bundle: true,
 		format: 'cjs',
@@ -93,6 +92,14 @@ function getWebBuildOptions() {
                 },
                 watch: true,
             }),
+			copy({
+				resolveFrom: 'cwd',
+				assets: {
+					from: ['../../shared/boards.txt'],
+					to: ['./dist/boards.txt'],
+				},
+				watch: true,
+			}),
 		],
 	};
 }

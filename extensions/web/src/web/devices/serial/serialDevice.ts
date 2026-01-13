@@ -1,7 +1,8 @@
 import vscode from "vscode";
-import {WebDevice} from "./webDevice";
+import {WebDevice} from "../webDevice";
 import {ESPLoader, type FlashOptions, type LoaderOptions, Transport} from "esptool-js";
-import {type RiotTerminal} from "../providers/terminalProvider";
+import {WebSocketManager} from "../../websocket/webSocketManager";
+import {DeviceTreeItem} from "shared/ui/treeItems/deviceTreeItem";
 
 export class SerialDevice extends WebDevice {
 
@@ -11,31 +12,27 @@ export class SerialDevice extends WebDevice {
     private _transport?: Transport;
 
     constructor(
-        port: SerialPort,
+        webPort: SerialPort,
         contextValue: string,
-        id: number,
-        eventEmitter: vscode.EventEmitter<WebDevice | undefined>,
+        label: string,
+        eventEmitter: vscode.EventEmitter<DeviceTreeItem | undefined>,
     ) {
-        super(port, 'Device ' + id, contextValue, eventEmitter);
-    }
-    getDescription(): string[] {
-        const port = this._port as SerialPort;
-        return [
+        super(webPort, label, contextValue, eventEmitter);
+        this._description = [
             'Status: ' + (this._flashing ? 'Flashing' : (this._open ? 'Connection open' : 'Connection closed')),
-            'CurrentWorkingDirectory: ' + (this.activeProject ? this.activeProject.name : 'Not specified'),
-            'USBVendorID: ' + port.getInfo().usbVendorId,
-            'USBProductID: ' + port.getInfo().usbProductId,
-            'BluetoothServiceClassID: ' + (port.getInfo().bluetoothServiceClassId ? port.getInfo().bluetoothServiceClassId : 'Not specified'),
+            'CurrentWorkingDirectory: ' + (this._activeProject ? this._activeProject.name : 'Not specified'),
+            'USBVendorID: ' + webPort.getInfo().usbVendorId,
+            'USBProductID: ' + webPort.getInfo().usbProductId,
+            'BluetoothServiceClassID: ' + (webPort.getInfo().bluetoothServiceClassId ? webPort.getInfo().bluetoothServiceClassId : 'Not specified'),
         ];
     }
 
-
-    comparePort(port: SerialPort): boolean {
-        return port === this._port;
+    comparePort(webPort: SerialPort): boolean {
+        return webPort === this._webPort;
     }
     async open(param: SerialOptions): Promise<void> {
         if (!this._open) {
-            await this._port.open(param).then(() => {
+            await this._webPort.open(param).then(() => {
                 console.log('Connected to ' + this.label);
                 this._open = true;
                 this.updateTreeview();
@@ -54,7 +51,7 @@ export class SerialDevice extends WebDevice {
             this._readableStreamClosed = undefined;
         }
         if (this._open) {
-            return this._port.close().then(() => {
+            return this._webPort.close().then(() => {
                 console.log('Connection to ' + this.label + ' closed');
                 this._open = false;
                 this.updateTreeview();
@@ -69,18 +66,18 @@ export class SerialDevice extends WebDevice {
     }
     forget(): void {
         this.close();
-        this._port.forget().then(() => console.log('Forgot ' + this.label));
+        this._webPort.forget().then(() => console.log('Forgot ' + this.label));
     }
-    async read(terminal: RiotTerminal): Promise<void> {
+    async read(webSocketManager: WebSocketManager): Promise<void> {
         if (this._open) {
             const decoder = new TextDecoderStream();
             //@ts-ignore
-            this._readableStreamClosed = this._port.readable?.pipeTo(decoder.writable);
+            this._readableStreamClosed = this._webPort.readable?.pipeTo(decoder.writable);
             this._reader = decoder.readable.getReader();
             while (true) {
                 const {value, done} = await this._reader.read();
                 if (value) {
-                    terminal.postMessage(this.contextValue, value);
+                    webSocketManager.postMessage(value);
                 }
                 if (done || !value) {
                     this._reader.releaseLock();
@@ -91,7 +88,7 @@ export class SerialDevice extends WebDevice {
     }
     write(message: string): void {
         if (this._open) {
-            const writer = (this._port as SerialPort).writable?.getWriter();
+            const writer = (this._webPort as SerialPort).writable?.getWriter();
             if (writer === undefined) {
                 return;
             }
@@ -106,7 +103,7 @@ export class SerialDevice extends WebDevice {
         if (!this._open) {
             this._flashing = true;
             this.updateTreeview();
-            options.loaderOptions.transport = new Transport(this._port as SerialPort);
+            options.loaderOptions.transport = new Transport(this._webPort as SerialPort);
             const espLoader: ESPLoader = new ESPLoader(options.loaderOptions);
             await espLoader.main().then(value => console.log(value)).catch(e => console.error(e));
             await espLoader.writeFlash(options.flashOptions).then(() => console.log('Programming Done')).catch(e => console.error(e));
@@ -120,6 +117,6 @@ export class SerialDevice extends WebDevice {
         if (this._transport) {
             return this._transport;
         }
-        return new Transport(this._port as SerialPort);
+        return new Transport(this._webPort as SerialPort);
     }
 }
