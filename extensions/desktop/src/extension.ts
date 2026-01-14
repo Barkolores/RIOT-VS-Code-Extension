@@ -304,6 +304,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		devicesTreeItemProvider.refresh();
 	});
 
+	const setDeviceActiveDisposable = vscode.commands.registerCommand('riot-launcher.setActive', async (d : DeviceTreeItem) => {
+		executeCompileCommandsTask(d.getDevice());
+	});
+
 	const changeDescriptionDisposable = vscode.commands.registerCommand('riot-launcher.changeDescriptionDevice', async (d : DeviceTreeItem) => {
 		if(!d) {
 			vscode.window.showErrorMessage("Please execute this command via RIOT panel.");

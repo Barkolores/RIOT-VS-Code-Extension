@@ -68,6 +68,10 @@
         "command": "riot-launcher.addDevice",
         "title": "Add Device",
         "icon": "$(plus)"
+      },
+      {
+        "command": "riot-launcher.setActive",
+        "title": "Set Active"
       }
     ],
     "configuration": {
@@ -127,12 +131,12 @@
           "group": "1_modification"
         },
         {
-          "command": "riot-launcher.forgetDevice",
+          "command": "riot-launcher.changeDescriptionDevice",
           "when": "view == riotView && viewItem == riot-device",
           "group": "1_modification"
         },
         {
-          "command": "riot-launcher.changeDescriptionDevice",
+          "command": "riot-launcher.setActive",
           "when": "view == riotView && viewItem == riot-device",
           "group": "1_modification"
         }
