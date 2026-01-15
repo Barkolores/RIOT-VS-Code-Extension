@@ -6,7 +6,7 @@ import {WebSocketManager} from "./websocket/webSocketManager";
 import {FolderTreeItem} from "shared/ui/treeItems/folderTreeItem";
 import {BoardTreeItem} from "shared/ui/treeItems/boardTreeItem";
 import {FileManager} from "./utility/fileManager";
-import {BoardTypes} from "../../../../shared/ui/boardTypes";
+import {BoardTypes} from "shared/ui/boardTypes";
 
 export function activate(context: vscode.ExtensionContext) {
 
