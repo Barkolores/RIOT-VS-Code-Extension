@@ -18,35 +18,38 @@
     "commands": [
       {
         "command": "riot-web-extension.device.add",
-        "title": "Add Serial Device",
+        "title": "Add device",
         "icon": "$(add)"
       },
       {
-        "command": "riot-web-extension.device.flash",
-        "title": "Flash Serial Device"
+        "command": "riot-web-extension.device.remove",
+        "title": "Remove Device",
+        "icon": "$(close)"
       },
       {
-        "command": "riot-web-extension.device.remove",
-        "title": "Remove Serial Device"
+        "command": "riot-web-extension.device.rename",
+        "title": "Rename Label",
+        "icon": "$(pencil)"
       },
       {
         "command": "riot-web-extension.device.selectProject",
-        "title": "Select Device Project",
+        "title": "Select active project",
         "icon": "$(folder)"
       },
       {
-        "command": "riot-web-extension.terminal.openTab",
-        "title": "Open Tab",
+        "command": "riot-web-extension.device.selectBoard",
+        "title": "Select board",
+        "icon": "$(circuit-board)"
+      },
+      {
+        "command": "riot-web-extension.device.term",
+        "title": "Open Terminal",
         "icon": "$(terminal)"
       },
       {
-        "command": "riot-web-extension.terminal.clear",
-        "title": "Clear Terminal"
-      },
-      {
-        "command": "riot-web-extension.terminal.closeTab",
-        "title": "Close Tab",
-        "icon": "$(close)"
+        "command": "riot-web-extension.device.flash",
+        "title": "Flash Device",
+        "icon": "$(zap)"
       },
       {
         "command": "riot-web-extension.websocket.open",
@@ -56,7 +59,7 @@
       {
         "command": "riot-web-extension.websocket.close",
         "title": "Close Websocket",
-        "icon": "$(stop)"
+        "icon": "$(close)"
       }
     ],
     "viewsContainers": {
@@ -64,13 +67,6 @@
         {
           "id": "riot-sidebar",
           "title": "RIOT",
-          "icon": "dist/assets/icons/riot-logo-R.svg"
-        }
-      ],
-      "panel": [
-        {
-          "id": "riot-panel",
-          "title": "RIOT Terminal",
           "icon": "dist/assets/icons/riot-logo-R.svg"
         }
       ]
@@ -81,23 +77,24 @@
           "id": "riot-web-extension.view.devices",
           "name": "Connected Devices"
         }
-      ],
-      "riot-panel": [
-        {
-          "id": "riot-web-extension.view.terminal",
-          "name": "Riot Terminal",
-          "type": "webview"
-        }
       ]
     },
     "menus": {
       "commandPalette": [
         {
-          "command": "riot-web-extension.device.flash",
+          "command": "riot-web-extension.device.remove",
           "when": "false"
         },
         {
-          "command": "riot-web-extension.device.remove",
+          "command": "riot-web-extension.device.rename",
+          "when": "false"
+        },
+        {
+          "command": "riot-web-extension.device.term",
+          "when": "false"
+        },
+        {
+          "command": "riot-web-extension.device.flash",
           "when": "false"
         },
         {
@@ -105,24 +102,16 @@
           "when": "false"
         },
         {
-          "command": "riot-web-extension.terminal.openTab",
-          "when": "false"
-        },
-        {
-          "command": "riot-web-extension.terminal.clear",
-          "when": "false"
-        },
-        {
-          "command": "riot-web-extension.terminal.closeTab",
+          "command": "riot-web-extension.device.selectBoard",
           "when": "false"
         },
         {
           "command": "riot-web-extension.websocket.open",
-          "when": "!riot-web-extension.context.websocketOpen"
+          "when": "riot-web-extension.context.websocketOpen == false"
         },
         {
           "command": "riot-web-extension.websocket.close",
-          "when": "riot-web-extension.context.websocketOpen"
+          "when": "riot-web-extension.context.websocketOpen == true"
         }
       ],
       "view/title": [
@@ -134,39 +123,44 @@
         {
           "command": "riot-web-extension.websocket.open",
           "group": "navigation",
-          "when": "view == riot-web-extension.view.terminal && !riot-web-extension.context.websocketOpen"
+          "when": "view == riot-web-extension.view.devices && riot-web-extension.context.websocketOpen == false"
         },
         {
           "command": "riot-web-extension.websocket.close",
           "group": "navigation",
-          "when": "view == riot-web-extension.view.terminal && riot-web-extension.context.websocketOpen"
+          "when": "view == riot-web-extension.view.devices && riot-web-extension.context.websocketOpen == true"
         }
       ],
       "view/item/context": [
         {
+          "command": "riot-web-extension.device.rename",
+          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != boardItem && viewItem != folderItem && viewItem != portItem",
+          "group": "dummy@1"
+        },
+        {
           "command": "riot-web-extension.device.remove",
-          "when": "view == riot-web-extension.view.devices && viewItem != description"
+          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != boardItem && viewItem != folderItem && viewItem != portItem",
+          "group": "dummy@2"
+        },
+        {
+          "command": "riot-web-extension.device.term",
+          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != boardItem && viewItem != folderItem && viewItem != portItem",
+          "group": "inline"
+        },
+        {
+          "command": "riot-web-extension.device.flash",
+          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != boardItem && viewItem != folderItem && viewItem != portItem",
+          "group": "inline"
         },
         {
           "command": "riot-web-extension.device.selectProject",
-          "when": "view == riot-web-extension.view.devices && viewItem != description",
+          "when": "view == riot-web-extension.view.devices && viewItem == folderItem",
           "group": "inline"
         },
         {
-          "command": "riot-web-extension.terminal.openTab",
-          "when": "view == riot-web-extension.view.devices && viewItem != description && (viewItem not in riot-web-extension.context.openTabs)",
+          "command": "riot-web-extension.device.selectBoard",
+          "when": "view == riot-web-extension.view.devices && viewItem == boardItem",
           "group": "inline"
-        },
-        {
-          "command": "riot-web-extension.terminal.closeTab",
-          "when": "view == riot-web-extension.view.devices && viewItem != description && (viewItem in riot-web-extension.context.openTabs)",
-          "group": "inline"
-        }
-      ],
-      "webview/context": [
-        {
-          "command": "riot-web-extension.terminal.clear",
-          "when": "webviewId == riot-web-extension.view.terminal && riot-web-extension.context.terminalVisible"
         }
       ]
     }
@@ -194,7 +188,7 @@
     "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.46.4",
     "@typescript-eslint/parser": "^8.46.4",
-    "@vscode/test-web": "^0.0.74",
+    "@vscode/test-web": "^0.0.78",
     "@vscode/vsce": "^3.7.0",
     "assert": "^2.1.0",
     "esbuild": "^0.25.12",
@@ -206,8 +200,7 @@
   },
   "dependencies": {
     "esptool-js": "^0.5.7",
-    "shared": "../../shared",
-    "ws": "^8.18.3"
+    "shared": "../../shared"
   },
   "overrides": {
     "@vscode/vsce": {

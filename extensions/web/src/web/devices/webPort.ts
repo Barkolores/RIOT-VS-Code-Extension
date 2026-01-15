@@ -1,0 +1,1 @@
+export type webPort = SerialPort | USBDevice

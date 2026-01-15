@@ -1,29 +1,32 @@
 import vscode from "vscode";
-import {type RiotTerminal} from "../providers/terminalProvider";
-import {Device} from "shared/types/device";
+import {DeviceTreeItem} from "shared/ui/treeItems/deviceTreeItem";
+import {webPort} from "./webPort";
+import {WebSocketManager} from "../websocket/webSocketManager";
 
-export type Port = SerialPort | USBDevice
-
-export abstract class WebDevice extends Device {
+export abstract class WebDevice extends DeviceTreeItem {
     protected _open: boolean = false;
     protected _flashing: boolean = false;
 
     protected constructor(
-        protected _port: Port,
+        protected _webPort: webPort,
         label: string,
         public readonly contextValue: string,
-        protected readonly _updateTreeviewEventEmitter: vscode.EventEmitter<WebDevice | undefined>
+        protected readonly _updateTreeviewEventEmitter: vscode.EventEmitter<DeviceTreeItem | undefined>
     ) {
         super(label, contextValue, _updateTreeviewEventEmitter);
     }
 
-    abstract comparePort(port: Port): boolean;
+    abstract comparePort(port: webPort): boolean;
 
     abstract open(param?: object): Promise<void>;
 
     abstract close(): Promise<boolean>;
 
-    abstract read(terminal: RiotTerminal): void;
+    abstract read(webSocketManager: WebSocketManager): void;
 
     abstract write(message: string): void;
+
+    abstract forget(): void;
+
+    abstract flash(param?: object): void;
 }
