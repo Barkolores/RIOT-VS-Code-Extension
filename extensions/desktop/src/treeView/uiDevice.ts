@@ -1,18 +1,18 @@
 import { WorkspaceFolder } from "vscode";
-import { Device } from "../../../../shared/types/device";
+import { DeviceTreeItem } from "../../../../shared/ui/treeItems/deviceTreeItem";
 import { DeviceModel } from "../boards/device";
 import * as vscode from 'vscode';
 import { VsCodeRiotFlashTask } from "../tasks/VsCodeRiotFlashTask";
 
 
-export class DeviceTreeItem extends Device {
+export class DesktopDeviceTreeItem extends DeviceTreeItem {
 
     public constructor (
         private device : DeviceModel,
-        _updateTreeviewEventEmitter: vscode.EventEmitter<Device | undefined>,
+        _updateTreeviewEventEmitter: vscode.EventEmitter<DeviceTreeItem | undefined>,
         private isActive: boolean = false
     ){
-        const labelStr = `${device.getDescription() ??'New Board'} ${isActive ? '(active)' : ''}`;
+        const labelStr = `${device.getTitle() ??'New Board'} ${isActive ? '(active)' : ''}`;
         super(labelStr, "riot-device", _updateTreeviewEventEmitter);
     }
 
@@ -23,16 +23,16 @@ export class DeviceTreeItem extends Device {
 
     private updateAppearance() {
         this.tooltip = `${this.device.getBoardName() ?? 'Unknown board'} at ${this.device.getPortPath() ?? 'unknown port'}`;
-        this.label = `${this.device.getDescription() ?? 'New Board'}`;
+        this.label = `${this.device.getTitle() ?? 'New Board'}`;
         this.description = this.isActive ? ' (Active)' : '';
     }
 
     getDescription(): string[] {
-        return [this.device.getDescription() ?? 'New Board'];
+        return [];
     }
 
-    getDesktopDescription(): string | undefined {
-        return this.device.getDescription();
+    getTitle(): string | undefined {
+        return this.device.getTitle();
     }
     
     forget(): void {

@@ -47,7 +47,7 @@ export class DeviceModel {
         return this.boardName;
     }
 
-    public getDescription() : string | undefined {
+    public getTitle() : string | undefined {
         return this.description;
     }
 

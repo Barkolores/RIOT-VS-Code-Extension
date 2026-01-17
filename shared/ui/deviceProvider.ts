@@ -66,4 +66,14 @@ export class DeviceProvider implements vscode.TreeDataProvider<vscode.TreeItem> 
     setDevices(devices: DeviceTreeItem[]): void {
         this._devices = devices;
     }
+
+    public addDevice (device : DeviceTreeItem) : void {
+        this._devices.push(device);
+        this.refresh();
+    }
+
+    public removeDevice (device : DeviceTreeItem) : void {
+        this._devices = this._devices.filter(d => d !== device);
+        this.refresh();
+    }
 }

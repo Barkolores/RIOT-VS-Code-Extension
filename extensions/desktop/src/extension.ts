@@ -13,11 +13,10 @@ import { VsCodeRiotFlashTask } from './tasks/VsCodeRiotFlashTask';
 import { VsCodeCompileCommandsTask } from './tasks/VsCodeCompileCommandsTask';
 import { VsCodeRiotTermTask } from './tasks/VsCodeRiotTermTask';
 import { DeviceTreeItemProvider } from './treeView/uiDeviceProvider';
-import { DeviceTreeItem } from './treeView/uiDevice';
+import { DesktopDeviceTreeItem } from './treeView/uiDevice';
 import { SelectedBoardTreeItem } from './treeView/uiSelBoard';
 import { SelectedPortTreeItem } from './treeView/uiSelPort';
 import { SelectedFolderTreeItem } from './treeView/uiSelFolder';
-import { Device } from '../../../shared/types/device';
 import { VsCodeRiotDebugTask } from './tasks/VsCodeRiotDebugTask';
 import { RiotFileDecorationProvider } from './treeView/uiFileDecorationProvider';
 					
@@ -116,14 +115,14 @@ export async function activate(context: vscode.ExtensionContext) {
 		}	
 	}
 	
-	const flashDisposable = vscode.commands.registerCommand('riot-launcher.riotFlash', (d : DeviceTreeItem)=> {
+	const flashDisposable = vscode.commands.registerCommand('riot-launcher.riotFlash', (d : DesktopDeviceTreeItem)=> {
 		if(!d) { return; }
 		d.flash();
 	});
 
 	context.subscriptions.push(flashDisposable);
 
-	const termDisposable = vscode.commands.registerCommand('riot-launcher.riotTerm', (d : DeviceTreeItem) => {
+	const termDisposable = vscode.commands.registerCommand('riot-launcher.riotTerm', (d : DesktopDeviceTreeItem) => {
 		if(!d) { return; }
 		const device = d.getDevice();
 		const appPath = device.getAppPath();
@@ -141,7 +140,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(termDisposable);
 	
-	const debugDisposable = vscode.commands.registerCommand('riot-launcher.riotDebug', async (d: DeviceTreeItem) => {
+	const debugDisposable = vscode.commands.registerCommand('riot-launcher.riotDebug', async (d: DesktopDeviceTreeItem) => {
 		if(!d) { return; }
 		const device = d.getDevice();
 		const appPath = device.getAppPath();
@@ -299,23 +298,23 @@ export async function activate(context: vscode.ExtensionContext) {
 	
 	context.subscriptions.push(changePortDisposable);
 
-	const forgetDeviceDisposable = vscode.commands.registerCommand('riot-launcher.forgetDevice', async (d : DeviceTreeItem) => {
+	const forgetDeviceDisposable = vscode.commands.registerCommand('riot-launcher.forgetDevice', async (d : DesktopDeviceTreeItem) => {
 		devicesTreeItemProvider.removeDevice(d);
 		devicesTreeItemProvider.refresh();
 	});
 
-	const setDeviceActiveDisposable = vscode.commands.registerCommand('riot-launcher.setActive', async (d : DeviceTreeItem) => {
+	const setDeviceActiveDisposable = vscode.commands.registerCommand('riot-launcher.setActive', async (d : DesktopDeviceTreeItem) => {
 		executeCompileCommandsTask(d.getDevice());
 	});
 
-	const changeDescriptionDisposable = vscode.commands.registerCommand('riot-launcher.changeDescriptionDevice', async (d : DeviceTreeItem) => {
+	const changeDescriptionDisposable = vscode.commands.registerCommand('riot-launcher.changeDescriptionDevice', async (d : DesktopDeviceTreeItem) => {
 		if(!d) {
 			vscode.window.showErrorMessage("Please execute this command via RIOT panel.");
 		}
 		const descriptionInput : string | undefined = await vscode.window.showInputBox({
 			title: 'Device configuration',
 			prompt: 'Enter new description for device',
-			value: d.getDesktopDescription()
+			value: d.getTitle()
 		});
 		
 		if(descriptionInput !== undefined) {

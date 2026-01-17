@@ -1,6 +1,6 @@
     import * as vscode from 'vscode';
     import { DeviceModel } from '../boards/device';
-    import { FolderTreeItem } from '../../../../shared/types/folderTreeItem';
+    import { FolderTreeItem } from '../../../../shared/ui/treeItems/folderTreeItem';
     import path from 'path';
 
     export class SelectedFolderTreeItem extends FolderTreeItem{
@@ -10,7 +10,8 @@
         ) {
             const appUri = device.getAppPath();
             const labelStr = `${appUri ? path.basename(appUri.fsPath) : 'Unknown application path'} `;
-            super(labelStr, 'riot-device-folder');
+            super();
+            this.label = labelStr;
             this.command = {
                 command: 'riot-launcher.changeFolderDevice',
                 title: 'Change Folder',

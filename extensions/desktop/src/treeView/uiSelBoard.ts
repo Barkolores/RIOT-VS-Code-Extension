@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { DeviceModel } from '../boards/device';
-import { BoardTreeItem } from '../../../../shared/types/boardTreeItem';
+import { BoardTreeItem } from '../../../../shared/ui/treeItems/boardTreeItem';
 
 export class SelectedBoardTreeItem extends BoardTreeItem{
 
@@ -8,7 +8,8 @@ export class SelectedBoardTreeItem extends BoardTreeItem{
         private device : DeviceModel
     ) {
         const labelStr = `${device.getBoardName() ?? 'Unknown board'} `;
-        super(labelStr, 'riot-device-board');
+        super();
+        this.label = labelStr;
         this.command = {
             command: 'riot-launcher.changeBoardDevice',
             title: 'Change Board',

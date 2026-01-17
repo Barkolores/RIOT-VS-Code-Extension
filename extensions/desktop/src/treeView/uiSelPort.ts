@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { DeviceModel } from '../boards/device';
-import { PortTreeItem } from '../../../../shared/types/portTreeItem';
+import { PortTreeItem } from '../../../../shared/ui/treeItems/portTreeItem';
 
 
 export class SelectedPortTreeItem extends PortTreeItem {
@@ -10,7 +10,8 @@ export class SelectedPortTreeItem extends PortTreeItem {
         private device : DeviceModel
     ) {
         const labelStr = `${device.getPortPath() ?? 'Port: None'} `;
-        super(labelStr, 'riot-device-port');
+        super();
+        this.label = labelStr;
         this.command = {
             command: 'riot-launcher.changePortDevice',
             title: 'Change Port',
