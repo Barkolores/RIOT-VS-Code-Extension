@@ -1,6 +1,6 @@
 import { WorkspaceFolder } from "vscode";
 import { DeviceTreeItem } from "../../../../shared/ui/treeItems/deviceTreeItem";
-import { DeviceModel } from "../boards/device";
+import { DeviceModel } from "../../../../shared/ui/deviceModel";
 import * as vscode from 'vscode';
 import { VsCodeRiotFlashTask } from "../tasks/VsCodeRiotFlashTask";
 
@@ -8,40 +8,17 @@ import { VsCodeRiotFlashTask } from "../tasks/VsCodeRiotFlashTask";
 export class DesktopDeviceTreeItem extends DeviceTreeItem {
 
     public constructor (
-        private device : DeviceModel,
+        device : DeviceModel,
         _updateTreeviewEventEmitter: vscode.EventEmitter<DeviceTreeItem | undefined>,
-        private isActive: boolean = false
+        isActive: boolean = false
     ){
-        const labelStr = `${device.getTitle() ??'New Board'} ${isActive ? '(active)' : ''}`;
-        super(labelStr, "riot-device", _updateTreeviewEventEmitter);
-    }
-
-    public setActiveState(isActive: boolean) : void {
-        this.isActive = isActive;
-        this.updateAppearance();
-    }
-
-    private updateAppearance() {
-        this.tooltip = `${this.device.getBoardName() ?? 'Unknown board'} at ${this.device.getPortPath() ?? 'unknown port'}`;
-        this.label = `${this.device.getTitle() ?? 'New Board'}`;
-        this.description = this.isActive ? ' (Active)' : '';
-    }
-
-    getDescription(): string[] {
-        return [];
-    }
-
-    getTitle(): string | undefined {
-        return this.device.getTitle();
+        const labelStr = `${device.title ??'New Board'} ${isActive ? '(active)' : ''}`;
+        super(device, "riot-device", _updateTreeviewEventEmitter, isActive);
     }
     
-    forget(): void {
-        throw new Error("Method not implemented.");
-    }
-
     flash(param?: object): void {
         const device = this.getDevice();
-        const appPath = device.getAppPath();
+        const appPath = device.appPath;
         if(!appPath || !device) {
             vscode.window.showErrorMessage("Application folder or device not properly selected.");
             return;
@@ -54,14 +31,6 @@ export class DesktopDeviceTreeItem extends DeviceTreeItem {
         vscode.tasks.executeTask(flashTask);
     }
     
-    getDevice() : DeviceModel {
-        return this.device;
-    }
-
-    setDescription(description : string) : void {
-        this.device.setDescription(description);
-        this.updateAppearance();
-    }
         
 
 }

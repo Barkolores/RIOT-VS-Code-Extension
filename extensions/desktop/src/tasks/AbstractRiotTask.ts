@@ -1,5 +1,5 @@
 import vscode from "vscode";
-import { DeviceModel } from "../boards/device";
+import { DeviceModel } from '../../../../shared/ui/deviceModel';
 
 
 export abstract class AbstractRiotTask {

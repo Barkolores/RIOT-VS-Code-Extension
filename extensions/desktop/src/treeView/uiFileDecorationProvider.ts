@@ -1,18 +1,19 @@
 import * as vscode from 'vscode';
-import { DeviceModel } from '../boards/device';
+import { DeviceModel } from '../../../../shared/ui/deviceModel';
+import { BoardTypes } from '../../../../shared/ui/boardTypes';
 
 export class RiotFileDecorationProvider implements vscode.FileDecorationProvider {
     private activeUriString: string | undefined;
-    private activeBoard: string | undefined;
+    private activeBoard: BoardTypes | undefined;
 
     private readonly _onDidChangeFileDecorations = new vscode.EventEmitter<vscode.Uri | undefined>();
     readonly onDidChangeFileDecorations = this._onDidChangeFileDecorations.event;
 
     public updateActiveUri(d : DeviceModel): void {
-        const uri = d.getAppPath();
+        const uri = d.appPath;
         this.activeUriString = uri ? uri.toString() : undefined;
 
-        this.activeBoard = d.getBoardName();
+        this.activeBoard = d.board;
         this._onDidChangeFileDecorations.fire(undefined);
     }
 

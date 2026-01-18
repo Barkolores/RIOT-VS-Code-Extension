@@ -6,20 +6,18 @@ import { exec } from 'child_process';
 import * as util from 'util';
 import { realpathSync } from 'fs';
 import * as path from 'path';
-import { BoardRecognizer } from './boards/BoardRecognizer';
 import { PortDiscovery } from './boards/PortDiscoverer';
-import { DeviceModel, DeviceConfig } from './boards/device';
-import { VsCodeRiotFlashTask } from './tasks/VsCodeRiotFlashTask';
+import { DeviceModel, DeviceConfig } from '../../../shared/ui/deviceModel';
 import { VsCodeCompileCommandsTask } from './tasks/VsCodeCompileCommandsTask';
 import { VsCodeRiotTermTask } from './tasks/VsCodeRiotTermTask';
-import { DeviceTreeItemProvider } from './treeView/uiDeviceProvider';
 import { DesktopDeviceTreeItem } from './treeView/uiDevice';
-import { SelectedBoardTreeItem } from './treeView/uiSelBoard';
-import { SelectedPortTreeItem } from './treeView/uiSelPort';
-import { SelectedFolderTreeItem } from './treeView/uiSelFolder';
 import { VsCodeRiotDebugTask } from './tasks/VsCodeRiotDebugTask';
 import { RiotFileDecorationProvider } from './treeView/uiFileDecorationProvider';
-					
+import { BoardTreeItem } from '../../../shared/ui/treeItems/boardTreeItem';
+import { PortTreeItem } from '../../../shared/ui/treeItems/portTreeItem';
+import { FolderTreeItem } from '../../../shared/ui/treeItems/folderTreeItem';
+import { DeviceProvider } from '../../../shared/ui/deviceProvider';					
+
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
@@ -31,20 +29,22 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	const initialDevices : DeviceModel[] = initialDevicesConfig.map(d => DeviceModel.fromConfig(d));
 
-	const devicesTreeItemProvider = new DeviceTreeItemProvider(initialDevices);
+	const devicesTreeItemProvider = new DeviceProvider(initialDevices);
 	devicesTreeItemProvider.onDidChangeTreeData( () => {
 		const currentDevices = devicesTreeItemProvider.getDeviceModels();
 		const configsToSave = currentDevices.map(d => d.toConfig());
+		const activeDevice = devicesTreeItemProvider.getActiveDevice();
 		context.workspaceState.update(DEVICE_LIST_CACHE_KEY, configsToSave);
+		context.workspaceState.update(ACTIVE_DEVICE_CACHE_KEY, activeDevice?.toConfig());
 	});
 
 	const colorProvider = new RiotFileDecorationProvider();
 
 	if(activeDeviceConfig) {
 		const matchedDevice = initialDevices.find( d => 
-			d.getAppPath()?.fsPath === activeDeviceConfig.appPath &&
-			d.getBoardName() === activeDeviceConfig.boardName &&
-			d.getPortPath() === activeDeviceConfig.portPath
+			d.appPath?.fsPath === activeDeviceConfig.appPath &&
+			d.board?.id === activeDeviceConfig.board &&
+			d.portPath === activeDeviceConfig.portPath
 		);
 		if(matchedDevice) {
 			devicesTreeItemProvider.setActiveDevice(matchedDevice);
@@ -125,7 +125,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	const termDisposable = vscode.commands.registerCommand('riot-launcher.riotTerm', (d : DesktopDeviceTreeItem) => {
 		if(!d) { return; }
 		const device = d.getDevice();
-		const appPath = device.getAppPath();
+		const appPath = device.appPath;
 		if(!appPath || !device) {
 			vscode.window.showErrorMessage("Application folder or device not properly selected.");
 			return;
@@ -143,7 +143,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	const debugDisposable = vscode.commands.registerCommand('riot-launcher.riotDebug', async (d: DesktopDeviceTreeItem) => {
 		if(!d) { return; }
 		const device = d.getDevice();
-		const appPath = device.getAppPath();
+		const appPath = device.appPath;
 		if(!appPath || !device) {
 			vscode.window.showErrorMessage("Application folder or device not properly selected.");
 			return;
@@ -176,7 +176,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(searchPortsDisposable);
 
 
-	const changeBoardDisposable = vscode.commands.registerCommand('riot-launcher.changeBoardDevice', async (treeItem : SelectedBoardTreeItem) => {
+	const changeBoardDisposable = vscode.commands.registerCommand('riot-launcher.changeBoardDevice', async (treeItem : BoardTreeItem) => {
 		if(!treeItem) {
 			vscode.window.showErrorMessage("Please execute this command via RIOT panel.");
 		}
@@ -186,18 +186,18 @@ export async function activate(context: vscode.ExtensionContext) {
 		});
 		
 		if(pick) {
-			treeItem.changeBoard(pick);
+			treeItem.changeBoard({id : pick, name : pick});
 			vscode.window.showInformationMessage(`Changed board of device to: ${pick}`);
 			devicesTreeItemProvider.refresh();
 			const device = treeItem.getDevice();
-			const appPath = device.getAppPath();
+			const appPath = device.appPath;
 			executeCompileCommandsTask(device);
 		}
 	});
 
 	context.subscriptions.push(changeBoardDisposable);
 
-	const changeApplicationFolderDisposable = vscode.commands.registerCommand('riot-launcher.changeFolderDevice', async (treeItem : SelectedFolderTreeItem) => {
+	const changeApplicationFolderDisposable = vscode.commands.registerCommand('riot-launcher.changeFolderDevice', async (treeItem : FolderTreeItem) => {
 		const result = await vscode.window.showOpenDialog({
 			canSelectFiles: false,
 			canSelectFolders: true,
@@ -225,7 +225,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				devicesTreeItemProvider.refresh();
 				/* Compile commands and configuring IntelliSense */
 				const device = treeItem.getDevice();
-				if(device.getBoardName())	 {
+				if(device.board?.id)	 {
 					if(isAlreadyOpen) {
 						await executeCompileCommandsTask(device);
 					} else {
@@ -260,7 +260,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(changeApplicationFolderDisposable);
 
-	const changePortDisposable = vscode.commands.registerCommand('riot-launcher.changePortDevice', async (treeItem : SelectedPortTreeItem) => {
+	const changePortDisposable = vscode.commands.registerCommand('riot-launcher.changePortDevice', async (treeItem : PortTreeItem) => {
 		if(!treeItem) {
 			vscode.window.showErrorMessage("Please execute this command via RIOT panel.");
 			return;
@@ -284,7 +284,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				finalPort = await vscode.window.showInputBox({
 					title: 'Device configuration',
 					prompt: 'Enter new port path',
-					value: treeItem.getPortPath()
+					value: treeItem.getDevice().appPath?.fsPath
 				});
 			}
 			if(finalPort) {
@@ -318,7 +318,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		});
 		
 		if(descriptionInput !== undefined) {
-			d.setDescription(descriptionInput);
+			d.setTitle(descriptionInput);
 			vscode.window.showInformationMessage(`Changed description of device to: ${descriptionInput}`);
 			devicesTreeItemProvider.refresh();
 		}
@@ -337,8 +337,8 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 
 	async function executeCompileCommandsTask(device: DeviceModel) {
-		const riotBasePath = device.getRiotBasePath();
-		const appFolderPath = device.getAppPath();
+		const riotBasePath = device.riotBasePath;
+		const appFolderPath = device.appPath;
 		if(!appFolderPath || !riotBasePath) {
 			return;
 		}
@@ -376,8 +376,8 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 
 	async function startDebugging(device: DeviceModel) {
-		const appPath = device.getAppPath();
-		const boardName = device.getBoardName() || 'native64';
+		const appPath = device.appPath;
+		const boardName = device.board?.id || 'native64';
 		const isNative : boolean = boardName.startsWith('native');
 		if(!appPath) {
 			vscode.window.showErrorMessage("Application folder not properly selected.");
@@ -457,18 +457,6 @@ export async function activate(context: vscode.ExtensionContext) {
 // This method is called when your extension is deactivated
 export function deactivate() {}
 
-/* Items shown in TreeView */ 
-class CmdItem extends vscode.TreeItem {
-	constructor(label : string, commandId: any, icon: any) {
-		super(label, vscode.TreeItemCollapsibleState.None);
-		this.command = { command : commandId, title: label };
-		if(typeof icon === 'string') {
-			this.iconPath = new vscode.ThemeIcon(icon);
-		} else if(icon) {
-			this.iconPath = icon;
-		}
-	} 
-}
 
 		
 

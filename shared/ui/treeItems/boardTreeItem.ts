@@ -1,16 +1,22 @@
 import * as vscode from 'vscode';
 import {DeviceTreeItem} from "./deviceTreeItem";
+import { DeviceModel } from '../deviceModel';
+import { BoardTypes } from '../boardTypes';
 
 export class BoardTreeItem extends vscode.TreeItem {
     constructor(
-        protected readonly _device?: DeviceTreeItem,
+        protected readonly _device: DeviceModel,
     ) {
-        const board = _device?.getBoard()
-        super('Selected Board: ' + (board ? board.name : 'None'), vscode.TreeItemCollapsibleState.None);
+        const board = _device.board;
+        super((board ? board.name : 'Unknown board'), vscode.TreeItemCollapsibleState.None);
         this.contextValue = 'boardItem'
     }
 
-    getParentDevice(): DeviceTreeItem| undefined {
+    getDevice(): DeviceModel {
         return this._device;
+    }
+
+    changeBoard(board : BoardTypes) : void {
+        this._device.board = board;
     }
 }

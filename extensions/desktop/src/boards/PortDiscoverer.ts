@@ -1,7 +1,8 @@
 import { SerialPort } from "serialport";
 import vscode from "vscode";
-import { DeviceModel } from "./device";
+import { DeviceModel } from '../../../../shared/ui/deviceModel';
 import { BoardRecognizer } from "./BoardRecognizer";
+import { BoardTypes } from "../../../../shared/ui/boardTypes";
 
 export class PortDiscovery {
     constructor(private recognizer?: BoardRecognizer) {}
@@ -17,10 +18,14 @@ export class PortDiscovery {
                 console.log(`Found port: ${port.path}\n VendorId: ${port.vendorId} ProductId: ${port.productId}\n`); 
                 const detection = this.recognizer.recognizeBoard(port.vendorId, port.productId, port.serialNumber);
                 const boardName = detection ? detection.boardId : undefined;
+                let board : BoardTypes | undefined;
+                if(boardName){
+                    board = {id : boardName, name: boardName};
+                }
                 const description = "";
                 const device = new DeviceModel(
                     port.path,
-                    boardName,
+                    board,
                     description
                 );
                 devises.push(device);

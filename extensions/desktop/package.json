@@ -52,12 +52,12 @@
       {
         "command": "riot-launcher.changePortDevice",
         "title": "Change Port",
-        "icon": "$(gear)"
+        "icon": "$(plug)"
       },
       {
         "command": "riot-launcher.changeBoardDevice",
         "title": "Change Board",
-        "icon": "$(circuit)"
+        "icon": "$(circuit-board)"
       },
       {
         "command": "riot-launcher.forgetDevice",
@@ -123,6 +123,21 @@
         {
           "command": "riot-launcher.riotTerm",
           "when": "view == riotView && viewItem == riot-device",
+          "group": "inline"
+        },
+        {
+          "command": "riot-launcher.changeBoardDevice",
+          "when": "view == riotView && viewItem == boardItem",
+          "group": "inline"
+        },
+        {
+          "command": "riot-launcher.changeFolderDevice",
+          "when": "view == riotView && viewItem == folderItem",
+          "group": "inline"
+        },
+        {
+          "command": "riot-launcher.changePortDevice",
+          "when": "view == riotView && viewItem == portItem",
           "group": "inline"
         },
         {

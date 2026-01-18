@@ -1,6 +1,6 @@
 import vscode from "vscode";
 import { VsCodeAbstractRiotTask } from "./VsCodeAbstractRiotTask";
-import { DeviceModel } from "../boards/device";
+import { DeviceModel } from '../../../../shared/ui/deviceModel';
 
 export abstract class VsCodeAbstractRiotDeviceTask extends VsCodeAbstractRiotTask{
 
@@ -16,9 +16,9 @@ export abstract class VsCodeAbstractRiotDeviceTask extends VsCodeAbstractRiotTas
         const cDir = `cd ${this.applicationPath}`;
         const makeCommand = this.getStringMakeCommand();
                 var shellCommand = 
-            `cd ${this.applicationPath} && ${makeCommand} BOARD=${this.device.getBoardName() ?? 'native64'}`;
-        if(this.device.getPortPath()) {
-            shellCommand.concat(`PORT=${this.device.getPortPath ?? ''}`);
+            `cd ${this.applicationPath} && ${makeCommand} BOARD=${this.device.board?.id ?? 'native64'}`;
+        if(this.device.portPath) {
+            shellCommand.concat(`PORT=${this.device.portPath ?? ''}`);
         }
         return shellCommand;
     }

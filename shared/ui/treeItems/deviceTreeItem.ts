@@ -1,35 +1,49 @@
 import vscode from "vscode";
 import {BoardTypes} from "../boardTypes";
+import { DeviceModel } from "../deviceModel";
 
 export abstract class DeviceTreeItem extends vscode.TreeItem {
 
-    protected _activeProject?: vscode.WorkspaceFolder;
-    protected _board?: BoardTypes;
-    protected _description?: string[];
-
     protected constructor(
-        label: string,
+        protected _device : DeviceModel,
         public readonly contextValue: string,
         protected readonly _updateTreeviewEventEmitter: vscode.EventEmitter<DeviceTreeItem | undefined>,
-        protected _port?: string
+        protected _isActive : boolean
     ) {
-        super(label, vscode.TreeItemCollapsibleState.Collapsed);
+        const labelStr = `${_device.title ??'New Board'}`;
+        super(labelStr, vscode.TreeItemCollapsibleState.Collapsed);
+        this.description = this._isActive ? ' (Active)' : '';
+    }
+
+    public setActiveState(isActive: boolean) : void {
+        this._isActive = isActive;
+        this.updateAppearance();
     }
 
     getActiveProject(): vscode.WorkspaceFolder | undefined {
-        return this._activeProject;
+        return this._device.getFolder();
+    }
+
+    protected updateAppearance() {
+        this.tooltip = `${this._device.board?.name ?? 'Unknown board'} at ${this._device.portPath ?? 'unknown port'}`;
+        this.label = `${this._device.title ?? 'New Board'}`;
+        this.description = this._isActive ? ' (Active)' : '';
+    }
+
+    getDevice(): DeviceModel {
+        return this._device;
     }
 
     getBoard(): BoardTypes | undefined {
-        return this._board;
+        return this._device.board;
     }
 
     getPort(): string | undefined {
-        return this._port;
+        return this._device.portPath;
     }
 
     getDescription(): string[] | undefined {
-        return this._description;
+        return this._device.description;
     };
 
     changeLabel(newLabel: string) {
@@ -37,22 +51,33 @@ export abstract class DeviceTreeItem extends vscode.TreeItem {
     }
 
     changeActiveProject(newProject: vscode.WorkspaceFolder) {
-        this._activeProject = newProject;
+        this._device.appPath = newProject.uri;
     }
 
     changeBoard(newBoard: BoardTypes) {
-        this._board = newBoard;
+        this._device.board = newBoard;
     }
 
     changePort(newPort: string) {
-        this._port = newPort;
+        this._device.portPath = newPort;
     }
 
     changeDescription(newDescription: string[]) {
-        this._description = newDescription;
+        this._device.description = newDescription;
     }
 
     updateTreeview(): void {
         this._updateTreeviewEventEmitter.fire(undefined);
     };
+
+    setTitle(title : string) : void {
+        this._device.title = title;
+        this.updateAppearance();
+    }
+
+    getTitle(): string | undefined {
+        return this._device.title;
+    }
+
+
 }

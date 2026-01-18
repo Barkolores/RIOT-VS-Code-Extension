@@ -1,6 +1,6 @@
 import { SerialPort } from "serialport";
 import vscode from "vscode";
-import { DeviceModel } from "./device";
+import { DeviceModel } from '../../../../shared/ui/deviceModel';
 import { boardsDB } from "./knownBoards";
 
 export interface DetectionResult {
