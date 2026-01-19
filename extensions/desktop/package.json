@@ -15,6 +15,20 @@
   "activationEvents": [
     "*"
   ],
+  "taskDefinitions": [
+    {
+        "type": "riot-launcher",
+        "properties": {
+            "board": {
+                "type": "string"
+            },
+            "mode": {
+                "type": "string",
+                "description": "debug, term, flash, compile-commands"
+            }
+        }
+    }
+  ],
   "main": "out/RIOT-VS-Code-Extension/extensions/desktop/src/extension.js",
   "contributes": {
     "commands": [

@@ -8,7 +8,7 @@ export class VsCodeRiotTermTask extends VsCodeAbstractRiotDeviceTask {
         applicationPath: string,
         device : DeviceModel
     ) {
-        super(applicationPath, device, "RIOT Term");
+        super(applicationPath, device, "RIOT Term", "term");
     }
 
     protected getStringMakeCommand(): string {

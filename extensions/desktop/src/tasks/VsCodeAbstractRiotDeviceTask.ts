@@ -7,9 +7,10 @@ export abstract class VsCodeAbstractRiotDeviceTask extends VsCodeAbstractRiotTas
     constructor(
         applicationPath: string,
         device: DeviceModel,
+        taskTitle : string,
         taskName : string
     ) {
-        super(applicationPath, device, taskName);
+        super(applicationPath, device, taskTitle, taskName);
     }
 
     protected getStringShellCommand(): string {

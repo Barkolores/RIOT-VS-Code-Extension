@@ -7,7 +7,7 @@ export class VsCodeRiotFlashTask extends VsCodeAbstractRiotDeviceTask {
         applicationPath: string,
         device : DeviceModel
     ) {
-        super(applicationPath, device, "RIOT Flash");
+        super(applicationPath, device, "RIOT Flash", "flash");
     }
 
     protected getStringMakeCommand(): string {

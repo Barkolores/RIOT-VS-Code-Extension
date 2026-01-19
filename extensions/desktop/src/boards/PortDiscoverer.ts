@@ -16,19 +16,14 @@ export class PortDiscovery {
         for(const port of ports) {
             if(port.path.includes('USB') || port.path.includes('COM') || port.path.includes('ACM')) {
                 console.log(`Found port: ${port.path}\n VendorId: ${port.vendorId} ProductId: ${port.productId}\n`); 
-                const detection = this.recognizer.recognizeBoard(port.vendorId, port.productId, port.serialNumber);
+                // const vendorId =  port.vendorId;
+                // const productId = port.productId;
+                const detection = this.recognizer.recognizeBoard(port.vendorId, port.productId);
                 const boardName = detection ? detection.boardId : undefined;
                 let board : BoardTypes | undefined;
                 if(boardName){
                     board = {id : boardName, name: boardName};
-                }
-                const description = "";
-                const device = new DeviceModel(
-                    port.path,
-                    board,
-                    description
-                );
-                devises.push(device);
+                }               
             }
         }
         return devises;

@@ -7,19 +7,26 @@ export abstract class VsCodeAbstractRiotTask extends AbstractRiotTask{
     constructor(
         applicationPath: string,
         device: DeviceModel,
-        taskName : string
+        taskTitle : string,
+        protected taskMode : string
     ) {
-        super(applicationPath, device, taskName);
+        super(applicationPath, device, taskTitle);
     }
 
     protected internalCreateTask(): vscode.Task {
+        const definition: vscode.TaskDefinition = {
+            type : 'riot-launcher',
+            board : this.device.board?.id,
+            mode : this.taskMode
+        };
+
         const command = this.getStringShellCommand();
         var shellCommand = new vscode.ShellExecution(
             command
         );
         console.log(this.taskName);
         return new vscode.Task(
-            { type: 'riotTaskProvider' },
+            definition,
             vscode.TaskScope.Workspace,
             this.taskName,
             'riot-launcher',

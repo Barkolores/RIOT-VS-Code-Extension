@@ -7,7 +7,7 @@ export class VsCodeCompileCommandsTask extends VsCodeAbstractRiotDeviceTask {
         applicationPath: string,
         device : DeviceModel
     ) {
-        super(applicationPath, device, "RIOT Compile Commands");
+        super(applicationPath, device, "RIOT Compile Commands", "compile-commands");
     }
 
     protected getStringMakeCommand(): string {

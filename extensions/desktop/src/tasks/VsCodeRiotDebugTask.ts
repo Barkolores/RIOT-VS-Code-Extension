@@ -7,7 +7,7 @@ export class VsCodeRiotDebugTask extends VsCodeAbstractRiotDeviceTask {
         applicationPath: string,
         device : DeviceModel
     ) {
-        super(applicationPath, device, "RIOT Debug");
+        super(applicationPath, device, "RIOT Debug", "debug");
     }
 
     protected getStringMakeCommand(): string {
