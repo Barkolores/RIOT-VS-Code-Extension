@@ -17,6 +17,9 @@ import { BoardTreeItem } from '../../../shared/ui/treeItems/boardTreeItem';
 import { PortTreeItem } from '../../../shared/ui/treeItems/portTreeItem';
 import { FolderTreeItem } from '../../../shared/ui/treeItems/folderTreeItem';
 import { DeviceProvider } from '../../../shared/ui/deviceProvider';					
+import { BoardRecognizer } from './boards/BoardRecognizer';
+import { SerialPort } from 'serialport';
+
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -265,35 +268,126 @@ export async function activate(context: vscode.ExtensionContext) {
 			vscode.window.showErrorMessage("Please execute this command via RIOT panel.");
 			return;
 		}
+		interface PortPickItem extends vscode.QuickPickItem {
+			portpath?: string;
+			detectedBoardId?: string;
+			detectedBoardName?: string;
+			rawPortInfo?: any;
+		}
 
-		const PortDiscoverer = new PortDiscovery();
-		const foundPorts = await PortDiscoverer.discoverPorts();
-		const portOptions = [
-			{ label: 'None', description: 'No port assigned' },
-		];
-		portOptions.push(...foundPorts.map(p => ({ label: p, description: 'Found port' })));
-		portOptions.push({ label: 'Custom...', description: 'Type manually' });
+		const quickPick = vscode.window.createQuickPick<PortPickItem>();
+		quickPick.title = 'Device confiuration';
+		quickPick.placeholder = 'Select a port...';
+		// quickPick.matchOnDetail = true;
 
-		const selected = await vscode.window.showQuickPick(portOptions, {
-			title: 'Device configuration',
-			placeHolder: 'Select a port or choose "Custom..." to enter your individual port'
+		const recognizer = new BoardRecognizer (context, boards);
+		const rawPorts = await SerialPort.list();
+
+		const validPorts = rawPorts.filter(port => port.path.includes('USB') || port.path.includes('COM') || port.path.includes('ACM'));
+		
+		const items: PortPickItem[] = [{ label: 'None', description: 'No port assigned'}];
+		items.push(...validPorts.map(port => {
+			const recognition = recognizer.recognizeBoard(port.vendorId, port.productId);
+			const item : PortPickItem = {
+				label: port.path,
+				description: "Found port",
+				detectedBoardId: recognition ? recognition.boardId :undefined,
+				detectedBoardName: recognition ? recognition.boardName : undefined,
+				portpath: port.path,
+				rawPortInfo: port
+			};
+			if(recognition) {
+				item.description = `Suggested: ${recognition.boardName}`;
+				item.buttons = [
+					{
+						iconPath: new vscode.ThemeIcon('lightbulb'),
+						tooltip: `Set suggested board: ${recognition.boardName}`
+					}
+				];
+			}
+			return item;
+		}));
+
+		items.push({ label: 'Custom...', description: 'Type manually'});
+		quickPick.items = items;
+
+		const updateDevice = async (portPath: string, boardId?: string, boardName?: string, details? : string[]) => {
+			treeItem.changePortPath(portPath);
+			let msg = `Changed port of device to: ${portPath}`;
+			const device = treeItem.getDevice();
+			if(boardId && boardName) {
+				device.board = {id: boardId, name: boardName};
+				await executeCompileCommandsTask(device);
+				msg += ` and board to: ${boardName}`;
+			}
+			device.description = details;
+			vscode.window.showInformationMessage(msg);
+			devicesTreeItemProvider.refresh();
+			quickPick.dispose();
+		};
+
+		quickPick.onDidTriggerItemButton(async (e) => {
+			const item = e.item;
+			if(item.detectedBoardId && item.detectedBoardName && item.portpath) {
+				let details : string[] | undefined = undefined;
+				if(item.rawPortInfo) {
+					details = determineDetails(item.rawPortInfo);
+				}
+				await updateDevice(item.portpath, item.detectedBoardId, item.detectedBoardName, details);
+			}
 		});
-		if(selected) {
-			let  finalPort : string | undefined = selected.label;
+
+		quickPick.onDidAccept( async () => {
+			const selected = quickPick.selectedItems[0];
+			if(!selected) {
+				return;
+			}
 			if(selected.label === 'Custom...') {
-				finalPort = await vscode.window.showInputBox({
+				quickPick.dispose();
+				const customPort = await vscode.window.showInputBox({
 					title: 'Device configuration',
 					prompt: 'Enter new port path',
 					value: treeItem.getDevice().appPath?.fsPath
 				});
+				if(customPort) {
+					await updateDevice(customPort);
+				}
+			}else if (selected.label === 'None') {
+				await updateDevice('None', undefined, undefined, undefined);
+			} else{
+				let details : string[] | undefined = undefined;
+				if(selected.rawPortInfo) {
+					details = determineDetails(selected.rawPortInfo);
+				}
+				await updateDevice(selected.portpath ?? 'Error', undefined, undefined, details);
 			}
-			if(finalPort) {
-				treeItem.changePortPath(finalPort);
-				vscode.window.showInformationMessage(`Changed port of device to: ${finalPort}`);
-				devicesTreeItemProvider.refresh();
-			}
+		});
 
-		}
+		quickPick.onDidHide(() => quickPick.dispose());
+		quickPick.show();
+	
+		const determineDetails = (portInfo : any) : string [] => {
+			let details : string[] = [];
+			if(portInfo.manufacturer) { 
+				details.push(`Manufacturer: ${portInfo.manufacturer}`);
+			}
+			if(portInfo.serialNumber) {
+				details.push(`Serial Number: ${portInfo.serialNumber}`);
+			}
+			if(portInfo.vendorId) {
+				details.push(`Vendor ID: ${portInfo.vendorId}`);
+			}
+			if(portInfo.productId) {
+				details.push(`Product ID: ${portInfo.productId}`);
+			}
+			if(portInfo.pnpId) {
+				details.push(`PNP ID: ${portInfo.pnpId}`);
+			}
+			if(portInfo.locationId) {
+				details.push(`Location ID: ${portInfo.locationId}`);
+			}
+			return details;
+		};
 	});
 	
 	context.subscriptions.push(changePortDisposable);

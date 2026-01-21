@@ -16,7 +16,7 @@ export class DesktopDeviceTreeItem extends DeviceTreeItem {
         super(device, "riot-device", _updateTreeviewEventEmitter, isActive);
     }
     
-    flash(param?: object): void {
+    flash(): void {
         const device = this.getDevice();
         const appPath = device.appPath;
         if(!appPath || !device) {

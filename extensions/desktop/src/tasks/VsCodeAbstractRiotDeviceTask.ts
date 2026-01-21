@@ -19,7 +19,7 @@ export abstract class VsCodeAbstractRiotDeviceTask extends VsCodeAbstractRiotTas
                 var shellCommand = 
             `cd ${this.applicationPath} && ${makeCommand} BOARD=${this.device.board?.id ?? 'native64'}`;
         if(this.device.portPath) {
-            shellCommand.concat(`PORT=${this.device.portPath ?? ''}`);
+            shellCommand += ` PORT=${this.device.portPath}`;
         }
         return shellCommand;
     }

@@ -46,7 +46,7 @@ export class DeviceModel {
         if(config.board) {
             board = { id : config.board, name : config.board };
         }
-        return new DeviceModel(config.portPath, board, config.title, appUri, riotBaseUri);
+        return new DeviceModel(config.portPath, board, config.title, appUri, riotBaseUri, config.description);
     }
 
     public getFolder () : vscode.WorkspaceFolder | undefined {

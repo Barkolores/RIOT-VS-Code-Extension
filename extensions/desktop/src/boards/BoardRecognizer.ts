@@ -7,7 +7,7 @@ import fs from "fs";
 
 export interface DetectionResult {
     boardId: string; 
-    friendlyName: string;
+    boardName: string;
 }
 
 export class BoardRecognizer {
@@ -34,7 +34,7 @@ export class BoardRecognizer {
             console.log(`Board recognized: ${match.boardName} (${match.boardId})`);
             return {
                 boardId: match.boardId,
-                friendlyName: match.boardName,
+                boardName: match.boardName,
             };
         }
         return undefined;
