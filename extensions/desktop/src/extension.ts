@@ -26,9 +26,12 @@ import { SerialPort } from 'serialport';
 export async function activate(context: vscode.ExtensionContext) {
 	const DEVICE_LIST_CACHE_KEY = 'riot-launcher.deviceList';
 	const ACTIVE_DEVICE_CACHE_KEY = 'riot-launcher.activeDevice';
+	const VALID_RIOT_PATHS_CACHE_KEY = 'riot-launcher.validRiotAppPaths';
+
 
 	const initialDevicesConfig = context.workspaceState.get<DeviceConfig[]>(DEVICE_LIST_CACHE_KEY, []	);
 	const activeDeviceConfig = context.workspaceState.get<DeviceConfig | undefined>(ACTIVE_DEVICE_CACHE_KEY, undefined);
+	const validRiotAppPaths = context.workspaceState.get<string[]>(VALID_RIOT_PATHS_CACHE_KEY, []);
 
 	const initialDevices : DeviceModel[] = initialDevicesConfig.map(d => DeviceModel.fromConfig(d));
 
@@ -41,7 +44,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.workspaceState.update(ACTIVE_DEVICE_CACHE_KEY, activeDevice?.toConfig());
 	});
 
-	const colorProvider = new RiotFileDecorationProvider();
+	const colorProvider = new RiotFileDecorationProvider(validRiotAppPaths);
 
 	if(activeDeviceConfig) {
 		const matchedDevice = initialDevices.find( d => 
@@ -216,6 +219,10 @@ export async function activate(context: vscode.ExtensionContext) {
 					`cd ${appFolderUri.fsPath} && make info-debug-variable-RIOTBASE`
 				);
 				const riotBasePath = vscode.Uri.file(stdout.toString().trim());
+				
+				colorProvider.addValidPath(appFolderUri);
+				await context.workspaceState.update(VALID_RIOT_PATHS_CACHE_KEY, colorProvider.getAllPaths());
+
 				loadBoards(appFolderUri).then((loadedBoards : string[]) => boards = loadedBoards);
 
 				const isAlreadyOpen = vscode.workspace.workspaceFolders?.some( 
@@ -253,6 +260,8 @@ export async function activate(context: vscode.ExtensionContext) {
 				);
 				// TODO Include logic of inserting RIOT base folder here in case a nested RIOT example is selected
 			}catch (error) {
+				colorProvider.removeValidPath(appFolderUri);
+				await context.workspaceState.update(VALID_RIOT_PATHS_CACHE_KEY, colorProvider.getAllPaths());
 				vscode.window.showErrorMessage(
 					'Error determining RIOT Base Path from Makefile'
 				);
