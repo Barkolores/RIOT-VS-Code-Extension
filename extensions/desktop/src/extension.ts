@@ -196,6 +196,40 @@ export async function activate(context: vscode.ExtensionContext) {
 			vscode.window.showInformationMessage(`Changed board of device to: ${pick}`);
 			devicesTreeItemProvider.refresh();
 			const device = treeItem.getDevice();
+
+			if(device.portPath) {
+				try {
+					const availablePorts = await SerialPort.list();
+					const portInfo = availablePorts.find( p => p.path === device.portPath);
+
+					if(portInfo && portInfo.vendorId && portInfo.productId) {
+						const recognizer = new BoardRecognizer (context, boards);
+						const existingMatch = recognizer.recognizeBoard(portInfo.vendorId, portInfo.productId);
+						if(!existingMatch || existingMatch.boardId !== pick) {
+							const vid = portInfo.vendorId;
+							const pid = portInfo.productId;
+
+							const answer = await vscode.window.showInformationMessage(
+								`Missmatch between product id and selected board. Do you want to update the assigned board to ${pick}?`,
+								'Update', 'Keep'
+							);
+							if(answer === 'Update') {
+								recognizer.addBoard({
+									vendorId: vid.toLowerCase(),
+									productId: pid.toLowerCase(),
+									boardId: pick,
+									boardName: pick
+								});
+								vscode.window.showInformationMessage(`Updated board assignment for port ${device.portPath} to board ${pick}.`);
+							}
+						}
+					}
+				}catch (error) {
+					console.error("Error recognizing board after changing board: ", error);
+				}
+
+			}
+
 			const appPath = device.appPath;
 			executeCompileCommandsTask(device);
 		}
