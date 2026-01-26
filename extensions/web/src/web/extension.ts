@@ -5,8 +5,10 @@ import {DeviceManager} from "./devices/deviceManager";
 import {WebSocketManager} from "./websocket/webSocketManager";
 import {FolderTreeItem} from "shared/ui/treeItems/folderTreeItem";
 import {BoardTreeItem} from "shared/ui/treeItems/boardTreeItem";
-import {FileManager} from "./utility/fileManager";
 import {BoardTypes} from "shared/ui/boardTypes";
+import {encode} from "cbor-x";
+import {inboundWSMessage} from "./websocket/api/inbound/inboundWSMessage";
+import {addressTypes, messageTypes, terminationTypes} from "./websocket/api/additionalTypes";
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -18,17 +20,15 @@ export function activate(context: vscode.ExtensionContext) {
     console.log("RIOT web extension activated");
 
     const deviceProvider = new DeviceProvider();
-    const deviceManager = new DeviceManager(deviceProvider);
-    const webSocketManager: WebSocketManager = new WebSocketManager();
-    const fileManager = new FileManager();
+    const {port1: devicesPort, port2: websocketPort} = new MessageChannel();
+    const {port1: testPort1, port2: testPort2} = new MessageChannel();
+    const deviceManager = new DeviceManager(deviceProvider, devicesPort);
+    const webSocketManager = new WebSocketManager(deviceManager, websocketPort, testPort1);
     let boards: string[] = [];
-    fileManager.readBundledBoards(context.extensionUri).then((result) => {
+    readBundledBoards(context.extensionUri).then((result) => {
         console.log('Supported boards have been parsed');
         boards = result;
     });
-
-    //initialize context
-    vscode.commands.executeCommand('setContext', 'riot-web-extension.context.websocketOpen', true);
 
     //Serial Events
     navigator.serial.addEventListener('connect', (event) => {
@@ -77,7 +77,7 @@ export function activate(context: vscode.ExtensionContext) {
                     newLabel = newLabel.trim();
                     if (deviceManager.checkLabelAvailable(newLabel, currentLabel)) {
                         device.changeLabel(newLabel);
-                        deviceManager.sortDevices();
+                        deviceManager.updateDeviceProvider();
                         break;
                     } else {
                         if (await vscode.window.showErrorMessage('New label is already in use. Please specify a unique label.', {modal: true}, 'Retry') === undefined) {
@@ -146,30 +146,121 @@ export function activate(context: vscode.ExtensionContext) {
             deviceManager.refreshDeviceProvider();
         }),
 
-        //make Term
+        //term
         vscode.commands.registerCommand('riot-web-extension.device.term', async (device: WebDevice)=> {
-            if (!webSocketManager.isOpen()) {
-                vscode.window.showErrorMessage('Cannot make Terminal. Websocket is not connected.');
+            if (!webSocketManager.isReady()) {
+                vscode.window.showErrorMessage('Cannot open Terminal. Connection to WebsocketServer is not fully established.');
+                return;
             }
-
+            device.requestTerm();
         }),
 
-        //flash Device
+        //flash
         vscode.commands.registerCommand('riot-web-extension.device.flash', async (device: WebDevice) => {
-            if (!webSocketManager.isOpen()) {
-                vscode.window.showErrorMessage('Cannot flash Device. Websocket is not connected.');
+            if (!webSocketManager.isReady()) {
+                vscode.window.showErrorMessage('Cannot flash device. Connection to WebsocketServer is not fully established.');
+                return;
+            }
+            device.requestFlash();
+        }),
+
+        //set custom Websocket URL
+        vscode.commands.registerCommand('riot-web-extension.websocket.setURL', async () => {
+            while (true) {
+                let newURL = await vscode.window.showInputBox({
+                    title: 'Choose a new URL for the Websocket Connection',
+                    value: webSocketManager.getURL(),
+                });
+                if (!newURL) {
+                    if (await vscode.window.showErrorMessage('No new URL was specified', {modal: true}, 'Retry') === undefined) {
+                        break;
+                    }
+                } else {
+                    webSocketManager.setURL(newURL.trim());
+                    break;
+                }
             }
         }),
 
-        //open Websocket
-        vscode.commands.registerCommand('riot-web-extension.websocket.open', () => {
-            webSocketManager.open();
+        //test
+        vscode.commands.registerCommand('riot-web-extension.test.receiveConnectACK', () => {
+            const message: inboundWSMessage = [
+                messageTypes.CONNECT_ACK,
+            ];
+            testPort2.postMessage(encode(message));
         }),
-
-        //close Websocket
-        vscode.commands.registerCommand('riot-web-extension.websocket.close', () => {
-            webSocketManager.close();
+        vscode.commands.registerCommand('riot-web-extension.test.receiveDisconnect', () => {
+            const message: inboundWSMessage = [
+                messageTypes.DISCONNECT,
+            ];
+            testPort2.postMessage(encode(message));
         }),
+        vscode.commands.registerCommand('riot-web-extension.test.receiveDNR', () => {
+            const message: inboundWSMessage = [
+                messageTypes.DNR,
+                [addressTypes.SHELL, 10],
+                'Hallo'
+            ];
+            testPort2.postMessage(encode(message));
+        }),
+        vscode.commands.registerCommand('riot-web-extension.test.receiveSRMACK', () => {
+            const message: inboundWSMessage = [
+                messageTypes.SRM_ACK,
+                [addressTypes.SHELL, 10],
+                [addressTypes.DEVICE, 20]
+            ];
+            testPort2.postMessage(encode(message));
+        }),
+        vscode.commands.registerCommand('riot-web-extension.test.LTMSuccess', () => {
+            const message: inboundWSMessage = [
+                messageTypes.LTM,
+                [addressTypes.SHELL, 10],
+                [addressTypes.DEVICE, 20],
+                terminationTypes.SUCCESS,
+                "Testing Success"
+            ];
+            testPort2.postMessage(encode(message));
+        }),
+        vscode.commands.registerCommand('riot-web-extension.test.LTMError', () => {
+            const message: inboundWSMessage = [
+                messageTypes.LTM,
+                [addressTypes.SHELL, 10],
+                [addressTypes.DEVICE, 20],
+                terminationTypes.ERROR,
+                "Testing Error"
+            ];
+            testPort2.postMessage(encode(message));
+        }),
+        vscode.commands.registerCommand('riot-web-extension.test.flash', () => {
+            const message: inboundWSMessage = [
+                messageTypes.FLASH,
+                [addressTypes.SHELL, 10],
+                [addressTypes.DEVICE, 20],
+                "esp32",
+                {"0x1000": "a"},
+                "arguments"
+            ];
+            testPort2.postMessage(encode(message));
+        }),
+        vscode.commands.registerCommand('riot-web-extension.test.term', () => {
+            const message: inboundWSMessage = [
+                messageTypes.TERM,
+                [addressTypes.SHELL, 10],
+                [addressTypes.DEVICE, 20],
+                "esp32",
+                32000
+            ];
+            testPort2.postMessage(encode(message));
+        }),
+        vscode.commands.registerCommand('riot-web-extension.test.input', () => {
+            const message: inboundWSMessage = [
+                messageTypes.INPUT,
+                [addressTypes.SHELL, 10],
+                [addressTypes.DEVICE, 20],
+                "testing Input"
+            ];
+            testPort2.postMessage(encode(message));
+        })
     );
 
     //Views
@@ -187,4 +278,10 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {
     console.log('RIOT Web Extension deactivated');
+}
+
+async function readBundledBoards(uri: vscode.Uri): Promise<string[]> {
+    const fileUri = vscode.Uri.joinPath(uri, 'dist', 'boards.txt');
+    const text = await vscode.workspace.fs.readFile(fileUri);
+    return new TextDecoder().decode(text).split('\n').filter(line => line.length > 0);
 }

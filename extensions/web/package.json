@@ -52,14 +52,45 @@
         "icon": "$(zap)"
       },
       {
-        "command": "riot-web-extension.websocket.open",
-        "title": "Open Websocket",
+        "command": "riot-web-extension.websocket.setURL",
+        "title": "Set custom Websocket URL",
         "icon": "$(rss)"
       },
       {
-        "command": "riot-web-extension.websocket.close",
-        "title": "Close Websocket",
-        "icon": "$(close)"
+        "command": "riot-web-extension.test.receiveConnectACK",
+        "title": "Receive Connect ACK"
+      },
+      {
+        "command": "riot-web-extension.test.receiveDisconnect",
+        "title": "Receive Disconnect"
+      },
+      {
+        "command": "riot-web-extension.test.receiveDNR",
+        "title": "Receive DNR"
+      },
+      {
+        "command": "riot-web-extension.test.receiveSRMACK",
+        "title": "Receive SRM ACK"
+      },
+      {
+        "command": "riot-web-extension.test.receiveLTMSuccess",
+        "title": "Receive LTM Success"
+      },
+      {
+        "command": "riot-web-extension.test.receiveLTMError",
+        "title": "Receive LTM Error"
+      },
+      {
+        "command": "riot-web-extension.test.receiveFlash",
+        "title": "Receive Flash"
+      },
+      {
+        "command": "riot-web-extension.test.receiveTerm",
+        "title": "Receive Term"
+      },
+      {
+        "command": "riot-web-extension.test.receiveInput",
+        "title": "Receive Input"
       }
     ],
     "viewsContainers": {
@@ -104,14 +135,6 @@
         {
           "command": "riot-web-extension.device.selectBoard",
           "when": "false"
-        },
-        {
-          "command": "riot-web-extension.websocket.open",
-          "when": "riot-web-extension.context.websocketOpen == false"
-        },
-        {
-          "command": "riot-web-extension.websocket.close",
-          "when": "riot-web-extension.context.websocketOpen == true"
         }
       ],
       "view/title": [
@@ -119,16 +142,6 @@
           "command": "riot-web-extension.device.add",
           "group": "navigation",
           "when": "view == riot-web-extension.view.devices"
-        },
-        {
-          "command": "riot-web-extension.websocket.open",
-          "group": "navigation",
-          "when": "view == riot-web-extension.view.devices && riot-web-extension.context.websocketOpen == false"
-        },
-        {
-          "command": "riot-web-extension.websocket.close",
-          "group": "navigation",
-          "when": "view == riot-web-extension.view.devices && riot-web-extension.context.websocketOpen == true"
         }
       ],
       "view/item/context": [
@@ -175,7 +188,8 @@
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
     "run-in-browser": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. .",
-    "package": "vsce package --allow-missing-repository"
+    "package": "vsce package --allow-missing-repository",
+    "generate-type-guards": "ts-auto-guard"
   },
   "devDependencies": {
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
@@ -196,9 +210,11 @@
     "eslint": "^9.39.1",
     "mocha": "^11.7.5",
     "npm-run-all": "^4.1.5",
+    "ts-auto-guard": "^5.0.1",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "cbor-x": "^1.6.0",
     "esptool-js": "^0.5.7",
     "shared": "../../shared"
   },
