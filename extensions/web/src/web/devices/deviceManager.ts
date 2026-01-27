@@ -51,14 +51,15 @@ export class DeviceManager {
     }
 
     private deviceGenerator(port: SerialPort): WebDevice {
-        let newDeviceId: string | undefined = undefined;
-        while (true) {
-            //get new Unique Id
-            newDeviceId = crypto.getRandomValues(this._randomArray)[0].toString();
-            if (!(newDeviceId in this._devices)) {
-                break;
-            }
-        }
+        //TESTING
+        let newDeviceId: string | undefined = '20';
+        // while (true) {
+        //     //get new Unique Id
+        //     newDeviceId = crypto.getRandomValues(this._randomArray)[0].toString();
+        //     if (!(newDeviceId in this._devices)) {
+        //         break;
+        //     }
+        // }
         const newDevice = new SerialDevice(port, newDeviceId, this.getNextDefaultLabel(), this._devicesProvider.onDidChangeTreeDataEventEmitter, this._messagePort);
         this._devices[newDeviceId] = newDevice;
         return newDevice;
@@ -169,5 +170,12 @@ export class DeviceManager {
             terminationTypes.ERROR,
             reason
         ] as outboundDeviceMessage);
+    }
+
+    cancelAllDeviceActions() {
+        console.log('Cancelling all device actions...');
+        for (const device of Object.values(this._devices)) {
+            device.cancel();
+        }
     }
 }

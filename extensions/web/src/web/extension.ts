@@ -17,7 +17,12 @@ export function activate(context: vscode.ExtensionContext) {
         return;
     }
 
+    console.clear();
     console.log("RIOT web extension activated");
+
+    //initialize Context
+    vscode.commands.executeCommand('setContext', 'riot-web-extension.context.connectionEstablished', false);
+    vscode.commands.executeCommand('setContext', 'riot-web-extension.context.busyDevices', []);
 
     const deviceProvider = new DeviceProvider();
     const {port1: devicesPort, port2: websocketPort} = new MessageChannel();
@@ -25,6 +30,7 @@ export function activate(context: vscode.ExtensionContext) {
     const deviceManager = new DeviceManager(deviceProvider, devicesPort);
     const webSocketManager = new WebSocketManager(deviceManager, websocketPort, testPort1);
     let boards: string[] = [];
+    const busyDevices = new Set<string>();
     readBundledBoards(context.extensionUri).then((result) => {
         console.log('Supported boards have been parsed');
         boards = result;
@@ -147,7 +153,7 @@ export function activate(context: vscode.ExtensionContext) {
         }),
 
         //term
-        vscode.commands.registerCommand('riot-web-extension.device.term', async (device: WebDevice)=> {
+        vscode.commands.registerCommand('riot-web-extension.device.term', (device: WebDevice)=> {
             if (!webSocketManager.isReady()) {
                 vscode.window.showErrorMessage('Cannot open Terminal. Connection to WebsocketServer is not fully established.');
                 return;
@@ -156,12 +162,17 @@ export function activate(context: vscode.ExtensionContext) {
         }),
 
         //flash
-        vscode.commands.registerCommand('riot-web-extension.device.flash', async (device: WebDevice) => {
+        vscode.commands.registerCommand('riot-web-extension.device.flash', (device: WebDevice) => {
             if (!webSocketManager.isReady()) {
                 vscode.window.showErrorMessage('Cannot flash device. Connection to WebsocketServer is not fully established.');
                 return;
             }
             device.requestFlash();
+        }),
+
+        //cancel current Action
+        vscode.commands.registerCommand('riot-web-extension.device.cancelAction', (device: WebDevice) => {
+           device.cancel();
         }),
 
         //set custom Websocket URL
@@ -180,6 +191,18 @@ export function activate(context: vscode.ExtensionContext) {
                     break;
                 }
             }
+        }),
+
+        //add Device to context (to change UI buttons)
+        vscode.commands.registerCommand('riot-web-extension.context.add', (contextValue: string) => {
+            busyDevices.add(contextValue);
+            vscode.commands.executeCommand('setContext', 'riot-web-extension.context.busyDevices', Array.from(busyDevices));
+        }),
+
+        //remove Device from context
+        vscode.commands.registerCommand('riot-web-extension.context.remove', (contextValue: string) => {
+            busyDevices.delete(contextValue);
+            vscode.commands.executeCommand('setContext', 'riot-web-extension.context.busyDevices', Array.from(busyDevices));
         }),
 
         //test
@@ -211,7 +234,7 @@ export function activate(context: vscode.ExtensionContext) {
             ];
             testPort2.postMessage(encode(message));
         }),
-        vscode.commands.registerCommand('riot-web-extension.test.LTMSuccess', () => {
+        vscode.commands.registerCommand('riot-web-extension.test.receiveLTMSuccess', () => {
             const message: inboundWSMessage = [
                 messageTypes.LTM,
                 [addressTypes.SHELL, 10],
@@ -221,7 +244,7 @@ export function activate(context: vscode.ExtensionContext) {
             ];
             testPort2.postMessage(encode(message));
         }),
-        vscode.commands.registerCommand('riot-web-extension.test.LTMError', () => {
+        vscode.commands.registerCommand('riot-web-extension.test.receiveLTMError', () => {
             const message: inboundWSMessage = [
                 messageTypes.LTM,
                 [addressTypes.SHELL, 10],
@@ -231,7 +254,7 @@ export function activate(context: vscode.ExtensionContext) {
             ];
             testPort2.postMessage(encode(message));
         }),
-        vscode.commands.registerCommand('riot-web-extension.test.flash', () => {
+        vscode.commands.registerCommand('riot-web-extension.test.receiveFlash', () => {
             const message: inboundWSMessage = [
                 messageTypes.FLASH,
                 [addressTypes.SHELL, 10],
@@ -242,17 +265,17 @@ export function activate(context: vscode.ExtensionContext) {
             ];
             testPort2.postMessage(encode(message));
         }),
-        vscode.commands.registerCommand('riot-web-extension.test.term', () => {
+        vscode.commands.registerCommand('riot-web-extension.test.receiveTerm', () => {
             const message: inboundWSMessage = [
                 messageTypes.TERM,
                 [addressTypes.SHELL, 10],
                 [addressTypes.DEVICE, 20],
                 "esp32",
-                32000
+                115200
             ];
             testPort2.postMessage(encode(message));
         }),
-        vscode.commands.registerCommand('riot-web-extension.test.input', () => {
+        vscode.commands.registerCommand('riot-web-extension.test.receiveInput', () => {
             const message: inboundWSMessage = [
                 messageTypes.INPUT,
                 [addressTypes.SHELL, 10],

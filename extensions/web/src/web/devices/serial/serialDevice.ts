@@ -35,10 +35,10 @@ export class SerialDevice extends WebDevice {
         this._webPort.forget().then(() => console.log('Forgot ' + this.label));
     }
 
-    async close(): Promise<boolean> {
+    protected async close() {
         if (this._currentState === deviceState.FLASH) {
             vscode.window.showErrorMessage(this.label + ' is currently flashing. Please wait until flashing is completed.');
-            return false;
+            return;
         }
         if (this._reader) {
             this._reader.cancel();
@@ -46,18 +46,13 @@ export class SerialDevice extends WebDevice {
             this._reader = undefined;
             this._readableStreamClosed = undefined;
         }
-        if (this._currentState === deviceState.TERM) {
-            return this._webPort.close().then(() => {
-                console.log('Connection to ' + this.label + ' closed');
-                this._currentState = deviceState.IDLE;
-                return true;
-            }).catch((e) => {
-                console.error(e);
-                console.error('Connection to ' + this.label + ' could not be closed');
-                return false;
-            });
-        }
-        return true;
+        this._webPort.close().then(() => {
+            console.log('Connection to ' + this.label + ' closed');
+            this._currentState = deviceState.IDLE;
+            return true;
+        }).catch((e) => {
+            console.log(e);
+        });
     }
 
     protected async read(): Promise<void> {
@@ -81,8 +76,8 @@ export class SerialDevice extends WebDevice {
         }
     }
 
-    write(message: string): void {
-        if (this._currentState === deviceState.FLASH) {
+    protected write(message: string): void {
+        if (this._currentState === deviceState.TERM) {
             const writer = (this._webPort as SerialPort).writable?.getWriter();
             if (writer === undefined) {
                 return;
@@ -92,29 +87,25 @@ export class SerialDevice extends WebDevice {
         }
     }
 
-    async term(param: SerialOptions) {
-        if (this._currentState === deviceState.IDLE) {
-            await this._webPort.open(param).then(() => {
-                    this._currentState = deviceState.TERM;
-                    this.read();
-                }
-            );
-        }
+    protected async term(param: SerialOptions) {
+        await this._webPort.open(param).then(() => {
+                this._currentState = deviceState.TERM;
+                this.read();
+            }
+        );
     }
 
-    async flash(options: {
+    protected async flash(options: {
         loaderOptions: LoaderOptions,
         flashOptions: FlashOptions,
     }): Promise<void> {
-        if (this._currentState === deviceState.IDLE) {
-            this._currentState = deviceState.FLASH;
-            options.loaderOptions.transport = new Transport(this._webPort as SerialPort);
-            const espLoader: ESPLoader = new ESPLoader(options.loaderOptions);
-            await espLoader.main().then(value => console.log(value)).catch(e => console.error(e));
-            await espLoader.writeFlash(options.flashOptions).then(() => console.log('Programming Done')).catch(e => console.error(e));
-            await espLoader.after();
-            await espLoader.transport.disconnect();
-            this._currentState = deviceState.IDLE;
-        }
+        this._currentState = deviceState.FLASH;
+        options.loaderOptions.transport = new Transport(this._webPort as SerialPort);
+        const espLoader: ESPLoader = new ESPLoader(options.loaderOptions);
+        await espLoader.main().then(value => console.log(value)).catch(e => console.error(e));
+        await espLoader.writeFlash(options.flashOptions).then(() => console.log('Programming Done')).catch(e => console.error(e));
+        await espLoader.after();
+        await espLoader.transport.disconnect();
+        this._currentState = deviceState.IDLE;
     }
 }

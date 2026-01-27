@@ -49,20 +49,20 @@ export abstract class WebDevice extends DeviceTreeItem {
 
     abstract forget(): void;
 
-    abstract close(): Promise<boolean>;
+    protected abstract close(): Promise<void>;
 
     protected abstract read(webSocketManager: WebSocketManager): void;
 
-    abstract write(message: string): void;
+    protected abstract write(message: string): void;
 
-    abstract term(param?: object): void;
+    protected abstract term(param?: object): void;
 
-    abstract flash(param?: object): void;
+    protected abstract flash(param?: object): void;
 
     requestFlash() {
         if (this._shellAddress === undefined) {
             this._nextAction = deviceActions.FLASH;
-            this.sendRequest(messageTypes.FLASH_REQUEST);
+            this.requestShell();
         } else {
             vscode.window.showErrorMessage('Device is busy');
         }
@@ -71,7 +71,7 @@ export abstract class WebDevice extends DeviceTreeItem {
     requestTerm() {
         if (this._shellAddress === undefined) {
             this._nextAction = deviceActions.TERM;
-            this.sendRequest(messageTypes.TERM_REQUEST);
+            this.requestShell();
         } else {
             vscode.window.showErrorMessage('Device is busy');
         }
@@ -80,8 +80,12 @@ export abstract class WebDevice extends DeviceTreeItem {
     private unlockDevice() {
         this._currentState = deviceState.IDLE;
         this._nextAction = undefined;
-        this._lastShellAddress = this._shellAddress;
-        this._shellAddress = undefined;
+        if (this._shellAddress) {
+            this._lastShellAddress = this._shellAddress;
+            this._shellAddress = undefined;
+        }
+        vscode.commands.executeCommand('riot-web-extension.context.remove', this.contextValue);
+        this.stopLogBundling();
     }
 
     private sendMessage(message: outboundDeviceMessage): void {
@@ -89,18 +93,18 @@ export abstract class WebDevice extends DeviceTreeItem {
     }
 
     async handleMessage(message: inboundDeviceMessage): Promise<void> {
-        console.log('Device received message: ', message[0]);
-        if (message[0] !== 'DNR') {
-            if (message[1] !== this._shellAddress) {
-                this.sendLTM(message[1], terminationTypes.ERROR, 'Device has established a connection with a different Shell.');
+        if (message[0] !== messageTypes.DNR) {
+            if (message[1][0] !== this._shellAddress?.[0] || message[1][1] !== this._shellAddress?.[1]) {
+                this.sendLTM(message[1], terminationTypes.ERROR, this._shellAddress ? 'Device has established a connection with a different Shell.' : 'A connection has to be established first.');
                 return;
             }
         }
         switch (message[0]) {
-            case "DNR":
+            case messageTypes.DNR:
                 if (this._shellAddress) {
                     this.sendLTM(message[1], terminationTypes.ERROR, 'Device is locked.');
                 } else {
+                    vscode.commands.executeCommand('riot-web-extension.context.add', this.contextValue);
                     this._shellAddress = message[1];
                     this._messagePort.postMessage([
                         'DNR ACK',
@@ -109,7 +113,7 @@ export abstract class WebDevice extends DeviceTreeItem {
                     ] as outboundDeviceMessage);
                 }
                 break;
-            case "SRM ACK":
+            case messageTypes.SRM_ACK:
                 if (this._currentState === deviceState.WAITING_FOR_SRM_ACK) {
                     this._currentState = deviceState.IDLE;
                     switch (this._nextAction) {
@@ -125,16 +129,22 @@ export abstract class WebDevice extends DeviceTreeItem {
                     }
                 }
                 break;
-            case "LTM":
+            case messageTypes.LTM:
                 if (this._currentState === deviceState.WAITING_FOR_SRM_ACK) {
                     this._lastShellAddress = undefined;
+                    vscode.window.showInformationMessage(`The last shell Device ${this.label} used isn't available anymore. Spawning new shell.`);
                     this.requestShell();
                     break;
+                }
+                if (message[3] === terminationTypes.SUCCESS) {
+                    vscode.window.showInformationMessage(message[4]);
+                } else {
+                    vscode.window.showErrorMessage(message[4]);
                 }
                 this.close();
                 this.unlockDevice();
                 break;
-            case "flash":
+            case messageTypes.FLASH:
                 if (this._currentState === deviceState.IDLE) {
                     if (await this.checkBoard(message[3])) {
                         this._currentState = deviceState.FLASH;
@@ -142,7 +152,7 @@ export abstract class WebDevice extends DeviceTreeItem {
                     }
                 }
                 break;
-            case "term":
+            case messageTypes.TERM:
                 if (this._currentState === deviceState.IDLE) {
                     if (await this.checkBoard(message[3])) {
                         this._currentState = deviceState.TERM;
@@ -152,7 +162,7 @@ export abstract class WebDevice extends DeviceTreeItem {
                     }
                 }
                 break;
-            case "input":
+            case messageTypes.INPUT:
                 if (this._currentState === deviceState.TERM) {
                     this.write(message[3]);
                 }
@@ -161,16 +171,19 @@ export abstract class WebDevice extends DeviceTreeItem {
     };
 
     private async requestShell() {
+        vscode.commands.executeCommand('riot-web-extension.context.add', this.contextValue);
         if (this._lastShellAddress) {
             this._shellAddress = this._lastShellAddress;
         } else {
             await vscode.commands.executeCommand('workbench.action.terminal.new');
             const processId = await vscode.window.activeTerminal?.processId;
             if (!processId) {
-                vscode.window.showErrorMessage('ProcessId was undefined');
-                return;
+                //TESTING
+                // vscode.window.showErrorMessage('ProcessId was undefined, cannot connect to Shell');
+                // return;
             }
-            this._shellAddress = [addressTypes.SHELL, processId];
+            //TESTING
+            this._shellAddress = [addressTypes.SHELL, processId ? processId : 10];
         }
         this._currentState = deviceState.WAITING_FOR_SRM_ACK;
         this.sendMessage([
@@ -214,17 +227,28 @@ export abstract class WebDevice extends DeviceTreeItem {
             while (this._logMessages.length !== 0) {
                 out += this._logMessages.splice(0, 1)[0] + '\n';
             }
-            this.sendMessage([
-                messageTypes.LOG,
-                this._deviceAddress,
-                this._shellAddress,
-                logTypes.LOG,
-                out
-            ] as outboundDeviceMessage);
+            if (out.length !== 0) {
+                this.sendMessage([
+                    messageTypes.LOG,
+                    this._deviceAddress,
+                    this._shellAddress,
+                    logTypes.LOG,
+                    out
+                ] as outboundDeviceMessage);
+            }
         }, 1000);
     }
 
     protected stopLogBundling() {
         clearInterval(this._logMessagesTimer);
+        this._logMessages = [];
+    }
+
+    cancel() {
+        if (this._shellAddress) {
+            this.sendLTM(this._shellAddress, terminationTypes.ERROR, 'User canceled Action.');
+        }
+        this.close();
+        this.unlockDevice();
     }
 }

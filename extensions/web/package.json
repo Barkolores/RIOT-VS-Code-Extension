@@ -52,9 +52,22 @@
         "icon": "$(zap)"
       },
       {
+        "command": "riot-web-extension.device.cancelAction",
+        "title": "Cancel current Action",
+        "icon": "$(x)"
+      },
+      {
         "command": "riot-web-extension.websocket.setURL",
         "title": "Set custom Websocket URL",
         "icon": "$(rss)"
+      },
+      {
+        "command": "riot-web-extension.context.add",
+        "title": "Add Device to Context"
+      },
+      {
+        "command": "riot-web-extension.context.remove",
+        "title": "Remove Device from Context"
       },
       {
         "command": "riot-web-extension.test.receiveConnectACK",
@@ -129,11 +142,23 @@
           "when": "false"
         },
         {
+          "command": "riot-web-extension.device.cancelAction",
+          "when": "false"
+        },
+        {
           "command": "riot-web-extension.device.selectProject",
           "when": "false"
         },
         {
           "command": "riot-web-extension.device.selectBoard",
+          "when": "false"
+        },
+        {
+          "command": "riot-web-extension.context.add",
+          "when": "false"
+        },
+        {
+          "command": "riot-web-extension.context.remove",
           "when": "false"
         }
       ],
@@ -157,12 +182,17 @@
         },
         {
           "command": "riot-web-extension.device.term",
-          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != boardItem && viewItem != folderItem && viewItem != portItem",
+          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != boardItem && viewItem != folderItem && viewItem != portItem && viewItem not in riot-web-extension.context.busyDevices && riot-web-extension.context.connectionEstablished",
           "group": "inline"
         },
         {
           "command": "riot-web-extension.device.flash",
-          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != boardItem && viewItem != folderItem && viewItem != portItem",
+          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != boardItem && viewItem != folderItem && viewItem != portItem && viewItem not in riot-web-extension.context.busyDevices && riot-web-extension.context.connectionEstablished",
+          "group": "inline"
+        },
+        {
+          "command": "riot-web-extension.device.cancelAction",
+          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != boardItem && viewItem != folderItem && viewItem != portItem && viewItem in riot-web-extension.context.busyDevices && riot-web-extension.context.connectionEstablished",
           "group": "inline"
         },
         {
