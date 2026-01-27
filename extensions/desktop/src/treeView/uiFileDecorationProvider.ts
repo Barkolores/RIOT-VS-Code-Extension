@@ -50,13 +50,14 @@ export class RiotFileDecorationProvider implements vscode.FileDecorationProvider
                 badge: 'A',
                 tooltip: `${this.activeBoard?.id ?? 'Unknown board'}`
             };
-        }else if(this.validAppPaths.has(uri.toString())) {
-            return {
-                color: new vscode.ThemeColor('charts.red'),
-                badge: 'R',
-                tooltip: `RIOT Application`
-            };
         }
+        // else if(this.validAppPaths.has(uri.toString())) {
+        //     return {
+        //         color: new vscode.ThemeColor('charts.red'),
+        //         badge: 'R',
+        //         tooltip: `RIOT Application`
+        //     };
+        // }
         return undefined;
     }
 }

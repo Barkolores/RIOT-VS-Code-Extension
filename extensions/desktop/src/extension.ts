@@ -27,9 +27,21 @@ export async function activate(context: vscode.ExtensionContext) {
 	const DEVICE_LIST_CACHE_KEY = 'riot-launcher.deviceList';
 	const ACTIVE_DEVICE_CACHE_KEY = 'riot-launcher.activeDevice';
 	const VALID_RIOT_PATHS_CACHE_KEY = 'riot-launcher.validRiotAppPaths';
+	const TRANSFER_DEVICES_KEY = 'riot-launcher.transferDevices';
+
+	const transferDevices = context.globalState.get<DeviceConfig[]>(TRANSFER_DEVICES_KEY);
 
 
-	const initialDevicesConfig = context.workspaceState.get<DeviceConfig[]>(DEVICE_LIST_CACHE_KEY, []	);
+	let initialDevicesConfig = context.workspaceState.get<DeviceConfig[]>(DEVICE_LIST_CACHE_KEY, []);
+
+	if (transferDevices && transferDevices.length > 0) {
+        console.log("Restoring devices from Global State transfer...");
+        initialDevicesConfig = transferDevices;
+        
+        await context.globalState.update(TRANSFER_DEVICES_KEY, undefined);
+        
+        await context.workspaceState.update(DEVICE_LIST_CACHE_KEY, initialDevicesConfig);
+    }
 	const activeDeviceConfig = context.workspaceState.get<DeviceConfig | undefined>(ACTIVE_DEVICE_CACHE_KEY, undefined);
 	const validRiotAppPaths = context.workspaceState.get<string[]>(VALID_RIOT_PATHS_CACHE_KEY, []);
 
@@ -110,7 +122,6 @@ export async function activate(context: vscode.ExtensionContext) {
 			.split(/\s+/)       //Escape characters for SPACE
 			.filter(Boolean);
 			
-			vscode.window.showInformationMessage(`Loaded ${boards.length} boards from RIOT Path.`);
 			if(boards.length > 0) {
 				return boards;
 			}else {
@@ -247,7 +258,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		if (result && result.length > 0) {
 			const appFolderUri = result[0];
-			vscode.window.showInformationMessage(`Selected Example Folder: ${appFolderUri}`);
+			vscode.window.showInformationMessage(`Selected Example Folder: ${appFolderUri.fsPath}`);
 			try {
 				const { stdout } = await execAsync(
 					`cd ${appFolderUri.fsPath} && make info-debug-variable-RIOTBASE`
@@ -267,6 +278,17 @@ export async function activate(context: vscode.ExtensionContext) {
 				treeItem.setBasePath(riotBasePath);
 				
 				devicesTreeItemProvider.refresh();
+
+				const currentDevices = devicesTreeItemProvider.getDeviceModels();
+                const configsToSave = currentDevices.map(d => d.toConfig());
+
+                await context.globalState.update('riot-launcher.transferDevices', configsToSave);
+                
+                await context.workspaceState.update(DEVICE_LIST_CACHE_KEY, configsToSave);
+                const activeDevice = devicesTreeItemProvider.getActiveDevice();
+                
+                await context.workspaceState.update(DEVICE_LIST_CACHE_KEY, configsToSave);
+                await context.workspaceState.update(ACTIVE_DEVICE_CACHE_KEY, activeDevice?.toConfig());
 				/* Compile commands and configuring IntelliSense */
 				const device = treeItem.getDevice();
 				if(device.board?.id)	 {
@@ -456,7 +478,6 @@ export async function activate(context: vscode.ExtensionContext) {
 		
 		if(descriptionInput !== undefined) {
 			d.setTitle(descriptionInput);
-			vscode.window.showInformationMessage(`Changed description of device to: ${descriptionInput}`);
 			devicesTreeItemProvider.refresh();
 		}
 	});

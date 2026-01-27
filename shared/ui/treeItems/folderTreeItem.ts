@@ -11,6 +11,7 @@ export class FolderTreeItem extends vscode.TreeItem {
         const appUri = _device.appPath;
         const labelStr = `${appUri ? path.basename(appUri.fsPath) : 'Unknown application path'} `;       
         super(labelStr, vscode.TreeItemCollapsibleState.None);
+        this.tooltip = appUri ? appUri.fsPath : "No application path set";
         this.contextValue = 'folderItem'
     }
 
