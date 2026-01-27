@@ -198,7 +198,7 @@ export abstract class WebDevice extends DeviceTreeItem {
             type,
             this._deviceAddress,
             this._shellAddress,
-            this._board ? this._board.name : 'native64'
+            this._board ? this._board.name : 'native'
         ] as outboundDeviceMessage);
     }
 
@@ -213,7 +213,7 @@ export abstract class WebDevice extends DeviceTreeItem {
     };
 
     private async checkBoard(board: string): Promise<boolean> {
-        const defaultBoard = 'native64';
+        const defaultBoard = 'native';
         if (this._board && this._board.name !== board || !this._board && defaultBoard !== board) {
             return await vscode.window.showErrorMessage('The board used for the Term/Flash does not match the specified board.', {modal: true}, 'Continue') !== undefined;
         }
@@ -225,7 +225,7 @@ export abstract class WebDevice extends DeviceTreeItem {
         this._logMessagesTimer = setInterval(() => {
             let out = '';
             while (this._logMessages.length !== 0) {
-                out += this._logMessages.splice(0, 1)[0] + '\n';
+                out += this._logMessages.shift();
             }
             if (out.length !== 0) {
                 this.sendMessage([
