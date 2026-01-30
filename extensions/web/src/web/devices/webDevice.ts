@@ -60,6 +60,10 @@ export abstract class WebDevice extends DeviceTreeItem {
     protected abstract flash(param?: object): void;
 
     requestFlash() {
+        if (!this._activeProject) {
+            vscode.window.showErrorMessage('No project in which to execute the flash command has been specified. Cancelling Flash...', {modal: true});
+            return;
+        }
         if (this._shellAddress === undefined) {
             this._nextAction = deviceActions.FLASH;
             this.requestShell();
@@ -69,6 +73,10 @@ export abstract class WebDevice extends DeviceTreeItem {
     }
 
     requestTerm() {
+        if (!this._activeProject) {
+            vscode.window.showErrorMessage('No project in which to execute the term command has been specified. Cancelling Term...', {modal: true});
+            return;
+        }
         if (this._shellAddress === undefined) {
             this._nextAction = deviceActions.TERM;
             this.requestShell();
@@ -178,12 +186,10 @@ export abstract class WebDevice extends DeviceTreeItem {
             await vscode.commands.executeCommand('workbench.action.terminal.new');
             const processId = await vscode.window.activeTerminal?.processId;
             if (!processId) {
-                //TESTING
-                // vscode.window.showErrorMessage('ProcessId was undefined, cannot connect to Shell');
-                // return;
+                vscode.window.showErrorMessage('ProcessId was undefined, cannot connect to Shell');
+                return;
             }
-            //TESTING
-            this._shellAddress = [addressTypes.SHELL, processId ? processId : 10];
+            this._shellAddress = [addressTypes.SHELL, processId];
         }
         this._currentState = deviceState.WAITING_FOR_SRM_ACK;
         this.sendMessage([
@@ -194,11 +200,15 @@ export abstract class WebDevice extends DeviceTreeItem {
     }
 
     private sendRequest(type: messageTypes.TERM_REQUEST | messageTypes.FLASH_REQUEST) {
+        if (!this._board) {
+            vscode.window.showWarningMessage(`No board has been specified. Board of type ${WebDevice._defaultBoard} will be used.`);
+        }
         this.sendMessage([
             type,
             this._deviceAddress,
             this._shellAddress,
-            this._board ? this._board.name : 'native'
+            this._board ? this._board.name : WebDevice._defaultBoard,
+            this._activeProject ? this._activeProject.uri : '',
         ] as outboundDeviceMessage);
     }
 
@@ -213,9 +223,8 @@ export abstract class WebDevice extends DeviceTreeItem {
     };
 
     private async checkBoard(board: string): Promise<boolean> {
-        const defaultBoard = 'native';
-        if (this._board && this._board.name !== board || !this._board && defaultBoard !== board) {
-            return await vscode.window.showErrorMessage('The board used for the Term/Flash does not match the specified board.', {modal: true}, 'Continue') !== undefined;
+        if (this._board && this._board.name !== board || !this._board && WebDevice._defaultBoard !== board) {
+            return await vscode.window.showErrorMessage(`The board used for the Term/Flash does not match the specified board. Board of type ${WebDevice._defaultBoard} will be used instead.`, {modal: true}, 'Continue') !== undefined;
         }
         return true;
     }

@@ -51,15 +51,14 @@ export class DeviceManager {
     }
 
     private deviceGenerator(port: SerialPort): WebDevice {
-        //TESTING
-        let newDeviceId: string | undefined = '20';
-        // while (true) {
-        //     //get new Unique Id
-        //     newDeviceId = crypto.getRandomValues(this._randomArray)[0].toString();
-        //     if (!(newDeviceId in this._devices)) {
-        //         break;
-        //     }
-        // }
+        let newDeviceId: string | undefined = undefined;
+        while (true) {
+            //get new Unique Id
+            newDeviceId = crypto.getRandomValues(this._randomArray)[0].toString();
+            if (!(newDeviceId in this._devices)) {
+                break;
+            }
+        }
         const newDevice = new SerialDevice(port, newDeviceId, this.getNextDefaultLabel(), this._devicesProvider.onDidChangeTreeDataEventEmitter, this._messagePort);
         this._devices[newDeviceId] = newDevice;
         return newDevice;

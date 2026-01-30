@@ -29,5 +29,6 @@ export type outboundDeviceMessage = [
 ] | [
     messageTypes.FLASH_REQUEST | messageTypes.TERM_REQUEST,
     ...deviceSendAddress,
-    board: string
+    board: string,
+    directory: string
 ]

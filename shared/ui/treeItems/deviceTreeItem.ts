@@ -4,6 +4,7 @@ import {BoardTypes} from "../boardTypes";
 export abstract class DeviceTreeItem extends vscode.TreeItem {
 
     protected _activeProject?: vscode.WorkspaceFolder;
+    protected static readonly _defaultBoard: string = 'native';
     protected _board?: BoardTypes;
     protected _description?: string[];
 

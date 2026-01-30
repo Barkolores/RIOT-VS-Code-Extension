@@ -48,7 +48,7 @@ export class WebSocketManager {
 
     public isReady(): boolean {
         //TESTING
-        //bypassed for debug
+        //disabled for debug
         // return this._socket !== undefined && this._socket.readyState === this._socket.OPEN && this._apiConnected;
         return true;
     }
@@ -67,11 +67,11 @@ export class WebSocketManager {
         this._socket.onclose = this.onClose.bind(this);
         this._socket.onerror = this.onError.bind(this);
         this._socket.onmessage = this.onMessage.bind(this);
-        //for testing only
+        //TESTING
         this._testPort.onmessage = this.onMessage.bind(this);
         this._messagePort.onmessage = (event) => {
             const message = event.data;
-            //Debug
+            //TESTING
             if (isValidOutboundMessage(message)) {
                 this.sendMessage(message);
             } else {
@@ -137,11 +137,9 @@ export class WebSocketManager {
                 this.clearApiConnectInterval();
                 break;
             case messageTypes.DISCONNECT:
-                this._apiConnected = false;
-                this._deviceManager.cancelAllDeviceActions();
-                vscode.commands.executeCommand('setContext', 'riot-web-extension.context.connectionEstablished', false);
+                this.resetApi();
                 vscode.window.showErrorMessage('Received Disconnect Message, reestablishing connection in 10 seconds...');
-                setTimeout(this.startApiConnectInterval.bind(this), 10000);
+                this._apiConnectInterval = setTimeout(this.startApiConnectInterval.bind(this), 10000);
                 break;
             default:
                 if (this._apiConnected) {
@@ -155,6 +153,7 @@ export class WebSocketManager {
 
     private sendMessage(message: outboundWSMessage) {
         this._socket?.send(encode(message));
+        //TESTING
         console.log('Send outbound message:', message);
     }
 
@@ -170,7 +169,6 @@ export class WebSocketManager {
         //retry connect Message every 10 seconds if no response
         this.sendConnectMessage();
         this._apiConnectInterval = setInterval(() => {
-            console.log('Received no Connection Acknowledgment in the past 10 seconds, retrying...');
             vscode.window.showErrorMessage('Received no Connection Acknowledgment in the past 10 seconds, retrying...');
             this.sendConnectMessage();
         }, 10000);
@@ -180,11 +178,19 @@ export class WebSocketManager {
         clearInterval(this._apiConnectInterval);
     }
 
+    private resetApi() {
+        this._apiConnected = false;
+        this._deviceManager.cancelAllDeviceActions();
+        this.clearApiConnectInterval();
+        vscode.commands.executeCommand('setContext', 'riot-web-extension.context.connectionEstablished', false);
+    }
+
     getURL() {
         return this._url;
     }
 
     setURL(newURL: string) {
+        this.resetApi();
         this._url = newURL;
         if (this._socket) {
             this._socket.onopen = () => {};
