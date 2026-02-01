@@ -111,9 +111,14 @@ export class WebSocketManager {
         console.log(error);
     }
 
-    private onMessage(event: MessageEvent<any>) {
+    private async onMessage(event: MessageEvent<any>) {
         try {
-            const parsedData = decode(event.data);
+            let parsedData;
+            if (event.data instanceof Blob) {
+                parsedData = decode(new Uint8Array(await event.data.arrayBuffer()));
+            } else {
+                parsedData = decode(event.data);
+            }
             if (isValidInboundMessage(parsedData)) {
                 this.handleMessage(parsedData);
             } else {
