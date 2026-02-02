@@ -6,7 +6,7 @@ import { messageTypes, addressTypes, terminationTypes } from "../additionalTypes
 import { inboundWSMessage } from "./inboundWSMessage";
 
 export function isValidInboundMessage(obj: unknown): obj is inboundWSMessage {
-    const typedObj = obj as inboundWSMessage
+    const typedObj = obj as inboundWSMessage;
     return (
         (Array.isArray(typedObj) &&
             typedObj[0] === messageTypes.DNR &&

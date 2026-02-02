@@ -101,9 +101,14 @@ export abstract class WebDevice extends DeviceTreeItem {
     }
 
     async handleMessage(message: inboundDeviceMessage): Promise<void> {
+        //Check all messages but DNR
         if (message[0] !== messageTypes.DNR) {
+            //Check if sender is known
             if (message[1][0] !== this._shellAddress?.[0] || message[1][1] !== this._shellAddress?.[1]) {
-                this.sendLTM(message[1], terminationTypes.ERROR, this._shellAddress ? 'Device has established a connection with a different Shell.' : 'A connection has to be established first.');
+                //Drop LTM messages
+                if (message[0] !== messageTypes.LTM) {
+                    this.sendLTM(message[1], terminationTypes.ERROR, this._shellAddress ? 'Device has established a connection with a different Shell.' : 'A connection has to be established first.');
+                }
                 return;
             }
         }
