@@ -68,5 +68,5 @@ export function isValidOutboundMessage(obj: unknown): obj is outboundWSMessage {
             typedObj[1][1] === 0 ||
             Array.isArray(typedObj) &&
             typedObj[0] === messageTypes.DISCONNECT)
-    )
+    );
 }
