@@ -550,7 +550,24 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 
 		const appName = path.basename(appPath.fsPath);
-		const programPath = path.join(`\${workspaceFolder}/bin/${boardName}/${appName}.elf`);
+
+		let elfFileName = `${appName}.elf`;
+		const binFolderPath = path.join(appPath.fsPath, 'bin', boardName);
+		try {
+			if(fs.existsSync(binFolderPath)) {
+				const files = await fs.promises.readdir(binFolderPath);
+				const foundsElf = files.find(file => file.endsWith(`${appName}.elf`));
+				if(foundsElf) {
+					elfFileName = foundsElf;
+				} else {
+					console.log(`ELF file ${appName}.elf not found in ${binFolderPath}. Using fallback name.`);
+				}
+			}
+		} catch (err) {
+			vscode.window.showErrorMessage(`Error reading bin folder: ${err}`);
+		}
+
+		const programPath = path.join(`\${workspaceFolder}/bin/${boardName}/${elfFileName}`);
 		const debugConfigName = `RIOT Debug (${boardName})`;
 
 		const launchConfig = {
@@ -609,6 +626,21 @@ export async function activate(context: vscode.ExtensionContext) {
 		}else {
 			vscode.window.showErrorMessage("Workspace folder for debugging not found");
 		}
+	}
+	async function executeTaskAndWait(task: vscode.Task) : Promise<void> {
+		const execution = await vscode.tasks.executeTask(task);
+		return new Promise<void>((resolve,reject) => {
+			const disposable = vscode.tasks.onDidEndTaskProcess ((e) => {
+				if(e.execution === execution) {
+					disposable.dispose();
+					if(e.exitCode !== 0) {
+						reject(new Error(`Task execution failed with exit code ${e.exitCode}`));
+					} else {
+						resolve();
+					}
+				}
+			});
+		});
 	}
 }
 
