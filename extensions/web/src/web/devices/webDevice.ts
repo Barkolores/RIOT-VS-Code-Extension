@@ -153,10 +153,13 @@ export abstract class WebDevice extends DeviceTreeItem {
                 this.unlockDevice();
                 break;
             case messageTypes.FLASH:
-                if (this._currentState === deviceState.IDLE) {
+                if (this._currentState === deviceState.IDLE && this._shellAddress !== undefined) {
                     if (await this.checkBoard(message[3])) {
-                        this._currentState = deviceState.FLASH;
-                        this.flash();
+                        //TESTING
+                        // this._currentState = deviceState.FLASH;
+                        // this.flash();
+                        this.sendLTM(this._shellAddress, terminationTypes.SUCCESS, 'Dummy: Flash complete');
+                        this.unlockDevice();
                     }
                 }
                 break;
