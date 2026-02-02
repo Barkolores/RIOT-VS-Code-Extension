@@ -6,7 +6,7 @@ import { messageTypes, addressTypes, terminationTypes, logTypes } from "../addit
 import { outboundWSMessage } from "./outboundWSMessage";
 
 export function isValidOutboundMessage(obj: unknown): obj is outboundWSMessage {
-    const typedObj = obj as outboundWSMessage;
+    const typedObj = obj as outboundWSMessage
     return (
         (Array.isArray(typedObj) &&
             (typedObj[0] === messageTypes.DNR_ACK ||
@@ -59,7 +59,8 @@ export function isValidOutboundMessage(obj: unknown): obj is outboundWSMessage {
             Array.isArray(typedObj[2]) &&
             typedObj[2][0] === addressTypes.SHELL &&
             typeof typedObj[2][1] === "number" &&
-            typeof typedObj[3] === "string" ||
+            typeof typedObj[3] === "string" &&
+            typeof typedObj[4] === "string" ||
             Array.isArray(typedObj) &&
             typedObj[0] === messageTypes.CONNECT &&
             Array.isArray(typedObj[1]) &&
@@ -67,5 +68,5 @@ export function isValidOutboundMessage(obj: unknown): obj is outboundWSMessage {
             typedObj[1][1] === 0 ||
             Array.isArray(typedObj) &&
             typedObj[0] === messageTypes.DISCONNECT)
-    );
+    )
 }
