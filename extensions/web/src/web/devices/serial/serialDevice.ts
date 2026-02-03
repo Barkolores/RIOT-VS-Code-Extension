@@ -2,8 +2,6 @@ import vscode from "vscode";
 import {deviceState, WebDevice} from "../webDevice";
 import {ESPLoader, type FlashOptions, type LoaderOptions, Transport} from "esptool-js";
 import {DeviceTreeItem} from "shared/ui/treeItems/deviceTreeItem";
-import {logTypes, messageTypes} from "../../websocket/api/additionalTypes";
-import {outboundDeviceMessage} from "../../websocket/api/outbound/outboundDeviceMessage";
 
 export class SerialDevice extends WebDevice {
 
@@ -65,7 +63,7 @@ export class SerialDevice extends WebDevice {
             while (true) {
                 const {value, done} = await this._reader.read();
                 if (value) {
-                    this._logMessages.push(value);
+                    this._logMessages += value;
                 }
                 if (done || !value) {
                     this._reader.releaseLock();

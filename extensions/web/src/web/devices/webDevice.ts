@@ -31,7 +31,7 @@ export abstract class WebDevice extends DeviceTreeItem {
     protected _lastShellAddress: shellAddress | undefined = undefined;
     protected _currentState: deviceState = deviceState.IDLE;
     protected _nextAction: deviceActions | undefined = undefined;
-    protected _logMessages: string[] = [];
+    protected _logMessages: string = '';
     protected _logMessagesTimer: NodeJS.Timeout | undefined = undefined;
 
     protected constructor(
@@ -103,7 +103,7 @@ export abstract class WebDevice extends DeviceTreeItem {
     async handleMessage(message: inboundDeviceMessage): Promise<void> {
         //Check all messages but DNR
         if (message[0] !== messageTypes.DNR) {
-            //Check if sender is known
+            //Check if sender is not known
             if (message[1][0] !== this._shellAddress?.[0] || message[1][1] !== this._shellAddress?.[1]) {
                 //Drop LTM messages
                 if (message[0] !== messageTypes.LTM) {
@@ -239,26 +239,26 @@ export abstract class WebDevice extends DeviceTreeItem {
 
     protected startLogBundling() {
         this.stopLogBundling();
-        this._logMessagesTimer = setInterval(() => {
-            let out = '';
-            while (this._logMessages.length !== 0) {
-                out += this._logMessages.shift();
-            }
-            if (out.length !== 0) {
-                this.sendMessage([
-                    messageTypes.LOG,
-                    this._deviceAddress,
-                    this._shellAddress,
-                    logTypes.LOG,
-                    out
-                ] as outboundDeviceMessage);
-            }
-        }, 1000);
+        this._logMessagesTimer = setInterval(this.sendLogMessage.bind(this), 100);
     }
 
     protected stopLogBundling() {
         clearInterval(this._logMessagesTimer);
-        this._logMessages = [];
+        //send out any remaining logs
+        this.sendLogMessage();
+    }
+
+    protected sendLogMessage() {
+        if (this._logMessages !== '') {
+            this.sendMessage([
+                messageTypes.LOG,
+                this._deviceAddress,
+                this._shellAddress,
+                logTypes.LOG,
+                this._logMessages
+            ] as outboundDeviceMessage);
+            this._logMessages = '';
+        }
     }
 
     cancel() {
