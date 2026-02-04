@@ -1,17 +1,15 @@
 import vscode from "vscode";
-import {BoardTypes} from "../boardTypes";
 
 export abstract class DeviceTreeItem extends vscode.TreeItem {
 
     protected _activeProject?: vscode.WorkspaceFolder;
     protected static readonly _defaultBoard: string = 'native';
-    protected _board?: BoardTypes;
     protected _description?: string[];
 
     protected constructor(
         label: string,
         public readonly contextValue: string,
-        protected readonly _updateTreeviewEventEmitter: vscode.EventEmitter<DeviceTreeItem | undefined>,
+        protected readonly _board: string,
         protected _port?: string
     ) {
         super(label, vscode.TreeItemCollapsibleState.Collapsed);
@@ -21,7 +19,7 @@ export abstract class DeviceTreeItem extends vscode.TreeItem {
         return this._activeProject;
     }
 
-    getBoard(): BoardTypes | undefined {
+    getBoard(): string {
         return this._board;
     }
 
@@ -41,19 +39,7 @@ export abstract class DeviceTreeItem extends vscode.TreeItem {
         this._activeProject = newProject;
     }
 
-    changeBoard(newBoard: BoardTypes) {
-        this._board = newBoard;
-    }
-
     changePort(newPort: string) {
         this._port = newPort;
     }
-
-    changeDescription(newDescription: string[]) {
-        this._description = newDescription;
-    }
-
-    updateTreeview(): void {
-        this._updateTreeviewEventEmitter.fire(undefined);
-    };
 }

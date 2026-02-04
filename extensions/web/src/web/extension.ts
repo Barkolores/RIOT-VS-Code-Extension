@@ -4,11 +4,10 @@ import {WebDevice} from "./devices/webDevice";
 import {DeviceManager} from "./devices/deviceManager";
 import {WebSocketManager} from "./websocket/webSocketManager";
 import {FolderTreeItem} from "shared/ui/treeItems/folderTreeItem";
-import {BoardTreeItem} from "shared/ui/treeItems/boardTreeItem";
-import {BoardTypes} from "shared/ui/boardTypes";
-import {decode, encode} from "cbor-x";
+import {encode} from "cbor-x";
 import {inboundWSMessage} from "./websocket/api/inbound/inboundWSMessage";
 import {addressTypes, messageTypes, terminationTypes} from "./websocket/api/additionalTypes";
+import {supportedBoards} from "./devices/boards/supportedBoards";
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -29,16 +28,11 @@ export function activate(context: vscode.ExtensionContext) {
     const {port1: testPort1, port2: testPort2} = new MessageChannel();
     const deviceManager = new DeviceManager(deviceProvider, devicesPort);
     const webSocketManager = new WebSocketManager(deviceManager, websocketPort, testPort1);
-    let boards: string[] = [];
     const busyDevices = new Set<string>();
-    readBundledBoards(context.extensionUri).then((result) => {
-        console.log('Supported boards have been parsed');
-        boards = result;
-    });
 
     //Serial Events
     navigator.serial.addEventListener('connect', (event) => {
-        deviceManager.handleConnectEvent(event.target as SerialPort);
+        (event.target as SerialPort).forget();
     });
     navigator.serial.addEventListener('disconnect', (event) => {
         deviceManager.handleDisconnectEvent(event.target as SerialPort);
@@ -49,13 +43,16 @@ export function activate(context: vscode.ExtensionContext) {
         //add new Device
         vscode.commands.registerCommand('riot-web-extension.device.add', async () => {
             console.log('RIOT Web Extension is registering new device...');
-            const serialPortInfo: SerialPortInfo = await vscode.commands.executeCommand(
-                "workbench.experimental.requestSerialPort"
-            );
-            if (serialPortInfo) {
-                deviceManager.checkForAddedDevices();
-            } else {
-                vscode.window.showErrorMessage('No new Serial Device selected!');
+            while (true) {
+                const board = await vscode.window.showQuickPick(supportedBoards);
+                if (board) {
+                    deviceManager.addDevice(board);
+                    break;
+                } else {
+                    if (await vscode.window.showErrorMessage('No board has been selected', {modal: true}, 'Retry') === undefined) {
+                        break;
+                    }
+                }
             }
         }),
 
@@ -119,36 +116,6 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.window.showInformationMessage(
                 `Project '${pick.folder.name}' assigned to ${device.label}`
             );
-            deviceManager.refreshDeviceProvider();
-        }),
-
-        //select board
-        vscode.commands.registerCommand('riot-web-extension.device.selectBoard', async (boardTreeItem: BoardTreeItem) => {
-            if (boards.length === 0) {
-                vscode.window.showErrorMessage('Supported boards have not been parsed yet. Please try again in a few moments.');
-                return;
-            }
-            const device = boardTreeItem.getParentDevice();
-            const label = device.label as string;
-            while (true) {
-                const pick : string | undefined = await vscode.window.showQuickPick(boards, {
-                    title: 'Select a new board for Device "' + label + '"',
-                    placeHolder: 'Select new board for device'
-                });
-                if (!pick) {
-                    if (await vscode.window.showErrorMessage('No new board was specified', {modal: true}, 'Retry') === undefined) {
-                        break;
-                    }
-                } else {
-                    //Placeholder
-                    device.changeBoard({
-                        id: pick,
-                        name: pick,
-                        loaderType: "esp"
-                    } as BoardTypes);
-                    break;
-                }
-            }
             deviceManager.refreshDeviceProvider();
         }),
 
@@ -337,10 +304,4 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {
     console.log('RIOT Web Extension deactivated');
-}
-
-async function readBundledBoards(uri: vscode.Uri): Promise<string[]> {
-    const fileUri = vscode.Uri.joinPath(uri, 'dist', 'boards.txt');
-    const text = await vscode.workspace.fs.readFile(fileUri);
-    return new TextDecoder().decode(text).split('\n').filter(line => line.length > 0);
 }

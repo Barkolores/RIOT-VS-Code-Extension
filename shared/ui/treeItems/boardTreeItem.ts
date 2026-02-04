@@ -6,8 +6,8 @@ export class BoardTreeItem extends vscode.TreeItem {
         protected readonly _device: DeviceTreeItem,
     ) {
         const board = _device.getBoard()
-        super('Selected Board: ' + (board ? board.name : 'None'), vscode.TreeItemCollapsibleState.None);
-        this.contextValue = 'boardItem'
+        super(`Board: ${board}`, vscode.TreeItemCollapsibleState.None);
+        this.contextValue = 'description'
     }
 
     getParentDevice(): DeviceTreeItem {

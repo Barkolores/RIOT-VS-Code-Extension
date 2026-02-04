@@ -1,7 +1,5 @@
 import vscode from "vscode";
 import {deviceState, WebDevice} from "../webDevice";
-import {ESPLoader, type FlashOptions, type LoaderOptions, Transport} from "esptool-js";
-import {DeviceTreeItem} from "shared/ui/treeItems/deviceTreeItem";
 
 export class SerialDevice extends WebDevice {
 
@@ -10,27 +8,24 @@ export class SerialDevice extends WebDevice {
     private readonly _encoder = new TextEncoder();
 
     constructor(
-        protected _webPort: SerialPort,
-        contextValue: string,
         label: string,
-        eventEmitter: vscode.EventEmitter<DeviceTreeItem | undefined>,
-        dmPort: MessagePort
+        contextValue: string,
+        board: string,
+        serialPort: SerialPort,
+        dmPort: MessagePort,
     ) {
-        super(_webPort, label, contextValue, eventEmitter, dmPort);
+        super(label, contextValue, board, serialPort, dmPort);
+        const serialPortInfo = serialPort.getInfo();
         this._description = [
-            'USBVendorID: ' + (_webPort.getInfo().usbVendorId ? _webPort.getInfo().usbVendorId : 'Not specified'),
-            'USBProductID: ' + (_webPort.getInfo().usbProductId ? _webPort.getInfo().usbProductId : 'Not specified'),
-            'BluetoothServiceClassID: ' + (_webPort.getInfo().bluetoothServiceClassId ? _webPort.getInfo().bluetoothServiceClassId : 'Not specified'),
+            'WebApi: Serial',
+            'USBVendorID: ' + (serialPortInfo.usbVendorId ? serialPortInfo.usbVendorId : 'Not specified'),
+            'USBProductID: ' + (serialPortInfo.usbProductId ? serialPortInfo.usbProductId : 'Not specified'),
+            'BluetoothServiceClassID: ' + (serialPortInfo.bluetoothServiceClassId ? serialPortInfo.bluetoothServiceClassId : 'Not specified'),
         ];
     }
 
     comparePort(webPort: SerialPort): boolean {
         return webPort === this._webPort;
-    }
-
-    forget(): void {
-        this.close();
-        this._webPort.forget().then(() => console.log('Forgot ' + this.label));
     }
 
     protected async close() {
@@ -91,19 +86,5 @@ export class SerialDevice extends WebDevice {
                 this.read();
             }
         );
-    }
-
-    protected async flash(options: {
-        loaderOptions: LoaderOptions,
-        flashOptions: FlashOptions,
-    }): Promise<void> {
-        this._currentState = deviceState.FLASH;
-        options.loaderOptions.transport = new Transport(this._webPort as SerialPort);
-        const espLoader: ESPLoader = new ESPLoader(options.loaderOptions);
-        await espLoader.main().then(value => console.log(value)).catch(e => console.error(e));
-        await espLoader.writeFlash(options.flashOptions).then(() => console.log('Programming Done')).catch(e => console.error(e));
-        await espLoader.after();
-        await espLoader.transport.disconnect();
-        this._currentState = deviceState.IDLE;
     }
 }

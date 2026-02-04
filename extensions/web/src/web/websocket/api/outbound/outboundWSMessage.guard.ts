@@ -2,11 +2,11 @@
  * Generated type guards for "outboundWSMessage.ts".
  * WARNING: Do not manually change this file.
  */
-import { messageTypes, addressTypes, terminationTypes, logTypes } from "../additionalTypes";
-import { outboundWSMessage } from "./outboundWSMessage";
+import {addressTypes, logTypes, messageTypes, terminationTypes} from "../additionalTypes";
+import {outboundWSMessage} from "./outboundWSMessage";
 
 export function isValidOutboundMessage(obj: unknown): obj is outboundWSMessage {
-    const typedObj = obj as outboundWSMessage;
+    const typedObj = obj as outboundWSMessage
     return (
         (Array.isArray(typedObj) &&
             (typedObj[0] === messageTypes.DNR_ACK ||
@@ -68,5 +68,5 @@ export function isValidOutboundMessage(obj: unknown): obj is outboundWSMessage {
             typedObj[1][1] === 0 ||
             Array.isArray(typedObj) &&
             typedObj[0] === messageTypes.DISCONNECT)
-    );
+    )
 }

@@ -12,6 +12,7 @@ import {
     terminationTypes
 } from "../websocket/api/additionalTypes";
 import {outboundDeviceMessage} from "../websocket/api/outbound/outboundDeviceMessage";
+import {implementsFlashInterface} from "./flash/flashInterface.guard";
 
 export enum deviceState {
     IDLE,
@@ -35,19 +36,17 @@ export abstract class WebDevice extends DeviceTreeItem {
     protected _logMessagesTimer: NodeJS.Timeout | undefined = undefined;
 
     protected constructor(
-        protected _webPort: webPort,
         label: string,
         contextValue: string,
-        protected readonly _updateTreeviewEventEmitter: vscode.EventEmitter<DeviceTreeItem | undefined>,
+        board: string,
+        protected _webPort: webPort,
         protected readonly _messagePort: MessagePort
     ) {
-        super(label, contextValue, _updateTreeviewEventEmitter);
+        super(label, contextValue, board);
         this._deviceAddress = [addressTypes.DEVICE, Number.parseInt(contextValue)];
     }
 
     abstract comparePort(port: webPort): boolean;
-
-    abstract forget(): void;
 
     protected abstract close(): Promise<void>;
 
@@ -57,9 +56,16 @@ export abstract class WebDevice extends DeviceTreeItem {
 
     protected abstract term(param?: object): void;
 
-    protected abstract flash(param?: object): void;
+    forget() {
+        this.cancel();
+        this._webPort.forget().then(() => console.log('Forgot ' + this.label));
+    };
 
     requestFlash() {
+        if (!implementsFlashInterface(this)) {
+            vscode.window.showErrorMessage(`Flashing ${this._board} is not supported in the Web.`, {modal: true});
+            return;
+        }
         if (!this._activeProject) {
             vscode.window.showErrorMessage('No project in which to execute the flash command has been specified. Cancelling Flash...', {modal: true});
             return;
@@ -158,6 +164,10 @@ export abstract class WebDevice extends DeviceTreeItem {
                 this.unlockDevice();
                 break;
             case messageTypes.FLASH:
+                if (!implementsFlashInterface(this)) {
+                    vscode.window.showErrorMessage(`Flashing ${this._board} is not supported in the Web.`, {modal: true});
+                    return;
+                }
                 if (this._currentState === deviceState.IDLE && this._shellAddress !== undefined) {
                     if (await this.checkBoard(message[3])) {
                         //TESTING
@@ -215,7 +225,7 @@ export abstract class WebDevice extends DeviceTreeItem {
             type,
             this._deviceAddress,
             this._shellAddress,
-            this._board ? this._board.name : WebDevice._defaultBoard,
+            this._board ? this._board : WebDevice._defaultBoard,
             this._activeProject ? this._activeProject.uri.toString() : '',
         ] as outboundDeviceMessage);
     }
@@ -231,7 +241,7 @@ export abstract class WebDevice extends DeviceTreeItem {
     };
 
     private async checkBoard(board: string): Promise<boolean> {
-        if (this._board && this._board.name !== board || !this._board && WebDevice._defaultBoard !== board) {
+        if (this._board && this._board !== board || !this._board && WebDevice._defaultBoard !== board) {
             return await vscode.window.showErrorMessage(`The board used for the Term/Flash does not match the specified board. Board of type ${WebDevice._defaultBoard} will be used instead.`, {modal: true}, 'Continue') !== undefined;
         }
         return true;

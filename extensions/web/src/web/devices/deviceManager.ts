@@ -12,6 +12,8 @@ import {
     shellAddress,
     terminationTypes
 } from "../websocket/api/additionalTypes";
+import {EspDevice} from "./serial/espDevice";
+import {isEspBoard, isSerialBoard, isUSBBoard} from "./boards/supportedBoards.guard";
 
 export class DeviceManager {
     private _devices: {[id: string]: WebDevice} = {};
@@ -21,13 +23,9 @@ export class DeviceManager {
         private _devicesProvider: DeviceProvider,
         private _messagePort: MessagePort,
     ) {
-        //initialize Devices
+        //discard Devices on reload
         navigator.serial.getPorts().then((ports) => {
-            for (const port of ports) {
-                const newDevice = this.deviceGenerator(port);
-                this._devices[newDevice.contextValue] = newDevice;
-            }
-            this.updateDeviceProvider();
+            ports.forEach((port) => {port.forget();});
         });
     }
 
@@ -50,7 +48,8 @@ export class DeviceManager {
         }
     }
 
-    private deviceGenerator(port: SerialPort): WebDevice {
+    async addDevice(board: string) {
+        let newDevice: WebDevice | undefined = undefined;
         let newDeviceId: string | undefined = undefined;
         while (true) {
             //get new Unique Id
@@ -59,9 +58,43 @@ export class DeviceManager {
                 break;
             }
         }
-        const newDevice = new SerialDevice(port, newDeviceId, this.getNextDefaultLabel(), this._devicesProvider.onDidChangeTreeDataEventEmitter, this._messagePort);
+        const newLabel = this.getNextDefaultLabel();
+        if (isSerialBoard(board)) {
+            //Add Serial Device
+            let serialPort: SerialPort | undefined;
+            await vscode.commands.executeCommand("workbench.experimental.requestSerialPort");
+            for (const port of await navigator.serial.getPorts()) {
+                if (this.includesPort(port) === undefined) {
+                    serialPort = port;
+                    break;
+                }
+            }
+            if (!serialPort) {
+                vscode.window.showErrorMessage('This serial port is already in use');
+                return;
+            }
+            switch (true) {
+                case isEspBoard(board):
+                    //esp boards with flasher esptool.js
+                    newDevice = new EspDevice(newLabel, newDeviceId, board, serialPort, this._messagePort);
+                    break;
+                default:
+                    //serial boards without flasher
+                    newDevice = new SerialDevice(newLabel, newDeviceId, 'None', serialPort, this._messagePort);
+                    break;
+            }
+        } else if (isUSBBoard(board)) {
+            //Add USB Device
+            //TODO
+            return;
+        } else {
+            vscode.window.showErrorMessage('Board is neither in supported USB nor Serial boards declaration.');
+            return;
+        }
+
         this._devices[newDeviceId] = newDevice;
-        return newDevice;
+        vscode.window.showInformationMessage('New Device with label "'+ newLabel +'" added');
+        this.updateDeviceProvider();
     }
 
     private includesPort(port: webPort): string | undefined {
@@ -71,34 +104,6 @@ export class DeviceManager {
             }
         }
         return;
-    }
-
-    checkForAddedDevices() {
-        navigator.serial.getPorts().then((ports) => {
-            let newDeviceFound = false;
-            for (const port of ports) {
-                if (this.includesPort(port) === undefined) {
-                    const newDevice = this.deviceGenerator(port);
-                    vscode.window.showInformationMessage('New Device with label "'+ newDevice.label +'" added');
-                    newDeviceFound = true;
-                }
-            }
-            if (newDeviceFound) {
-                this.updateDeviceProvider();
-            }
-        });
-    }
-
-    handleConnectEvent(port: webPort) {
-        const index = this.includesPort(port);
-        if (index !== undefined) {
-            return;
-        }
-        if (port instanceof SerialPort) {
-            const newDevice = this.deviceGenerator(port);
-            vscode.window.showInformationMessage('New device with label "'+ newDevice.label +'" has been connected');
-        }
-        this.updateDeviceProvider();
     }
 
     handleDisconnectEvent(port: webPort) {
@@ -123,7 +128,7 @@ export class DeviceManager {
         this._devicesProvider.refresh();
     }
 
-    //use when TreeItems should are added or removed, or when sorting TreeItems
+    //use when TreeItems are added or removed, or when sorting TreeItems
     updateDeviceProvider() {
         const devices = Object.values(this._devices).sort((device1, device2) => {
             return (device1.label as string).localeCompare(device2.label as string);
