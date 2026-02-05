@@ -1,6 +1,5 @@
 import vscode from "vscode";
 import {DeviceTreeItem} from "shared/ui/treeItems/deviceTreeItem";
-import {webPort} from "./webPort";
 import {WebSocketManager} from "../websocket/webSocketManager";
 import {inboundDeviceMessage} from "../websocket/api/inbound/inboundDeviceMessage";
 import {
@@ -13,6 +12,8 @@ import {
 } from "../websocket/api/additionalTypes";
 import {outboundDeviceMessage} from "../websocket/api/outbound/outboundDeviceMessage";
 import {implementsFlashInterface} from "./flash/flashInterface.guard";
+
+export type webPort = SerialPort | USBDevice
 
 export enum deviceState {
     IDLE,

@@ -1,5 +1,5 @@
 import {WebDevice} from "./webDevice";
-import {webPort} from "./webPort";
+import {webPort} from "./webDevice";
 import {SerialDevice} from "./serial/serialDevice";
 import {DeviceProvider} from "shared/ui/deviceProvider";
 import vscode from "vscode";
@@ -13,7 +13,7 @@ import {
     terminationTypes
 } from "../websocket/api/additionalTypes";
 import {EspDevice} from "./serial/espDevice";
-import {isEspBoard, isSerialBoard, isUSBBoard} from "./boards/supportedBoards.guard";
+import {espBoards, serialBoards, usbBoards} from "./supportedBoards";
 
 export class DeviceManager {
     private _devices: {[id: string]: WebDevice} = {};
@@ -59,7 +59,7 @@ export class DeviceManager {
             }
         }
         const newLabel = this.getNextDefaultLabel();
-        if (isSerialBoard(board)) {
+        if (serialBoards.includes(board)) {
             //Add Serial Device
             let serialPort: SerialPort | undefined;
             await vscode.commands.executeCommand("workbench.experimental.requestSerialPort");
@@ -74,7 +74,7 @@ export class DeviceManager {
                 return;
             }
             switch (true) {
-                case isEspBoard(board):
+                case espBoards.includes(board):
                     //esp boards with flasher esptool.js
                     newDevice = new EspDevice(newLabel, newDeviceId, board, serialPort, this._messagePort);
                     break;
@@ -83,7 +83,7 @@ export class DeviceManager {
                     newDevice = new SerialDevice(newLabel, newDeviceId, 'None', serialPort, this._messagePort);
                     break;
             }
-        } else if (isUSBBoard(board)) {
+        } else if (usbBoards.includes(board)) {
             //Add USB Device
             //TODO
             return;

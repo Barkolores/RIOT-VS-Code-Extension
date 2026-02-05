@@ -1,5 +1,5 @@
 //Esp Boards (Serial) using esptool.js
-const espBoards = [
+export const espBoards = [
     'esp32c3-devkit',
     'esp32c3-wemos-mini',
     'esp32c6-devkit',
@@ -26,29 +26,20 @@ const espBoards = [
     'esp8266-esp-12x',
     'esp8266-olimex-mod',
     'esp8266-sparkfun-thing',
-] as const;
-
-/** @see {isEspBoard} ts-auto-guard:type-guard */
-export type espBoardsType = typeof espBoards[number];
+];
 
 //Boards using WebSerial Api, no flasher
-const serialBoards = [
+export const serialBoards = [
     'Standard Serial Board',
     ...espBoards
-] as const;
-
-/** @see {isSerialBoard} ts-auto-guard:type-guard */
-export type serialBoardsType = typeof serialBoards[number];
+];
 
 
 
 //Boards using WebUSB Api, no flasher
-const usbBoards = [
+export const usbBoards = [
     'Standard USB Board',
-] as const;
-
-/** @see {isUSBBoard} ts-auto-guard:type-guard */
-export type usbBoardsType = typeof usbBoards[number];
+];
 
 
 

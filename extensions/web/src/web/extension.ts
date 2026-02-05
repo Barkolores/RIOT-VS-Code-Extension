@@ -7,7 +7,7 @@ import {FolderTreeItem} from "shared/ui/treeItems/folderTreeItem";
 import {encode} from "cbor-x";
 import {inboundWSMessage} from "./websocket/api/inbound/inboundWSMessage";
 import {addressTypes, messageTypes, terminationTypes} from "./websocket/api/additionalTypes";
-import {supportedBoards} from "./devices/boards/supportedBoards";
+import {supportedBoards} from "./devices/supportedBoards";
 
 export function activate(context: vscode.ExtensionContext) {
 
