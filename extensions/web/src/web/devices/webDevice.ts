@@ -228,7 +228,7 @@ export abstract class WebDevice extends DeviceTreeItem {
             this._deviceAddress,
             this._shellAddress,
             this._board ? this._board : WebDevice._defaultBoard,
-            this._activeProject ? this._activeProject.uri.toString() : '',
+            this._activeProject ? this._activeProject.uri.path : '',
         ] as outboundDeviceMessage);
     }
 
