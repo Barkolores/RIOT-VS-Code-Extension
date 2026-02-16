@@ -20,6 +20,7 @@ export class WebSocketManager {
         private _messagePort: MessagePort,
         private _testPort: MessagePort,
     ) {
+        console.log(location);
         const parsed_expression = /^(.*?):.*\.([^;]*?)[:|\/]/.exec(location.pathname);
         if (!parsed_expression) {
             vscode.window.showErrorMessage('URL could not be parsed! Websocket cannot be connected! Please specify the Websocket URL manually.');
