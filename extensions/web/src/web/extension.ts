@@ -8,6 +8,7 @@ import {encode} from "cbor-x";
 import {inboundWSMessage} from "./websocket/api/inbound/inboundWSMessage";
 import {addressTypes, messageTypes, terminationTypes} from "./websocket/api/additionalTypes";
 import {supportedBoards} from "./devices/supportedBoards";
+import {Container} from "./placeholder";
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -15,6 +16,8 @@ export function activate(context: vscode.ExtensionContext) {
         console.log("No serial or USB support found. Aborting RIOT web extension.");
         return;
     }
+    //TODO remove
+    Container.context = context;
 
     console.clear();
     console.log("RIOT web extension activated");

@@ -28,10 +28,16 @@ export const espBoards = [
     'esp8266-sparkfun-thing',
 ];
 
+export const nrfBoards = [
+    'nrf52840',
+    'Adafruit Feather Sense'
+];
+
 //Boards using WebSerial Api, no flasher
 export const serialBoards = [
     'Standard Serial Board',
-    ...espBoards
+    ...espBoards,
+    ...nrfBoards
 ];
 
 

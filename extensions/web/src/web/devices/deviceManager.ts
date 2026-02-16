@@ -13,7 +13,8 @@ import {
     terminationTypes
 } from "../websocket/api/additionalTypes";
 import {EspDevice} from "./serial/espDevice";
-import {espBoards, serialBoards, usbBoards} from "./supportedBoards";
+import {espBoards, nrfBoards, serialBoards, usbBoards} from "./supportedBoards";
+import {NrfDevice} from "./serial/nrfDevice";
 
 export class DeviceManager {
     private _devices: {[id: string]: WebDevice} = {};
@@ -41,7 +42,7 @@ export class DeviceManager {
     private getNextDefaultLabel(): string {
         let counter = 1;
         while (true) {
-            const newLabel = 'Device ' + counter++;
+            const newLabel = 'Device' + counter++;
             if (this.checkLabelAvailable(newLabel)) {
                 return newLabel;
             }
@@ -77,6 +78,10 @@ export class DeviceManager {
                 case espBoards.includes(board):
                     //esp boards with flasher esptool.js
                     newDevice = new EspDevice(newLabel, newDeviceId, board, serialPort, this._messagePort);
+                    break;
+                case nrfBoards.includes(board):
+                    //nrf boards with flasher pc-nrf-dfu-js
+                    newDevice = new NrfDevice(newLabel, newDeviceId, board, serialPort, this._messagePort);
                     break;
                 default:
                     //serial boards without flasher
