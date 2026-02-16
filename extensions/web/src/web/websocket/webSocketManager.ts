@@ -18,22 +18,21 @@ export class WebSocketManager {
     constructor(
         private _deviceManager: DeviceManager,
         private _messagePort: MessagePort,
+        extensionUri: vscode.Uri,
         private _testPort: MessagePort,
     ) {
-        console.log(location);
-        const parsed_expression = /^(.*?):.*\.([^;]*?)[:|\/]/.exec(location.pathname);
+        const parsed_expression = /^[^:]+/.exec(extensionUri.authority);
         if (!parsed_expression) {
             vscode.window.showErrorMessage('URL could not be parsed! Websocket cannot be connected! Please specify the Websocket URL manually.');
             return;
         }
-        const protocol = parsed_expression[1];
-        const host = parsed_expression[2];
-        if (host === '') {
+        const host = parsed_expression[0];
+        if (host === '' || host === undefined) {
             vscode.window.showErrorMessage("No host detected! Websocket cannot be connected! Please specify the Websocket URL manually.");
             return;
         }
         let url = '://' + host + ':' + this._port;
-        switch (protocol) {
+        switch (extensionUri.scheme) {
             case 'http':
                 url = 'ws' + url;
                 break;
@@ -41,7 +40,7 @@ export class WebSocketManager {
                 url = 'wss' + url;
                 break;
             default:
-                vscode.window.showErrorMessage("Protocol " + protocol + " isn't supported! Websocket cannot be connected! Please specify the Websocket URL manually.");
+                vscode.window.showErrorMessage("Protocol " + extensionUri.scheme + " isn't supported! Websocket cannot be connected! Please specify the Websocket URL manually.");
                 return;
         }
         this._url = url;

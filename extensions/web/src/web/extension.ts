@@ -30,7 +30,7 @@ export function activate(context: vscode.ExtensionContext) {
     const {port1: devicesPort, port2: websocketPort} = new MessageChannel();
     const {port1: testPort1, port2: testPort2} = new MessageChannel();
     const deviceManager = new DeviceManager(deviceProvider, devicesPort);
-    const webSocketManager = new WebSocketManager(deviceManager, websocketPort, testPort1);
+    const webSocketManager = new WebSocketManager(deviceManager, websocketPort, context.extensionUri, testPort1);
     const busyDevices = new Set<string>();
 
     //Serial Events
