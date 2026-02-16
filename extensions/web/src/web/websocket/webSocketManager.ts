@@ -33,15 +33,12 @@ export class WebSocketManager {
         }
         let url = '://' + host + ':' + this._port;
         switch (extensionUri.scheme) {
-            case 'http':
-                url = 'ws' + url;
-                break;
             case 'https':
                 url = 'wss' + url;
                 break;
             default:
-                vscode.window.showErrorMessage("Protocol " + extensionUri.scheme + " isn't supported! Websocket cannot be connected! Please specify the Websocket URL manually.");
-                return;
+                url = 'ws' + url;
+                break;
         }
         this._url = url;
     }
