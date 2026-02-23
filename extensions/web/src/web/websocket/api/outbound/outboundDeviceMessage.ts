@@ -7,7 +7,7 @@ type deviceSendAddress = [
 ];
 
 export type outboundDeviceMessage = [
-    messageTypes.DNR_ACK | messageTypes.SRM,
+    messageTypes.DRM_ACK | messageTypes.SRM,
     ...deviceSendAddress
 ] | [
     messageTypes.LTM,

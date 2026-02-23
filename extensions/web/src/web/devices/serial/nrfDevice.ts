@@ -54,6 +54,16 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
         this.total_size = 0;
     }
 
+    async rediscoverPort() {
+        (await navigator.serial.getPorts()).forEach((serialPort) => {
+            if (!('used' in serialPort)) {
+                serialPort.used = true;
+                this._webPort = serialPort;
+                console.log('found');
+            }
+        });
+    }
+
     /**
      * Waits for the provided milliseconds, and then resolves.
      * @param millis
@@ -105,7 +115,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * Flashes the provided firmware zip.
      * @returns {Promise<void>}
      */
-    async flash() {
+    async flash(binaries: {[offset:string]: any}, args: string) {
 
         const uri = Container.context.extensionUri;
 
@@ -119,7 +129,11 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
         const updates = new Blob([await vscode.workspace.fs.readFile(vscode.Uri.joinPath(uri, 'sketch_oct30a.ino.zip'))]);
 
         const progressCallback = (log) => {
-            this._logMessages += log;
+            if (log === 100) {
+                this._logMessages += 'Flashing Complete';
+            } else {
+                this._logMessages += 'Flashing in Progress... ' + log + '%\n';
+            }
         };
         
         // read zip file
@@ -154,23 +168,20 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
 
         // flash application image
         if(manifest.application){
+            await vscode.commands.executeCommand('riot-web-extension.device.cleanUp');
+            await vscode.commands.executeCommand('riot-web-extension.eventListener.lock');
             await this.enterDfuMode();
-            const serialPortInfo: SerialPortInfo = await vscode.commands.executeCommand("workbench.experimental.requestSerialPort");
-            let serialPort: SerialPort = undefined;
-            (await navigator.serial.getPorts()).forEach((sp) => {
-                if (sp.getInfo().usbVendorId === serialPortInfo.usbVendorId && sp.getInfo().usbProductId === serialPortInfo.usbProductId) {
-                    serialPort = sp;
-                }
-            });
-            if (serialPort) {
-                this._webPort = serialPort;
-                await this.dfuSendImage(this.HEX_TYPE_APPLICATION, zipEntries, manifest.application, progressCallback);
-            } else {
-                console.log('Could not find new port');
+            while (!(this._webPort as SerialPort).connected) {
+                //Device was not in DFU mode, need to find new Serial Port
+                await this.rediscoverPort();
             }
+            await this.dfuSendImage(this.HEX_TYPE_APPLICATION, zipEntries, manifest.application, progressCallback);
+            //Device exits DFU mode, need to find new Serial Port
+            await this.rediscoverPort();
         }
         this._currentState = deviceState.IDLE;
-
+        await vscode.commands.executeCommand('riot-web-extension.eventListener.unlock');
+        await vscode.commands.executeCommand('riot-web-extension.device.cleanUp');
     }
 
     /**
@@ -223,8 +234,10 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
         console.log("Sending firmware");
         await this.sendFirmware(firmware, progressCallback);
 
-        // todo
-        // sleep(self.dfu_transport.get_activate_wait_time())
+        await this._webPort.close();
+
+        console.log("Waiting for reconnect");
+        await this.sleepMillis(1000);
 
     }
 

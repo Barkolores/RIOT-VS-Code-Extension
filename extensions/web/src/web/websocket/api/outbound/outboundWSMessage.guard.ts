@@ -2,18 +2,18 @@
  * Generated type guards for "outboundWSMessage.ts".
  * WARNING: Do not manually change this file.
  */
-import {addressTypes, logTypes, messageTypes, terminationTypes} from "../additionalTypes";
-import {outboundWSMessage} from "./outboundWSMessage";
+import { messageTypes, addressTypes, terminationTypes, logTypes } from "../additionalTypes";
+import { outboundWSMessage } from "./outboundWSMessage";
 
 export function isValidOutboundMessage(obj: unknown): obj is outboundWSMessage {
     const typedObj = obj as outboundWSMessage
     return (
         (Array.isArray(typedObj) &&
-            (typedObj[0] === messageTypes.DNR_ACK ||
+            (typedObj[0] === messageTypes.DRM_ACK ||
                 typedObj[0] === messageTypes.SRM) &&
             Array.isArray(typedObj[1]) &&
             typedObj[1][0] === addressTypes.DEVICE &&
-            typeof typedObj[1][1] === "number" &&
+            typeof typedObj[1][1] === "string" &&
             Array.isArray(typedObj[2]) &&
             typedObj[2][0] === addressTypes.SHELL &&
             typeof typedObj[2][1] === "number" ||
@@ -21,7 +21,7 @@ export function isValidOutboundMessage(obj: unknown): obj is outboundWSMessage {
             typedObj[0] === messageTypes.LTM &&
             Array.isArray(typedObj[1]) &&
             typedObj[1][0] === addressTypes.DEVICE &&
-            typeof typedObj[1][1] === "number" &&
+            typeof typedObj[1][1] === "string" &&
             Array.isArray(typedObj[2]) &&
             typedObj[2][0] === addressTypes.SHELL &&
             typeof typedObj[2][1] === "number" &&
@@ -43,7 +43,7 @@ export function isValidOutboundMessage(obj: unknown): obj is outboundWSMessage {
             typedObj[0] === messageTypes.LOG &&
             Array.isArray(typedObj[1]) &&
             typedObj[1][0] === addressTypes.DEVICE &&
-            typeof typedObj[1][1] === "number" &&
+            typeof typedObj[1][1] === "string" &&
             Array.isArray(typedObj[2]) &&
             typedObj[2][0] === addressTypes.SHELL &&
             typeof typedObj[2][1] === "number" &&
@@ -55,7 +55,7 @@ export function isValidOutboundMessage(obj: unknown): obj is outboundWSMessage {
                 typedObj[0] === messageTypes.TERM_REQUEST) &&
             Array.isArray(typedObj[1]) &&
             typedObj[1][0] === addressTypes.DEVICE &&
-            typeof typedObj[1][1] === "number" &&
+            typeof typedObj[1][1] === "string" &&
             Array.isArray(typedObj[2]) &&
             typedObj[2][0] === addressTypes.SHELL &&
             typeof typedObj[2][1] === "number" &&

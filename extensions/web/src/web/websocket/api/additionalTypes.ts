@@ -2,8 +2,8 @@ export enum messageTypes {
     CONNECT = 'connect',
     CONNECT_ACK = 'connect ACK',
     DISCONNECT = 'disconnect',
-    DNR = 'DNR',
-    DNR_ACK = 'DNR ACK',
+    DRM = 'DRM',
+    DRM_ACK = 'DRM ACK',
     SRM = 'SRM',
     SRM_ACK = 'SRM ACK',
     LTM = 'LTM',
@@ -32,5 +32,5 @@ export enum addressTypes {
 }
 
 export type clientAddress = [addressTypes.CLIENT, 0];
-export type deviceAddress = [addressTypes.DEVICE, number];
+export type deviceAddress = [addressTypes.DEVICE, string];
 export type shellAddress = [addressTypes.SHELL, number];

@@ -52,17 +52,29 @@
         "icon": "$(x)"
       },
       {
+        "command": "riot-web-extension.device.cleanUp",
+        "title": "CleanUp Devices"
+      },
+      {
         "command": "riot-web-extension.websocket.setURL",
         "title": "Set custom Websocket URL",
         "icon": "$(rss)"
       },
       {
-        "command": "riot-web-extension.context.add",
+        "command": "riot-web-extension.context.device.add",
         "title": "Add Device to Context"
       },
       {
-        "command": "riot-web-extension.context.remove",
+        "command": "riot-web-extension.context.device.remove",
         "title": "Remove Device from Context"
+      },
+      {
+        "command": "riot-web-extension.eventListener.lock",
+        "title": "Lock Connect & Disconnect EventListeners"
+      },
+      {
+        "command": "riot-web-extension.eventListener.unlock",
+        "title": "Unlock Connect & Disconnect EventListeners"
       },
       {
         "command": "riot-web-extension.test.receiveConnectACK",
@@ -99,6 +111,10 @@
       {
         "command": "riot-web-extension.test.receiveInput",
         "title": "Receive Input"
+      },
+      {
+        "command": "riot-web-extension.test.enterDFU",
+        "title": "Enter DFU"
       }
     ],
     "viewsContainers": {
@@ -145,11 +161,23 @@
           "when": "false"
         },
         {
-          "command": "riot-web-extension.context.add",
+          "command": "riot-web-extension.device.cleanUp",
           "when": "false"
         },
         {
-          "command": "riot-web-extension.context.remove",
+          "command": "riot-web-extension.context.device.add",
+          "when": "false"
+        },
+        {
+          "command": "riot-web-extension.context.device.remove",
+          "when": "false"
+        },
+        {
+          "command": "riot-web-extension.eventListener.lock",
+          "when": "false"
+        },
+        {
+          "command": "riot-web-extension.eventListener.unlock",
           "when": "false"
         }
       ],
@@ -163,12 +191,12 @@
       "view/item/context": [
         {
           "command": "riot-web-extension.device.rename",
-          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != folderItem && viewItem != portItem",
+          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != folderItem && viewItem != portItem && viewItem not in riot-web-extension.context.busyDevices",
           "group": "dummy@1"
         },
         {
           "command": "riot-web-extension.device.remove",
-          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != folderItem && viewItem != portItem",
+          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != folderItem && viewItem != portItem && viewItem not in riot-web-extension.context.busyDevices",
           "group": "dummy@2"
         },
         {

@@ -7,11 +7,7 @@ type deviceReceiveAddress = [
 ]
 
 export type inboundDeviceMessage = [
-    messageTypes.DNR,
-    shellAddress,
-    deviceName: string
-] | [
-    messageTypes.SRM_ACK,
+    messageTypes.DRM | messageTypes.SRM_ACK,
     ...deviceReceiveAddress
 ] | [
     messageTypes.LTM,

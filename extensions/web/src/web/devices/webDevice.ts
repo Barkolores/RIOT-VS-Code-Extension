@@ -44,7 +44,12 @@ export abstract class WebDevice extends DeviceTreeItem {
         protected readonly _messagePort: MessagePort
     ) {
         super(label, contextValue, board);
-        this._deviceAddress = [addressTypes.DEVICE, Number.parseInt(contextValue)];
+        this._deviceAddress = [addressTypes.DEVICE, label];
+    }
+
+    changeLabel(newLabel: string) {
+        this._deviceAddress[1] = newLabel;
+        super.changeLabel(newLabel);
     }
 
     abstract comparePort(port: webPort): boolean;
@@ -99,7 +104,7 @@ export abstract class WebDevice extends DeviceTreeItem {
             this._lastShellAddress = this._shellAddress;
             this._shellAddress = undefined;
         }
-        vscode.commands.executeCommand('riot-web-extension.context.remove', this.contextValue);
+        vscode.commands.executeCommand('riot-web-extension.context.device.remove', this.contextValue);
         this.stopLogBundling();
     }
 
@@ -109,7 +114,7 @@ export abstract class WebDevice extends DeviceTreeItem {
 
     async handleMessage(message: inboundDeviceMessage): Promise<void> {
         //Check all messages but DNR
-        if (message[0] !== messageTypes.DNR) {
+        if (message[0] !== messageTypes.DRM) {
             //Check if sender is not known
             if (message[1][0] !== this._shellAddress?.[0] || message[1][1] !== this._shellAddress?.[1]) {
                 //Drop LTM messages
@@ -120,14 +125,14 @@ export abstract class WebDevice extends DeviceTreeItem {
             }
         }
         switch (message[0]) {
-            case messageTypes.DNR:
+            case messageTypes.DRM:
                 if (this._shellAddress) {
                     this.sendLTM(message[1], terminationTypes.ERROR, 'Device is locked.');
                 } else {
-                    vscode.commands.executeCommand('riot-web-extension.context.add', this.contextValue);
+                    vscode.commands.executeCommand('riot-web-extension.context.device.add', this.contextValue);
                     this._shellAddress = message[1];
                     this._messagePort.postMessage([
-                        'DNR ACK',
+                        'DRM ACK',
                         this._deviceAddress,
                         this._shellAddress
                     ] as outboundDeviceMessage);
@@ -173,7 +178,7 @@ export abstract class WebDevice extends DeviceTreeItem {
                     if (await this.checkBoard(message[3])) {
                         //TESTING
                         this.startLogBundling();
-                        await this.flash();
+                        await this.flash(message[4], message[5]);
                         this.stopLogBundling();
                         // this.sendLTM(this._shellAddress, terminationTypes.SUCCESS, 'Dummy: Flash complete');
                         this.unlockDevice();
@@ -199,7 +204,7 @@ export abstract class WebDevice extends DeviceTreeItem {
     };
 
     private async requestShell() {
-        vscode.commands.executeCommand('riot-web-extension.context.add', this.contextValue);
+        vscode.commands.executeCommand('riot-web-extension.context.device.add', this.contextValue);
         if (this._lastShellAddress) {
             this._shellAddress = this._lastShellAddress;
         } else {

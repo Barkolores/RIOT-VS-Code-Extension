@@ -17,7 +17,7 @@ import {espBoards, nrfBoards, serialBoards, usbBoards} from "./supportedBoards";
 import {NrfDevice} from "./serial/nrfDevice";
 
 export class DeviceManager {
-    private _devices: {[id: string]: WebDevice} = {};
+    private _devices: WebDevice[] = [];
     private _randomArray = new Uint32Array(1);
 
     constructor(
@@ -74,6 +74,8 @@ export class DeviceManager {
                 vscode.window.showErrorMessage('This serial port is already in use');
                 return;
             }
+            //@ts-ignore
+            serialPort.used = true;
             switch (true) {
                 case espBoards.includes(board):
                     //esp boards with flasher esptool.js
@@ -97,15 +99,15 @@ export class DeviceManager {
             return;
         }
 
-        this._devices[newDeviceId] = newDevice;
+        this._devices.push(newDevice);
         vscode.window.showInformationMessage('New Device with label "'+ newLabel +'" added');
         this.updateDeviceProvider();
     }
 
-    private includesPort(port: webPort): string | undefined {
+    private includesPort(port: webPort): number | undefined {
         for (const device of Object.values(this._devices)) {
             if (device.comparePort(port)) {
-                return device.contextValue;
+                return this._devices.indexOf(device);
             }
         }
         return;
@@ -117,14 +119,14 @@ export class DeviceManager {
             return;
         }
         const disconnectedDevice = this._devices[id];
-        delete this._devices[id];
+        this._devices.splice(id, 1);
         vscode.window.showInformationMessage('Device "'+ disconnectedDevice.label +'" has been disconnected');
         this.updateDeviceProvider();
     }
 
     removeDevice(device: WebDevice) {
         device.forget();
-        delete this._devices[device.contextValue];
+        this._devices.splice(this._devices.indexOf(device), 1);
         this.updateDeviceProvider();
     }
 
@@ -144,28 +146,16 @@ export class DeviceManager {
 
     handleMessage(message: inboundDeviceMessage) {
         let requestedDevice: WebDevice | undefined = undefined;
-        if (message[0] === messageTypes.DNR) {
-            //Device Name Resolution
-            const deviceName = message[2];
-            for (const device of Object.values(this._devices)) {
-                if (device.label === deviceName) {
-                    requestedDevice = device;
-                    break;
-                }
+        const deviceName = message[2][1];
+        for (const device of this._devices) {
+            if (device.label === deviceName) {
+                requestedDevice = device;
+                break;
             }
-            if (requestedDevice === undefined) {
-                this.sendErrorLTM(message[1][1], `No Device with the label '${deviceName}' is known.`);
-                return;
-            }
-        } else {
-            //Forward to device id
-            const deviceId = message[2][1];
-            if (deviceId in this._devices) {
-                requestedDevice = this._devices[deviceId];
-            } else {
-                this.sendErrorLTM(message[1][1], `No Device with the id ${deviceId} is known.`);
-                return;
-            }
+        }
+        if (requestedDevice === undefined) {
+            this.sendErrorLTM(message[1][1], `No Device with the label '${deviceName}' is known.`);
+            return;
         }
         requestedDevice.handleMessage(message);
     }
@@ -186,5 +176,37 @@ export class DeviceManager {
         for (const device of Object.values(this._devices)) {
             device.cancel();
         }
+    }
+
+    //removes all disconnected Devices from UI and unused connected Devices from serial Api
+    //TODO for WebUSB as well
+    async cleanUp() {
+        for (const port of await navigator.serial.getPorts()) {
+            if (!this.includesPort(port)) {
+                console.log('not included');
+                await port.forget();
+            }
+            if (!port.connected) {
+                console.log('not connected');
+                this.handleDisconnectEvent(port);
+                await port.forget();
+            }
+        }
+    }
+
+    //TESTING
+    async enterDFU() {
+        await vscode.commands.executeCommand('riot-web-extension.eventListener.lock');
+        const port = (await navigator.serial.getPorts())[0];
+        await port.open({baudRate: 1200});
+        await new Promise((resolve) => {
+            setTimeout(resolve, 100);
+        });
+        await port.close();
+        await new Promise((resolve) => {
+            setTimeout(resolve, 1000);
+        });
+        await (Object.values(this._devices)[0] as NrfDevice).rediscoverPort();
+        await vscode.commands.executeCommand('riot-web-extension.eventListener.unlock');
     }
 }
