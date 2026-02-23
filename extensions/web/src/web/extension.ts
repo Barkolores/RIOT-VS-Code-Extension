@@ -90,12 +90,19 @@ export function activate(context: vscode.ExtensionContext) {
                     }
                 } else {
                     newLabel = newLabel.trim();
+                    if (newLabel.includes(' ')) {
+                        if (await vscode.window.showErrorMessage('New label must not contain spaces. Please specify a unique label without spaces.', {modal: true}, 'Retry') === undefined) {
+                            break;
+                        }
+                        defaultLabel = newLabel;
+                        continue;
+                    }
                     if (deviceManager.checkLabelAvailable(newLabel, currentLabel)) {
                         device.changeLabel(newLabel);
                         deviceManager.updateDeviceProvider();
                         break;
                     } else {
-                        if (await vscode.window.showErrorMessage('New label is already in use. Please specify a unique label.', {modal: true}, 'Retry') === undefined) {
+                        if (await vscode.window.showErrorMessage('New label is already in use. Please specify a unique label without spaces.', {modal: true}, 'Retry') === undefined) {
                             break;
                         }
                         defaultLabel = newLabel;
