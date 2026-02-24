@@ -58,10 +58,15 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
         await this.enterDfuMode();
         if ((this._webPort as SerialPort).connected) {
             //device was already in DFU mode
-            //cant revert back to non DFU mode (and term isn't working)
-            vscode.window.showErrorMessage('Device is already in DFU mode. Please press the reset button or reconnect the device and try again.', {modal: true});
-            await this._webPort.forget();
-            return false;
+            const result = await vscode.window.showInformationMessage('Device is already in DFU mode. Please press the reset button or reconnect the device first. Then grant access to it again.', {modal: true}, 'Grant Access');
+            if ((this._webPort as SerialPort).connected || !result) {
+                vscode.window.showErrorMessage('Device has not been reset. Aborting.');
+                await this._webPort.forget();
+                return false;
+            }
+            await vscode.commands.executeCommand("workbench.experimental.requestSerialPort");
+            await this.rediscoverPort();
+            return true;
         } else {
             //device was in non DFU mode
             //grant access to DFU mode
