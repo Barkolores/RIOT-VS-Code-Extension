@@ -58,7 +58,7 @@ export function activate(context: vscode.ExtensionContext) {
             while (true) {
                 const board = await vscode.window.showQuickPick(supportedBoards);
                 if (board) {
-                    deviceManager.addDevice(board);
+                    await deviceManager.addDevice(board);
                     break;
                 } else {
                     if (await vscode.window.showErrorMessage('No board has been selected', {modal: true}, 'Retry') === undefined) {
@@ -66,6 +66,8 @@ export function activate(context: vscode.ExtensionContext) {
                     }
                 }
             }
+            // await deviceManager.enterDFU();
+            // await vscode.commands.executeCommand("workbench.experimental.requestSerialPort");
         }),
 
         //remove Device

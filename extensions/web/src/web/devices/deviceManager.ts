@@ -84,6 +84,9 @@ export class DeviceManager {
                 case nrfBoards.includes(board):
                     //nrf boards with flasher pc-nrf-dfu-js
                     newDevice = new NrfDevice(newLabel, newDeviceId, board, serialPort, this._messagePort);
+                    if (!await (newDevice as NrfDevice).init()) {
+                        return;
+                    }
                     break;
                 default:
                     //serial boards without flasher
@@ -209,6 +212,8 @@ export class DeviceManager {
             setTimeout(resolve, 1000);
         });
         await (Object.values(this._devices)[0] as NrfDevice).rediscoverPort();
+        // const port = (await navigator.serial.getPorts())[0];
+        // port.
         await vscode.commands.executeCommand('riot-web-extension.eventListener.unlock');
     }
 }
