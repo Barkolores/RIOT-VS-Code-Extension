@@ -112,6 +112,10 @@
         {
           "id": "riotView",
           "name": "Desktop Extension"
+        },
+        {
+          "id": "riotFileView",
+          "name": "Application Files"
         }
       ]
     },

@@ -19,6 +19,7 @@ import { FolderTreeItem } from '../../../shared/ui/treeItems/folderTreeItem';
 import { DeviceProvider } from '../../../shared/ui/deviceProvider';					
 import { BoardRecognizer } from './boards/BoardRecognizer';
 import { SerialPort } from 'serialport';
+import { RiotFileTreeProvider } from './treeView/uiFileTreeProvider';
 
 
 // This method is called when your extension is activated
@@ -47,6 +48,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	const initialDevices : DeviceModel[] = initialDevicesConfig.map(d => DeviceModel.fromConfig(d));
 
+
 	const devicesTreeItemProvider = new DeviceProvider(initialDevices);
 	devicesTreeItemProvider.onDidChangeTreeData( () => {
 		const currentDevices = devicesTreeItemProvider.getDeviceModels();
@@ -57,6 +59,14 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 
 	const colorProvider = new RiotFileDecorationProvider(validRiotAppPaths);
+	const riotFileTreeProvider = new RiotFileTreeProvider();
+	context.subscriptions.push(vscode.window.registerTreeDataProvider('riotFileView', riotFileTreeProvider));
+
+	initialDevices.forEach(device => {
+		if(device.appPath) {
+			riotFileTreeProvider.addAppFolder(device.appPath);
+		}
+	});
 
 	if(activeDeviceConfig) {
 		const matchedDevice = initialDevices.find( d => 
@@ -258,7 +268,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		if (result && result.length > 0) {
 			const appFolderUri = result[0];
-			vscode.window.showInformationMessage(`Selected Example Folder: ${appFolderUri.fsPath}`);
+			riotFileTreeProvider.addAppFolder(appFolderUri);
+
+            vscode.window.showInformationMessage(`Selected Example Folder: ${appFolderUri.fsPath}`);
 			try {
 				const { stdout } = await execAsync(
 					`cd ${appFolderUri.fsPath} && make info-debug-variable-RIOTBASE`
