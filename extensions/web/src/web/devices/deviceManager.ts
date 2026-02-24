@@ -105,12 +105,14 @@ export class DeviceManager {
     }
 
     private includesPort(port: webPort): number | undefined {
-        for (const device of Object.values(this._devices)) {
-            if (device.comparePort(port)) {
-                return this._devices.indexOf(device);
+        for (let i = 0; i < this._devices.length; i++) {
+            if (this._devices[i].comparePort(port)) {
+                console.log('found port');
+                return i;
             }
         }
-        return;
+        console.log('did not find port');
+        return undefined;
     }
 
     handleDisconnectEvent(port: webPort) {
@@ -182,7 +184,7 @@ export class DeviceManager {
     //TODO for WebUSB as well
     async cleanUp() {
         for (const port of await navigator.serial.getPorts()) {
-            if (!this.includesPort(port)) {
+            if (this.includesPort(port) === undefined) {
                 console.log('not included');
                 await port.forget();
             }

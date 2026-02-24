@@ -85,8 +85,8 @@
         "title": "Receive Disconnect"
       },
       {
-        "command": "riot-web-extension.test.receiveDNR",
-        "title": "Receive DNR"
+        "command": "riot-web-extension.test.receiveDRM",
+        "title": "Receive DRM"
       },
       {
         "command": "riot-web-extension.test.receiveSRMACK",

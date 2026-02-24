@@ -222,7 +222,7 @@ export function activate(context: vscode.ExtensionContext) {
             ];
             testPort2.postMessage(encode(message));
         }),
-        vscode.commands.registerCommand('riot-web-extension.test.receiveDNR', async () => {
+        vscode.commands.registerCommand('riot-web-extension.test.receiveDRM', async () => {
             const shellID = await vscode.window.showInputBox({title: 'ID of shell'});
             const deviceName = await vscode.window.showInputBox({title: 'Name of device'});
             if (!deviceName || !shellID) {

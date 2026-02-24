@@ -55,6 +55,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
     }
 
     async rediscoverPort() {
+        console.log('starting rediscover');
         (await navigator.serial.getPorts()).forEach((serialPort) => {
             if (!('used' in serialPort)) {
                 serialPort.used = true;
@@ -62,6 +63,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
                 console.log('found');
             }
         });
+        console.log('ending rediscover');
     }
 
     /**
@@ -94,7 +96,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * @returns {Promise<void>}
      */
     async enterDfuMode() {
-
+        console.log('starting dfu enter');
         // open port
         await this._webPort.open({
             baudRate: this.DFU_TOUCH_BAUD,
@@ -108,7 +110,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
 
         // wait TOUCH_RESET_WAIT_TIME for device to enter into DFU mode
         await this.sleepMillis(this.TOUCH_RESET_WAIT_TIME * 1000);
-
+        console.log('ending dfu enter');
     }
 
     /**
@@ -116,7 +118,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * @returns {Promise<void>}
      */
     async flash(binaries: {[offset:string]: any}, args: string) {
-
+        console.log('starting flash');
         const uri = Container.context.extensionUri;
 
         if (!uri) {
@@ -182,6 +184,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
         this._currentState = deviceState.IDLE;
         await vscode.commands.executeCommand('riot-web-extension.eventListener.unlock');
         await vscode.commands.executeCommand('riot-web-extension.device.cleanUp');
+        console.log('ending flash');
     }
 
     /**
@@ -193,7 +196,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * @returns {Promise<void>}
      */
     async dfuSendImage(programMode, zipEntries, firmwareManifest, progressCallback) {
-
+        console.log('starting dfu send image');
         // open port
         await this._webPort.open({
             baudRate: this.FLASH_BAUD,
@@ -239,6 +242,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
         console.log("Waiting for reconnect");
         await this.sleepMillis(1000);
 
+        console.log('ending dfu send image');
     }
 
     /**
