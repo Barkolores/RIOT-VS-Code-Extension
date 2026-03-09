@@ -12,7 +12,6 @@ import { VsCodeCompileCommandsTask } from './tasks/VsCodeCompileCommandsTask';
 import { VsCodeRiotTermTask } from './tasks/VsCodeRiotTermTask';
 import { DesktopDeviceTreeItem } from './treeView/uiDevice';
 import { VsCodeRiotDebugTask } from './tasks/VsCodeRiotDebugTask';
-import { RiotFileDecorationProvider } from './treeView/uiFileDecorationProvider';
 import { BoardTreeItem } from '../../../shared/ui/treeItems/boardTreeItem';
 import { PortTreeItem } from '../../../shared/ui/treeItems/portTreeItem';
 import { FolderTreeItem } from '../../../shared/ui/treeItems/folderTreeItem';
@@ -27,7 +26,6 @@ import { RiotFileTreeProvider } from './treeView/uiFileTreeProvider';
 export async function activate(context: vscode.ExtensionContext) {
 	const DEVICE_LIST_CACHE_KEY = 'riot-launcher.deviceList';
 	const ACTIVE_DEVICE_CACHE_KEY = 'riot-launcher.activeDevice';
-	const VALID_RIOT_PATHS_CACHE_KEY = 'riot-launcher.validRiotAppPaths';
 	const TRANSFER_DEVICES_KEY = 'riot-launcher.transferDevices';
 
 	const transferDevices = context.globalState.get<DeviceConfig[]>(TRANSFER_DEVICES_KEY);
@@ -44,7 +42,6 @@ export async function activate(context: vscode.ExtensionContext) {
         await context.workspaceState.update(DEVICE_LIST_CACHE_KEY, initialDevicesConfig);
     }
 	const activeDeviceConfig = context.workspaceState.get<DeviceConfig | undefined>(ACTIVE_DEVICE_CACHE_KEY, undefined);
-	const validRiotAppPaths = context.workspaceState.get<string[]>(VALID_RIOT_PATHS_CACHE_KEY, []);
 
 	const initialDevices : DeviceModel[] = initialDevicesConfig.map(d => DeviceModel.fromConfig(d));
 
@@ -58,9 +55,19 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.workspaceState.update(ACTIVE_DEVICE_CACHE_KEY, activeDevice?.toConfig());
 	});
 
-	const colorProvider = new RiotFileDecorationProvider(validRiotAppPaths);
 	const riotFileTreeProvider = new RiotFileTreeProvider();
-	context.subscriptions.push(vscode.window.registerTreeDataProvider('riotFileView', riotFileTreeProvider));
+	const treeView = vscode.window.createTreeView('riotFileView', {
+		treeDataProvider: riotFileTreeProvider
+	});
+
+	context.subscriptions.push(
+		vscode.window.onDidChangeActiveTextEditor(editor => {
+			if(editor && editor.document.uri.scheme === 'file') {
+				treeView.reveal(editor.document.uri, { focus: true, select: true, expand: true});
+			
+			}
+		})
+	);
 
 	initialDevices.forEach(device => {
 		if(device.appPath) {
@@ -76,13 +83,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		);
 		if(matchedDevice) {
 			devicesTreeItemProvider.setActiveDevice(matchedDevice);
-			colorProvider.updateActiveUri(matchedDevice);
 		}
 	}
 
 	context.subscriptions.push(vscode.window.registerTreeDataProvider('riotView', devicesTreeItemProvider));
-
-	context.subscriptions.push(vscode.window.registerFileDecorationProvider(colorProvider));
 
 	let currentDebugServerTaskExecution : vscode.TaskExecution | undefined = undefined;
 
@@ -277,9 +281,6 @@ export async function activate(context: vscode.ExtensionContext) {
 				);
 				const riotBasePath = vscode.Uri.file(stdout.toString().trim());
 				
-				colorProvider.addValidPath(appFolderUri);
-				await context.workspaceState.update(VALID_RIOT_PATHS_CACHE_KEY, colorProvider.getAllPaths());
-
 				loadBoards(appFolderUri).then((loadedBoards : string[]) => boards = loadedBoards);
 
 				const isAlreadyOpen = vscode.workspace.workspaceFolders?.some( 
@@ -319,17 +320,7 @@ export async function activate(context: vscode.ExtensionContext) {
 						});
 					}
 				}
-
-				/* Add folder to workspace*/ 
-				vscode.workspace.updateWorkspaceFolders(
-						vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders.length : 0,
-						0,
-						{ uri: appFolderUri }
-				);
-				// TODO Include logic of inserting RIOT base folder here in case a nested RIOT example is selected
 			}catch (error) {
-				colorProvider.removeValidPath(appFolderUri);
-				await context.workspaceState.update(VALID_RIOT_PATHS_CACHE_KEY, colorProvider.getAllPaths());
 				vscode.window.showErrorMessage(
 					'Error determining RIOT Base Path from Makefile'
 				);
@@ -521,7 +512,6 @@ export async function activate(context: vscode.ExtensionContext) {
 		await configureCompiledCommands(riotBasePath.fsPath, appFolderPath.fsPath);
 	
 		devicesTreeItemProvider.setActiveDevice(device);
-		colorProvider.updateActiveUri(device);
 		context.workspaceState.update(ACTIVE_DEVICE_CACHE_KEY, device.toConfig());
 	}
 
@@ -638,21 +628,6 @@ export async function activate(context: vscode.ExtensionContext) {
 		}else {
 			vscode.window.showErrorMessage("Workspace folder for debugging not found");
 		}
-	}
-	async function executeTaskAndWait(task: vscode.Task) : Promise<void> {
-		const execution = await vscode.tasks.executeTask(task);
-		return new Promise<void>((resolve,reject) => {
-			const disposable = vscode.tasks.onDidEndTaskProcess ((e) => {
-				if(e.execution === execution) {
-					disposable.dispose();
-					if(e.exitCode !== 0) {
-						reject(new Error(`Task execution failed with exit code ${e.exitCode}`));
-					} else {
-						resolve();
-					}
-				}
-			});
-		});
 	}
 }
 

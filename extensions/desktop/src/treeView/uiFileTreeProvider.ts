@@ -1,3 +1,4 @@
+import * as path from 'path';
 import { Uri } from "vscode";
 import vscode from "vscode";
 
@@ -18,11 +19,41 @@ export class RiotFileTreeProvider implements vscode.TreeDataProvider<Uri>{
         this._onDidChangeTreeData.fire();
     }
 
-    
-    getTreeItem(element: Uri): vscode.TreeItem | Thenable<vscode.TreeItem> {
-        const isDir = vscode.workspace.fs.stat(element).then(stat => stat.type === vscode.FileType.Directory);
-        const treeItem = new vscode.TreeItem(element, vscode.TreeItemCollapsibleState.Collapsed);
-        return treeItem;
+ 
+
+    async getTreeItem(element: Uri): Promise <vscode.TreeItem> {
+        try {
+            const stat = await vscode.workspace.fs.stat(element);
+            const isDir = stat.type === vscode.FileType.Directory;
+
+            const treeItem = new vscode.TreeItem(element, 
+                isDir ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None
+            );
+            treeItem.id = element.fsPath;
+            if(!isDir) {
+                treeItem.command = {
+                    command: 'vscode.open',
+                    title: 'Open File',
+                    arguments: [element]
+                };
+                treeItem.contextValue = 'file';
+            }else {
+                treeItem.contextValue = 'folder';
+            }
+            return treeItem;
+        }catch (err) {           
+            return new vscode.TreeItem(element, vscode.TreeItemCollapsibleState.None);
+        }
+    }
+
+    getParent(element: Uri): vscode.ProviderResult<Uri> {
+        const fsPath = element.fsPath;
+
+        if(this.rootUris.some(root => element.fsPath === root.fsPath)){
+            return undefined;
+        }
+        const parentPath = path.dirname(fsPath); 
+        return vscode.Uri.file(parentPath);
     }
 
     async getChildren(element?: vscode.Uri): Promise<vscode.Uri[]> {
