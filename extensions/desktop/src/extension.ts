@@ -491,14 +491,14 @@ export async function activate(context: vscode.ExtensionContext) {
 		const vscodeFolderUri = vscode.Uri.joinPath(appPath, '.vscode');
 		const launchJsonUri = vscode.Uri.joinPath(vscodeFolderUri, 'launch.json');
 	
+		const appName = path.basename(appPath.fsPath);
+		let elfFileName = `${appName}.elf`;
 		if(!fs.existsSync(vscodeFolderUri.fsPath)) {
 			await fs.promises.mkdir(vscodeFolderUri.fsPath, { recursive: true});
 		}
 
-		const appName = path.basename(appPath.fsPath);
-
-		let elfFileName = `${appName}.elf`;
 		const binFolderPath = path.join(appPath.fsPath, 'bin', boardName);
+
 		try {
 			if(fs.existsSync(binFolderPath)) {
 				const files = await fs.promises.readdir(binFolderPath);
@@ -513,7 +513,8 @@ export async function activate(context: vscode.ExtensionContext) {
 			vscode.window.showErrorMessage(`Error reading bin folder: ${err}`);
 		}
 
-		const programPath = path.join(`\${workspaceFolder}/bin/${boardName}/${elfFileName}`);
+		const absoluteAppPath = appPath.fsPath.replace(/\\/g, '/');
+		const programPath = path.join(`${absoluteAppPath}/bin/${boardName}/${elfFileName}`);
 		const debugConfigName = `RIOT Debug (${boardName})`;
 
 		const launchConfig = {
@@ -522,7 +523,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			request : 'launch',
 			program : programPath,
 			args : [],
-			cwd : '${workspaceFolder}',
+			cwd : absoluteAppPath,
 			environment : [],
 			MIMode : 'gdb',
 			miDebuggerPath : isNative ? 'gdb' :'gdb-multiarch',
@@ -555,22 +556,39 @@ export async function activate(context: vscode.ExtensionContext) {
 		let launchConfigs : any = { version : '0.2.0', configurations : [] };
 		if(fs.existsSync(launchJsonUri.fsPath)) {
 			const launchJsonText = await fs.promises.readFile(launchJsonUri.fsPath, 'utf8');
-			launchConfigs = JSON.parse(launchJsonText);
+			try {
+				launchConfigs = JSON.parse(launchJsonText);
+			}catch (err) {
+				vscode.window.showErrorMessage(`Error parsing existing launch.json: ${err}. A new launch.json will be created.`);
+				return;
+			}
 		}	
-		const configExists = launchConfigs.configurations.some( (c : any) => c.name === debugConfigName);
-		if(!configExists) {
+		let targetConfig = launchConfigs.configurations.find( (c : any) => c.name === debugConfigName);
+		
+		if(!targetConfig) {
 			launchConfigs.configurations.push(launchConfig);
 			await fs.promises.writeFile(launchJsonUri.fsPath, JSON.stringify(launchConfigs, null, 2));
 			vscode.window.showInformationMessage(`Debug configuration added to ${launchJsonUri.fsPath}`);
+			targetConfig = launchConfig;
 		}
-		const workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(appPath.fsPath));
-		if(workspaceFolder) {
-			await vscode.debug.startDebugging(
-				workspaceFolder,
-				debugConfigName
-			);
-		}else {
-			vscode.window.showErrorMessage("Workspace folder for debugging not found");
+		const resolveConfig = JSON.parse(JSON.stringify(targetConfig));
+
+		// const resolveWorkspaceFolder = (obj: any) => {
+		// 	for (const key in obj) {
+		// 		if(typeof obj[key] === 'string') {
+		// 			const absolutePath = appPath.fsPath.replace(/\\/g, '/');
+		// 			obj[key] = obj[key].replace(/\$\{workspaceFolder\}/g, absolutePath);
+		// 		}else if (typeof obj[key] === 'object' && obj[key] !== null){
+		// 			resolveWorkspaceFolder(obj[key]);
+		// 		} 
+		// 	}
+		// };
+		// resolveWorkspaceFolder(resolveConfig);
+
+		try {
+			await vscode.debug.startDebugging(undefined, resolveConfig);
+		}catch (err) {
+			vscode.window.showErrorMessage(`Error starting debug session: ${err}`);
 		}
 	}
 }
