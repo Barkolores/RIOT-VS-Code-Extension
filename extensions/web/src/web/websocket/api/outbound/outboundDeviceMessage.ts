@@ -6,17 +6,20 @@ type deviceSendAddress = [
     shellAddress
 ];
 
+export type commandRequest = [
+    'flash' | 'term',
+    board: string,
+    projectPath: string
+]
+
 export type outboundDeviceMessage = [
-    messageTypes.DRM_ACK | messageTypes.SRM,
-    ...deviceSendAddress
-] | [
-    messageTypes.LTM,
+    messageTypes.RST,
     ...deviceSendAddress,
     terminationTypes,
     msg: string
 ] | [
-    //LTM response for DNR fail
-    messageTypes.LTM,
+    //RST response when device name not found
+    messageTypes.RST,
     clientAddress,
     shellAddress,
     terminationTypes,
@@ -27,8 +30,8 @@ export type outboundDeviceMessage = [
     logTypes,
     msg: string
 ] | [
-    messageTypes.FLASH_REQUEST | messageTypes.TERM_REQUEST,
+    messageTypes.REQ,
     ...deviceSendAddress,
-    board: string,
-    directory: string
+    newInstance: boolean,
+    commandRequest,
 ]

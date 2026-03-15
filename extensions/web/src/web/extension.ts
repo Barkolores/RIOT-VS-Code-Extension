@@ -6,7 +6,7 @@ import {WebSocketManager} from "./websocket/webSocketManager";
 import {FolderTreeItem} from "shared/ui/treeItems/folderTreeItem";
 import {encode} from "cbor-x";
 import {inboundWSMessage} from "./websocket/api/inbound/inboundWSMessage";
-import {addressTypes, messageTypes, terminationTypes} from "./websocket/api/additionalTypes";
+import {addressTypes, commandTypes, messageTypes, terminationTypes} from "./websocket/api/additionalTypes";
 import {supportedBoards} from "./devices/supportedBoards";
 import {Container} from "./placeholder";
 
@@ -66,8 +66,6 @@ export function activate(context: vscode.ExtensionContext) {
                     }
                 }
             }
-            // await deviceManager.enterDFU();
-            // await vscode.commands.executeCommand("workbench.experimental.requestSerialPort");
         }),
 
         //remove Device
@@ -224,40 +222,27 @@ export function activate(context: vscode.ExtensionContext) {
             ];
             testPort2.postMessage(encode(message));
         }),
-        vscode.commands.registerCommand('riot-web-extension.test.receiveDRM', async () => {
-            const shellID = await vscode.window.showInputBox({title: 'ID of shell'});
-            const deviceName = await vscode.window.showInputBox({title: 'Name of device'});
-            if (!deviceName || !shellID) {
-                return;
-            }
-            const message: inboundWSMessage = [
-                messageTypes.DRM,
-                [addressTypes.SHELL, Number.parseInt(shellID)],
-                [addressTypes.DEVICE, deviceName]
-            ];
-            testPort2.postMessage(encode(message));
-        }),
-        vscode.commands.registerCommand('riot-web-extension.test.receiveSRMACK', async () => {
+        vscode.commands.registerCommand('riot-web-extension.test.receiveACK', async () => {
             const shellID = await vscode.window.showInputBox({title: 'ID of shell'});
             const deviceName = await vscode.window.showInputBox({title: 'Name of device'});
             if (!shellID || !deviceName) {
                 return;
             }
             const message: inboundWSMessage = [
-                messageTypes.SRM_ACK,
+                messageTypes.ACK,
                 [addressTypes.SHELL, Number.parseInt(shellID)],
                 [addressTypes.DEVICE, deviceName]
             ];
             testPort2.postMessage(encode(message));
         }),
-        vscode.commands.registerCommand('riot-web-extension.test.receiveLTMSuccess', async () => {
+        vscode.commands.registerCommand('riot-web-extension.test.receiveRSTSuccess', async () => {
             const shellID = await vscode.window.showInputBox({title: 'ID of shell'});
             const deviceName = await vscode.window.showInputBox({title: 'Name of device'});
             if (!shellID || !deviceName) {
                 return;
             }
             const message: inboundWSMessage = [
-                messageTypes.LTM,
+                messageTypes.RST,
                 [addressTypes.SHELL, Number.parseInt(shellID)],
                 [addressTypes.DEVICE, deviceName],
                 terminationTypes.SUCCESS,
@@ -265,14 +250,14 @@ export function activate(context: vscode.ExtensionContext) {
             ];
             testPort2.postMessage(encode(message));
         }),
-        vscode.commands.registerCommand('riot-web-extension.test.receiveLTMError', async () => {
+        vscode.commands.registerCommand('riot-web-extension.test.receiveRSTError', async () => {
             const shellID = await vscode.window.showInputBox({title: 'ID of shell'});
             const deviceName = await vscode.window.showInputBox({title: 'Name of device'});
             if (!shellID || !deviceName) {
                 return;
             }
             const message: inboundWSMessage = [
-                messageTypes.LTM,
+                messageTypes.RST,
                 [addressTypes.SHELL, Number.parseInt(shellID)],
                 [addressTypes.DEVICE, deviceName],
                 terminationTypes.ERROR,
@@ -280,23 +265,26 @@ export function activate(context: vscode.ExtensionContext) {
             ];
             testPort2.postMessage(encode(message));
         }),
-        vscode.commands.registerCommand('riot-web-extension.test.receiveFlash', async () => {
+        vscode.commands.registerCommand('riot-web-extension.test.receiveFlashCMD', async () => {
             const shellID = await vscode.window.showInputBox({title: 'ID of shell'});
             const deviceName = await vscode.window.showInputBox({title: 'Name of device'});
             if (!shellID || !deviceName) {
                 return;
             }
             const message: inboundWSMessage = [
-                messageTypes.FLASH,
+                messageTypes.CMD,
                 [addressTypes.SHELL, Number.parseInt(shellID)],
                 [addressTypes.DEVICE, deviceName],
-                "esp32",
-                {"0x1000": "a"},
-                "arguments"
+                [
+                    commandTypes.FLASH,
+                    "esp32",
+                    {"0x1000": "a"},
+                    "arguments"
+                ],
             ];
             testPort2.postMessage(encode(message));
         }),
-        vscode.commands.registerCommand('riot-web-extension.test.receiveTerm', async () => {
+        vscode.commands.registerCommand('riot-web-extension.test.receiveTermCMD', async () => {
             const shellID = await vscode.window.showInputBox({title: 'ID of shell'});
             const deviceName = await vscode.window.showInputBox({title: 'Name of device'});
             const baudrate = await vscode.window.showInputBox({title: 'Baudrate'});
@@ -304,11 +292,14 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
             const message: inboundWSMessage = [
-                messageTypes.TERM,
+                messageTypes.CMD,
                 [addressTypes.SHELL, Number.parseInt(shellID)],
                 [addressTypes.DEVICE, deviceName],
-                "esp32",
-                Number.parseInt(baudrate)
+                [
+                    commandTypes.TERM,
+                    "esp32",
+                    Number.parseInt(baudrate)
+                ]
             ];
             testPort2.postMessage(encode(message));
         }),
@@ -326,9 +317,6 @@ export function activate(context: vscode.ExtensionContext) {
             ];
             testPort2.postMessage(encode(message));
         }),
-        vscode.commands.registerCommand('riot-web-extension.test.enterDFU', async () => {
-            deviceManager.enterDFU();
-        })
     );
 
     //Views

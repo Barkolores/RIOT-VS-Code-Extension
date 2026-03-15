@@ -9,16 +9,7 @@ export function isValidOutboundMessage(obj: unknown): obj is outboundWSMessage {
     const typedObj = obj as outboundWSMessage
     return (
         (Array.isArray(typedObj) &&
-            (typedObj[0] === messageTypes.DRM_ACK ||
-                typedObj[0] === messageTypes.SRM) &&
-            Array.isArray(typedObj[1]) &&
-            typedObj[1][0] === addressTypes.DEVICE &&
-            typeof typedObj[1][1] === "string" &&
-            Array.isArray(typedObj[2]) &&
-            typedObj[2][0] === addressTypes.SHELL &&
-            typeof typedObj[2][1] === "number" ||
-            Array.isArray(typedObj) &&
-            typedObj[0] === messageTypes.LTM &&
+            typedObj[0] === messageTypes.RST &&
             Array.isArray(typedObj[1]) &&
             typedObj[1][0] === addressTypes.DEVICE &&
             typeof typedObj[1][1] === "string" &&
@@ -29,7 +20,7 @@ export function isValidOutboundMessage(obj: unknown): obj is outboundWSMessage {
                 typedObj[3] === terminationTypes.ERROR) &&
             typeof typedObj[4] === "string" ||
             Array.isArray(typedObj) &&
-            typedObj[0] === messageTypes.LTM &&
+            typedObj[0] === messageTypes.RST &&
             Array.isArray(typedObj[1]) &&
             typedObj[1][0] === addressTypes.CLIENT &&
             typedObj[1][1] === 0 &&
@@ -51,16 +42,19 @@ export function isValidOutboundMessage(obj: unknown): obj is outboundWSMessage {
                 typedObj[3] === logTypes.ERROR) &&
             typeof typedObj[4] === "string" ||
             Array.isArray(typedObj) &&
-            (typedObj[0] === messageTypes.FLASH_REQUEST ||
-                typedObj[0] === messageTypes.TERM_REQUEST) &&
+            typedObj[0] === messageTypes.REQ &&
             Array.isArray(typedObj[1]) &&
             typedObj[1][0] === addressTypes.DEVICE &&
             typeof typedObj[1][1] === "string" &&
             Array.isArray(typedObj[2]) &&
             typedObj[2][0] === addressTypes.SHELL &&
             typeof typedObj[2][1] === "number" &&
-            typeof typedObj[3] === "string" &&
-            typeof typedObj[4] === "string" ||
+            typeof typedObj[3] === "boolean" &&
+            Array.isArray(typedObj[4]) &&
+            (typedObj[4][0] === "flash" ||
+                typedObj[4][0] === "term") &&
+            typeof typedObj[4][1] === "string" &&
+            typeof typedObj[4][2] === "string" ||
             Array.isArray(typedObj) &&
             typedObj[0] === messageTypes.CONNECT &&
             Array.isArray(typedObj[1]) &&

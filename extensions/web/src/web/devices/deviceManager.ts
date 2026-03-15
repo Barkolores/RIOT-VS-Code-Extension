@@ -168,7 +168,7 @@ export class DeviceManager {
     private sendErrorLTM(shellId: number , reason: string) {
         //send LTM when Device is not found
         this._messagePort.postMessage([
-            messageTypes.LTM,
+            messageTypes.RST,
             [addressTypes.CLIENT, 0] as clientAddress,
             [addressTypes.SHELL, shellId] as shellAddress,
             terminationTypes.ERROR,
@@ -197,23 +197,5 @@ export class DeviceManager {
                 await port.forget();
             }
         }
-    }
-
-    //TESTING
-    async enterDFU() {
-        await vscode.commands.executeCommand('riot-web-extension.eventListener.lock');
-        const port = (await navigator.serial.getPorts())[0];
-        await port.open({baudRate: 1200});
-        await new Promise((resolve) => {
-            setTimeout(resolve, 100);
-        });
-        await port.close();
-        await new Promise((resolve) => {
-            setTimeout(resolve, 1000);
-        });
-        await (Object.values(this._devices)[0] as NrfDevice).rediscoverPort();
-        // const port = (await navigator.serial.getPorts())[0];
-        // port.
-        await vscode.commands.executeCommand('riot-web-extension.eventListener.unlock');
     }
 }

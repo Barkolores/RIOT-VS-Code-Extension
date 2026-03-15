@@ -2,17 +2,17 @@ export enum messageTypes {
     CONNECT = 'connect',
     CONNECT_ACK = 'connect ACK',
     DISCONNECT = 'disconnect',
-    DRM = 'DRM',
-    DRM_ACK = 'DRM ACK',
-    SRM = 'SRM',
-    SRM_ACK = 'SRM ACK',
-    LTM = 'LTM',
-    FLASH_REQUEST = 'flash request',
-    FLASH = 'flash',
-    TERM_REQUEST = 'term request',
-    TERM = 'term',
+    REQ = 'REQ',
+    ACK = 'ACK',
+    RST = 'RST',
+    CMD = 'CMD',
     LOG = 'log',
     INPUT = 'input'
+}
+
+export enum commandTypes {
+    FLASH = 'flash',
+    TERM = 'term'
 }
 
 export enum logTypes {

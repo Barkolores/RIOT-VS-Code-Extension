@@ -1,7 +1,6 @@
 //@ts-nocheck
 import {SerialDevice} from "./serialDevice";
 import {FlashInterface} from "../flash/flashInterface";
-import {deviceState} from "../webDevice";
 import vscode from "vscode";
 import zip from "../../tools/zip.min.js";
 import {Container} from "../../placeholder";
@@ -60,7 +59,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
             //device was already in DFU mode
             const result = await vscode.window.showInformationMessage('Device is already in DFU mode. Please press the reset button or reconnect the device first. Then grant access to it again.', {modal: true}, 'Grant Access');
             if ((this._webPort as SerialPort).connected || !result) {
-                vscode.window.showErrorMessage('Device has not been reset. Aborting.');
+                vscode.window.showErrorMessage((result ? 'Device has not been reset. ' : '') + 'Aborting...');
                 await this._webPort.forget();
                 return false;
             }
@@ -90,13 +89,22 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
 
     async rediscoverPort() {
         console.log('starting rediscover');
-        (await navigator.serial.getPorts()).forEach((serialPort) => {
-            if (!('used' in serialPort)) {
-                serialPort.used = true;
-                this._webPort = serialPort;
-                console.log('found');
+        let has_found = false;
+        while (true) {
+            (await navigator.serial.getPorts()).forEach((serialPort) => {
+                if (!('used' in serialPort)) {
+                    has_found = true;
+                    serialPort.used = true;
+                    this._webPort = serialPort;
+                    console.log('found');
+                }
+            });
+            if (has_found) {
+                break;
             }
-        });
+            await vscode.window.showErrorMessage('Physical Device could not be rediscovered. Please grant access to the device again.', {modal: true});
+            await vscode.commands.executeCommand('workbench.experimental.requestSerialPort');
+        }
         console.log('ending rediscover');
     }
 
@@ -160,8 +168,6 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
             return;
         }
 
-        this._currentState = deviceState.FLASH;
-
         const updates = new Blob([await vscode.workspace.fs.readFile(vscode.Uri.joinPath(uri, 'sketch_oct30a.ino.zip'))]);
 
         const progressCallback = (log) => {
@@ -215,9 +221,6 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
             //Device exits DFU mode, need to find new Serial Port
             await this.rediscoverPort();
         }
-        this._currentState = deviceState.IDLE;
-        await vscode.commands.executeCommand('riot-web-extension.eventListener.unlock');
-        await vscode.commands.executeCommand('riot-web-extension.device.cleanUp');
         console.log('ending flash');
     }
 
@@ -277,6 +280,10 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
         await this.sleepMillis(1000);
 
         console.log('ending dfu send image');
+
+        this.sequenceNumber = 0;
+        this.sd_size = 0;
+        this.total_size = 0;
     }
 
     /**
@@ -538,5 +545,4 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
             (num & 0xFF00) >> 8,
         ];
     }
-
 }

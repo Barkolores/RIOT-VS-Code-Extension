@@ -1,30 +1,38 @@
 //All messages that can be received by a Device/the DeviceManager from the WebsocketManager
-import {deviceAddress, messageTypes, shellAddress, terminationTypes} from "../additionalTypes";
+import {commandTypes, deviceAddress, messageTypes, shellAddress, terminationTypes} from "../additionalTypes";
 
 type deviceReceiveAddress = [
     shellAddress,
     deviceAddress
 ]
 
+type flashCommand = [
+    commandTypes.FLASH,
+    board: string,
+    binaries: {[offset:string]: any},
+    arguments: string
+]
+
+type termCommand = [
+    commandTypes.TERM,
+    board: string,
+    baudrate: number
+]
+
+export type command = flashCommand | termCommand
+
 export type inboundDeviceMessage = [
-    messageTypes.DRM | messageTypes.SRM_ACK,
+    messageTypes.ACK,
     ...deviceReceiveAddress
 ] | [
-    messageTypes.LTM,
+    messageTypes.RST,
     ...deviceReceiveAddress,
     terminationTypes,
     msg: string
 ] | [
-    messageTypes.FLASH,
+    messageTypes.CMD,
     ...deviceReceiveAddress,
-    board: string,
-    binaries: {[offset:string]: any},
-    agruments: string
-] | [
-    messageTypes.TERM,
-    ...deviceReceiveAddress,
-    board: string,
-    baudrate: number
+    command
 ] | [
     messageTypes.INPUT,
     ...deviceReceiveAddress,

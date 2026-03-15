@@ -85,36 +85,28 @@
         "title": "Receive Disconnect"
       },
       {
-        "command": "riot-web-extension.test.receiveDRM",
-        "title": "Receive DRM"
+        "command": "riot-web-extension.test.receiveACK",
+        "title": "Receive ACK"
       },
       {
-        "command": "riot-web-extension.test.receiveSRMACK",
-        "title": "Receive SRM ACK"
+        "command": "riot-web-extension.test.receiveRSTSuccess",
+        "title": "Receive RST Success"
       },
       {
-        "command": "riot-web-extension.test.receiveLTMSuccess",
-        "title": "Receive LTM Success"
+        "command": "riot-web-extension.test.receiveRSTError",
+        "title": "Receive RST Error"
       },
       {
-        "command": "riot-web-extension.test.receiveLTMError",
-        "title": "Receive LTM Error"
+        "command": "riot-web-extension.test.receiveFlashCMD",
+        "title": "Receive Flash CMD"
       },
       {
-        "command": "riot-web-extension.test.receiveFlash",
-        "title": "Receive Flash"
-      },
-      {
-        "command": "riot-web-extension.test.receiveTerm",
-        "title": "Receive Term"
+        "command": "riot-web-extension.test.receiveTermCMD",
+        "title": "Receive Term CMD"
       },
       {
         "command": "riot-web-extension.test.receiveInput",
         "title": "Receive Input"
-      },
-      {
-        "command": "riot-web-extension.test.enterDFU",
-        "title": "Enter DFU"
       }
     ],
     "viewsContainers": {

@@ -1,38 +1,32 @@
 import vscode from "vscode";
 import {DeviceTreeItem} from "shared/ui/treeItems/deviceTreeItem";
 import {WebSocketManager} from "../websocket/webSocketManager";
-import {inboundDeviceMessage} from "../websocket/api/inbound/inboundDeviceMessage";
+import {command, inboundDeviceMessage} from "../websocket/api/inbound/inboundDeviceMessage";
 import {
     addressTypes,
+    commandTypes,
     deviceAddress,
     logTypes,
     messageTypes,
     shellAddress,
     terminationTypes
 } from "../websocket/api/additionalTypes";
-import {outboundDeviceMessage} from "../websocket/api/outbound/outboundDeviceMessage";
+import {commandRequest, outboundDeviceMessage} from "../websocket/api/outbound/outboundDeviceMessage";
 import {implementsFlashInterface} from "./flash/flashInterface.guard";
 
 export type webPort = SerialPort | USBDevice
 
-export enum deviceState {
-    IDLE,
-    WAITING_FOR_SRM_ACK,
-    FLASH,
-    TERM,
-}
-
-enum deviceActions {
+enum deviceAction {
     FLASH,
     TERM
 }
 
 export abstract class WebDevice extends DeviceTreeItem {
     protected _deviceAddress: deviceAddress;
-    protected _shellAddress: shellAddress | undefined = undefined;
-    protected _lastShellAddress: shellAddress | undefined = undefined;
-    protected _currentState: deviceState = deviceState.IDLE;
-    protected _nextAction: deviceActions | undefined = undefined;
+    protected _currentlyLockedTo: shellAddress | undefined = undefined;
+    protected _previouslyLockedTo: shellAddress | undefined = undefined;
+    protected _requestedAction: deviceAction | undefined = undefined;
+    protected _flashing: boolean = false;
     protected _logMessages: string = '';
     protected _logMessagesTimer: NodeJS.Timeout | undefined = undefined;
 
@@ -67,6 +61,35 @@ export abstract class WebDevice extends DeviceTreeItem {
         this._webPort.forget().then(() => console.log('Forgot ' + this.label));
     };
 
+    cancel() {
+        if (this._flashing) {
+            vscode.window.showErrorMessage('Device is currently flashing. Please wait till flashing is complete.');
+            return;
+        }
+        if (this._currentlyLockedTo) {
+            this.sendRST(this._currentlyLockedTo, terminationTypes.ERROR, 'User canceled Action.');
+        }
+        this.close();
+        this.unlockDevice();
+    }
+
+    private async checkBoard(board: string): Promise<boolean> {
+        if (this._board && this._board !== board || !this._board && WebDevice._defaultBoard !== board) {
+            return await vscode.window.showErrorMessage(`The board used for the Term/Flash does not match the specified board. Board of type ${WebDevice._defaultBoard} will be used instead.`, {modal: true}, 'Continue') !== undefined;
+        }
+        return true;
+    }
+
+    private unlockDevice() {
+        this._requestedAction = undefined;
+        if (this._currentlyLockedTo) {
+            this._previouslyLockedTo = this._currentlyLockedTo;
+            this._currentlyLockedTo = undefined;
+        }
+        vscode.commands.executeCommand('riot-web-extension.context.device.remove', this.contextValue);
+        this.stopLogBundling();
+    }
+
     requestFlash() {
         if (!implementsFlashInterface(this)) {
             vscode.window.showErrorMessage(`Flashing ${this._board} is not supported in the Web.`, {modal: true});
@@ -76,8 +99,12 @@ export abstract class WebDevice extends DeviceTreeItem {
             vscode.window.showErrorMessage('No project in which to execute the flash command has been specified. Cancelling Flash...', {modal: true});
             return;
         }
-        if (this._shellAddress === undefined) {
-            this._nextAction = deviceActions.FLASH;
+        if (!this._board) {
+            vscode.window.showWarningMessage(`No board has been specified. Board of type ${WebDevice._defaultBoard} will be used.`);
+        }
+        if (this._currentlyLockedTo === undefined) {
+            vscode.commands.executeCommand('riot-web-extension.context.device.add', this.contextValue);
+            this._requestedAction = deviceAction.FLASH;
             this.requestShell();
         } else {
             vscode.window.showErrorMessage('Device is busy');
@@ -89,77 +116,139 @@ export abstract class WebDevice extends DeviceTreeItem {
             vscode.window.showErrorMessage('No project in which to execute the term command has been specified. Cancelling Term...', {modal: true});
             return;
         }
-        if (this._shellAddress === undefined) {
-            this._nextAction = deviceActions.TERM;
+        if (!this._board) {
+            vscode.window.showWarningMessage(`No board has been specified. Board of type ${WebDevice._defaultBoard} will be used.`);
+        }
+        if (this._currentlyLockedTo === undefined) {
+            vscode.commands.executeCommand('riot-web-extension.context.device.add', this.contextValue);
+            this._requestedAction = deviceAction.TERM;
             this.requestShell();
         } else {
             vscode.window.showErrorMessage('Device is busy');
         }
     }
 
-    private unlockDevice() {
-        this._currentState = deviceState.IDLE;
-        this._nextAction = undefined;
-        if (this._shellAddress) {
-            this._lastShellAddress = this._shellAddress;
-            this._shellAddress = undefined;
+    private async requestShell() {
+        let newInstance = false;
+        if (this._previouslyLockedTo) {
+            this._currentlyLockedTo = this._previouslyLockedTo;
+        } else {
+            await vscode.commands.executeCommand('workbench.action.terminal.new');
+            const processId = await vscode.window.activeTerminal?.processId;
+            if (!processId) {
+                vscode.window.showErrorMessage('ProcessId was undefined, cannot connect to Shell');
+                this.unlockDevice();
+                return;
+            }
+            newInstance = true;
+            this._currentlyLockedTo = [addressTypes.SHELL, processId];
         }
-        vscode.commands.executeCommand('riot-web-extension.context.device.remove', this.contextValue);
-        this.stopLogBundling();
+        let commandRequest = undefined;
+        switch (this._requestedAction) {
+            case deviceAction.FLASH:
+                commandRequest = [
+                    'flash',
+                    this._board ? this._board : WebDevice._defaultBoard,
+                    this._activeProject ? this._activeProject.uri.path : '',
+                ] as commandRequest;
+                break;
+            case deviceAction.TERM:
+                commandRequest = [
+                    'term',
+                    this._board ? this._board : WebDevice._defaultBoard,
+                    this._activeProject ? this._activeProject.uri.path : '',
+                ] as commandRequest;
+                break;
+            default:
+                vscode.window.showErrorMessage('Unsupported action requested');
+                this.unlockDevice();
+                return;
+        }
+
+        this.sendMessage([
+            messageTypes.REQ,
+            this._deviceAddress,
+            this._currentlyLockedTo,
+            newInstance,
+            commandRequest
+        ] as outboundDeviceMessage);
     }
 
     private sendMessage(message: outboundDeviceMessage): void {
         this._messagePort.postMessage(message);
     }
 
-    async handleMessage(message: inboundDeviceMessage): Promise<void> {
-        //Check all messages but DNR
-        if (message[0] !== messageTypes.DRM) {
-            //Check if sender is not known
-            if (message[1][0] !== this._shellAddress?.[0] || message[1][1] !== this._shellAddress?.[1]) {
-                //Drop LTM messages
-                if (message[0] !== messageTypes.LTM) {
-                    this.sendLTM(message[1], terminationTypes.ERROR, this._shellAddress ? 'Device has established a connection with a different Shell.' : 'A connection has to be established first.');
-                }
-                return;
-            }
+    private sendRST(receiver: shellAddress, terminationType: terminationTypes, reason: string) {
+        this.sendMessage([
+            messageTypes.RST,
+            this._deviceAddress,
+            receiver,
+            terminationType,
+            reason
+        ] as outboundDeviceMessage);
+    };
+
+    protected sendLog() {
+        if (this._logMessages !== '') {
+            this.sendMessage([
+                messageTypes.LOG,
+                this._deviceAddress,
+                this._currentlyLockedTo,
+                logTypes.LOG,
+                this._logMessages
+            ] as outboundDeviceMessage);
+            this._logMessages = '';
         }
+    }
+
+    protected startLogBundling() {
+        this.stopLogBundling();
+        this._logMessagesTimer = setInterval(this.sendLog.bind(this), 100);
+    }
+
+    protected stopLogBundling() {
+        clearInterval(this._logMessagesTimer);
+        //send out any remaining logs
+        this.sendLog();
+    }
+
+    async handleMessage(message: inboundDeviceMessage): Promise<void> {
+        //prepass to check for linkage with right shell
         switch (message[0]) {
-            case messageTypes.DRM:
-                if (this._shellAddress) {
-                    this.sendLTM(message[1], terminationTypes.ERROR, 'Device is locked.');
-                } else {
-                    vscode.commands.executeCommand('riot-web-extension.context.device.add', this.contextValue);
-                    this._shellAddress = message[1];
-                    this._messagePort.postMessage([
-                        'DRM ACK',
-                        this._deviceAddress,
-                        this._shellAddress
-                    ] as outboundDeviceMessage);
+            case messageTypes.CMD:
+                //Send RST response when receiving cmd messages from unknown shells (but accept if not locked to any shell to establish new connection)
+                if (this._currentlyLockedTo !== undefined && (this._currentlyLockedTo[0] !== message[1][0] || this._currentlyLockedTo[1] !== message[1][1])) {
+                    this.sendRST(message[1], terminationTypes.ERROR, 'Device has established a connection with a different Shell.');
+                    return;
                 }
                 break;
-            case messageTypes.SRM_ACK:
-                if (this._currentState === deviceState.WAITING_FOR_SRM_ACK) {
-                    this._currentState = deviceState.IDLE;
-                    switch (this._nextAction) {
-                        case deviceActions.FLASH:
-                            this.sendRequest(messageTypes.FLASH_REQUEST);
-                            break;
-                        case deviceActions.TERM:
-                            this.sendRequest(messageTypes.TERM_REQUEST);
-                            break;
-                        default:
-                            this.sendLTM(message[1], terminationTypes.ERROR, 'Device has no further actions to take');
-                            this.unlockDevice();
+            default:
+                //Send RST response when receiving non cmd messages from unknown shells
+                if (this._currentlyLockedTo === undefined || this._currentlyLockedTo[0] !== message[1][0] || this._currentlyLockedTo[1] !== message[1][1]) {
+                    //Drop RST to prevent infinite RST loop
+                    if (message[0] !== messageTypes.RST) {
+                        this.sendRST(message[1], terminationTypes.ERROR, this._currentlyLockedTo ? 'Device has established a connection with a different Shell.' : 'A connection to this Device has to be established first.');
                     }
+                    return;
                 }
                 break;
-            case messageTypes.LTM:
-                if (this._currentState === deviceState.WAITING_FOR_SRM_ACK) {
-                    this._lastShellAddress = undefined;
+        }
+
+
+        //actual message handling
+        switch (message[0]) {
+            case messageTypes.ACK:
+                this._requestedAction = undefined;
+                //TODO focus shell
+                //wait for further instructions from shell
+                break;
+            case messageTypes.RST:
+                if (this._requestedAction) {
+                    //shell is busy or gone, find new one
+                    this._previouslyLockedTo = undefined;
                     vscode.window.showInformationMessage(`The last shell Device ${this.label} used isn't available anymore. Spawning new shell.`);
                     this.requestShell();
-                    break;
+                    return;
                 }
                 if (message[3] === terminationTypes.SUCCESS) {
                     vscode.window.showInformationMessage(message[4]);
@@ -169,120 +258,56 @@ export abstract class WebDevice extends DeviceTreeItem {
                 this.close();
                 this.unlockDevice();
                 break;
-            case messageTypes.FLASH:
-                if (!implementsFlashInterface(this)) {
-                    vscode.window.showErrorMessage(`Flashing ${this._board} is not supported in the Web.`, {modal: true});
+            case messageTypes.CMD:
+                //new connection, lock to new shell
+                if (this._requestedAction) {
+                    //Received CMD before ACK, sequence break not allowed
+                    vscode.window.showErrorMessage('Received CMD before ACK.');
+                    this.unlockDevice();
                     return;
                 }
-                if (this._currentState === deviceState.IDLE && this._shellAddress !== undefined) {
-                    if (await this.checkBoard(message[3])) {
-                        //TESTING
-                        this.startLogBundling();
-                        await this.flash(message[4], message[5]);
-                        this.stopLogBundling();
-                        // this.sendLTM(this._shellAddress, terminationTypes.SUCCESS, 'Dummy: Flash complete');
-                        this.unlockDevice();
-                    }
+                if (this._currentlyLockedTo === undefined) {
+                    vscode.commands.executeCommand('riot-web-extension.context.device.add', this.contextValue);
+                    this._currentlyLockedTo = message[1];
                 }
-                break;
-            case messageTypes.TERM:
-                if (this._currentState === deviceState.IDLE) {
-                    if (await this.checkBoard(message[3])) {
-                        this._currentState = deviceState.TERM;
-                        this.term({
-                            baudRate: message[4]
-                        } as SerialOptions);
-                    }
-                }
+                await this.executeCommand(message[3]);
                 break;
             case messageTypes.INPUT:
-                if (this._currentState === deviceState.TERM) {
-                    this.write(message[3]);
+                this.write(message[3]);
+                break;
+        }
+    }
+
+    async executeCommand(command: command) {
+        switch (command[0]) {
+            case commandTypes.FLASH:
+                if (!implementsFlashInterface(this)) {
+                    if (this._currentlyLockedTo) {
+                        this.sendRST(this._currentlyLockedTo, terminationTypes.ERROR, `Flashing ${this._board} is not supported in the Web.`);
+                    }
+                    vscode.window.showErrorMessage(`Flashing ${this._board} is not supported in the Web.`, {modal: true});
+                    this.unlockDevice();
+                    return;
+                }
+                if (await this.checkBoard(command[1])) {
+                    this.startLogBundling();
+                    this._flashing = true;
+                    await this.flash(command[2], command[3]).finally(async () => {
+                        await vscode.commands.executeCommand('riot-web-extension.eventListener.unlock');
+                        await vscode.commands.executeCommand('riot-web-extension.device.cleanUp');
+                        this._flashing = false;
+                        this.stopLogBundling();
+                        this.unlockDevice();
+                    });
+                }
+                break;
+            case commandTypes.TERM:
+                if (await this.checkBoard(command[1])) {
+                    this.term({
+                        baudRate: command[2]
+                    } as SerialOptions);
                 }
                 break;
         }
-    };
-
-    private async requestShell() {
-        vscode.commands.executeCommand('riot-web-extension.context.device.add', this.contextValue);
-        if (this._lastShellAddress) {
-            this._shellAddress = this._lastShellAddress;
-        } else {
-            await vscode.commands.executeCommand('workbench.action.terminal.new');
-            const processId = await vscode.window.activeTerminal?.processId;
-            if (!processId) {
-                vscode.window.showErrorMessage('ProcessId was undefined, cannot connect to Shell');
-                return;
-            }
-            this._shellAddress = [addressTypes.SHELL, processId];
-        }
-        this._currentState = deviceState.WAITING_FOR_SRM_ACK;
-        this.sendMessage([
-            messageTypes.SRM,
-            this._deviceAddress,
-            this._shellAddress
-        ] as outboundDeviceMessage);
-    }
-
-    private sendRequest(type: messageTypes.TERM_REQUEST | messageTypes.FLASH_REQUEST) {
-        if (!this._board) {
-            vscode.window.showWarningMessage(`No board has been specified. Board of type ${WebDevice._defaultBoard} will be used.`);
-        }
-        this.sendMessage([
-            type,
-            this._deviceAddress,
-            this._shellAddress,
-            this._board ? this._board : WebDevice._defaultBoard,
-            this._activeProject ? this._activeProject.uri.path : '',
-        ] as outboundDeviceMessage);
-    }
-
-    private sendLTM(receiver: shellAddress, terminationType: terminationTypes, reason: string) {
-        this.sendMessage([
-            messageTypes.LTM,
-            this._deviceAddress,
-            receiver,
-            terminationType,
-            reason
-        ] as outboundDeviceMessage);
-    };
-
-    private async checkBoard(board: string): Promise<boolean> {
-        if (this._board && this._board !== board || !this._board && WebDevice._defaultBoard !== board) {
-            return await vscode.window.showErrorMessage(`The board used for the Term/Flash does not match the specified board. Board of type ${WebDevice._defaultBoard} will be used instead.`, {modal: true}, 'Continue') !== undefined;
-        }
-        return true;
-    }
-
-    protected startLogBundling() {
-        this.stopLogBundling();
-        this._logMessagesTimer = setInterval(this.sendLogMessage.bind(this), 100);
-    }
-
-    protected stopLogBundling() {
-        clearInterval(this._logMessagesTimer);
-        //send out any remaining logs
-        this.sendLogMessage();
-    }
-
-    protected sendLogMessage() {
-        if (this._logMessages !== '') {
-            this.sendMessage([
-                messageTypes.LOG,
-                this._deviceAddress,
-                this._shellAddress,
-                logTypes.LOG,
-                this._logMessages
-            ] as outboundDeviceMessage);
-            this._logMessages = '';
-        }
-    }
-
-    cancel() {
-        if (this._shellAddress) {
-            this.sendLTM(this._shellAddress, terminationTypes.ERROR, 'User canceled Action.');
-        }
-        this.close();
-        this.unlockDevice();
     }
 }
