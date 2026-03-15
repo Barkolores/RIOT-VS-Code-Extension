@@ -247,9 +247,6 @@ export async function activate(context: vscode.ExtensionContext) {
 				
 				loadBoards(appFolderUri).then((loadedBoards : string[]) => boards = loadedBoards);
 
-				const isAlreadyOpen = vscode.workspace.workspaceFolders?.some( 
-					folder => folder.uri.fsPath === appFolderUri.fsPath
-				);
 			
 				treeItem.setAppPath(appFolderUri);
 				treeItem.setBasePath(riotBasePath);
@@ -268,21 +265,8 @@ export async function activate(context: vscode.ExtensionContext) {
                 await context.workspaceState.update(ACTIVE_DEVICE_CACHE_KEY, activeDevice?.toConfig());
 				/* Compile commands and configuring IntelliSense */
 				const device = treeItem.getDevice();
-				if(device.board?.id)	 {
-					if(isAlreadyOpen) {
-						await executeCompileCommandsTask(device);
-					} else {
-						/* Set up event that ensures, compile-commands and configuring IntelliSense is
-						configured subsequentially after opening the workspace folder 
-						... Otherwise leads to a race condition */ 
-						const listener = vscode.workspace.onDidChangeWorkspaceFolders( async (e) => { 
-							const addedFolder = e.added.find(folder => folder.uri === appFolderUri);
-							if(addedFolder) {
-								listener.dispose();
-								await executeCompileCommandsTask(device);
-							}
-						});
-					}
+				if(device.board){
+					await executeCompileCommandsTask(device);
 				}
 			}catch (error) {
 				vscode.window.showErrorMessage(
@@ -471,7 +455,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			await config.update(
 				'default.compileCommands',
 				compileCommandsPath,
-				vscode.ConfigurationTarget.WorkspaceFolder
+				vscode.ConfigurationTarget.Workspace
 			);
 			vscode.window.showInformationMessage("Compiled commands adapted");
 		}else {
@@ -491,22 +475,30 @@ export async function activate(context: vscode.ExtensionContext) {
 		const vscodeFolderUri = vscode.Uri.joinPath(appPath, '.vscode');
 		const launchJsonUri = vscode.Uri.joinPath(vscodeFolderUri, 'launch.json');
 	
-		const appName = path.basename(appPath.fsPath);
-		let elfFileName = `${appName}.elf`;
 		if(!fs.existsSync(vscodeFolderUri.fsPath)) {
 			await fs.promises.mkdir(vscodeFolderUri.fsPath, { recursive: true});
 		}
+		let appName = path.basename(appPath.fsPath);
+		try {
+			const { stdout } = await execAsync(
+				`make info-debug-variable-APPLICATION`,
+				{ cwd: appPath.fsPath}
+			);
+			const extractedAppName = stdout.toString().trim();
+			if(extractedAppName) {
+				appName = extractedAppName;
+			}
+		}catch (err) {
+			vscode.window.showErrorMessage(`Error extracting application name from Makefile: ${err}. Using folder name as fallback.`);
+		}
 
-		const binFolderPath = path.join(appPath.fsPath, 'bin', boardName);
-
+		const elfFileName = `${appName}.elf`;
+    	const binFolderPath = path.join(appPath.fsPath, 'bin', boardName);
 		try {
 			if(fs.existsSync(binFolderPath)) {
 				const files = await fs.promises.readdir(binFolderPath);
-				const foundsElf = files.find(file => file.endsWith(`${appName}.elf`));
-				if(foundsElf) {
-					elfFileName = foundsElf;
-				} else {
-					console.log(`ELF file ${appName}.elf not found in ${binFolderPath}. Using fallback name.`);
+				if(!files.includes(elfFileName)) {
+					vscode.window.showErrorMessage(`Compiled ELF file not found in expected location: ${path.join(binFolderPath, elfFileName)}. Please compile the application before debugging.`);			
 				}
 			}
 		} catch (err) {
