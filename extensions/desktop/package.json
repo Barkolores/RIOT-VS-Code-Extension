@@ -33,6 +33,11 @@
   "contributes": {
     "commands": [
       {
+        "command": "riot-launcher.createProject",
+        "title": "RIOT Create Project",
+        "icon": "$(file-code)"
+      },
+      {
         "command": "riot-launcher.riotFlash",
         "title": "RIOT Flash",
         "icon": "$(zap)"

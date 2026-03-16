@@ -309,6 +309,96 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(changeApplicationFolderDisposable);
 
+	const createProjectDisposable = vscode.commands.registerCommand('riot-launcher.createProject', async (treeItem : FolderTreeItem) => {
+		const appName = await vscode.window.showInputBox({
+			title: 'Create RIOT Application',
+			prompt: 'Enter the name of your new application',
+			placeHolder: 'my_riot_app',
+			validateInput: text => {
+				return text && text.indexOf(' ') === -1 ? null : 'Application name cannot be empty or contain spaces';
+			}
+		});
+		if(!appName) { return; }
+		const appBrief = await vscode.window.showInputBox( {
+			title: 'Create RIOT Application',
+			prompt: 'Enter a brief description for your application',
+			placeHolder: 'An awesome RIOT application'
+		});
+		if(!appBrief) { return; }
+		const boardOptions = boards.map(board => ({ label: board }));
+		const targetBoard = await vscode.window.showQuickPick(boardOptions, {
+			title: 'Create RIOT Application',
+			placeHolder: 'Select target board for your application'
+		});
+		if(!targetBoard) { return; }
+		const riotBaseUri = await vscode.window.showOpenDialog( {
+			title: 'Create RIOT Application',
+			canSelectFiles: false,
+			canSelectFolders: true,
+			canSelectMany: false,
+			openLabel: 'Select RIOT Base Folder'
+		});
+		if(!riotBaseUri || riotBaseUri.length === 0) { return; }
+		const riotBasePath = riotBaseUri[0].fsPath;
+		const targetDirUri = await vscode.window.showOpenDialog( {
+			title: 'Create RIOT Application',
+			canSelectFiles: false,
+			canSelectFolders: true,
+			canSelectMany: false,
+			openLabel: 'Select Target Directory for Application'
+		});
+		if(!targetDirUri || targetDirUri.length === 0) { return; }
+		const targetDirPath = targetDirUri[0].fsPath;
+		const cfgContent = `[global]
+author_name=VS Code User
+author_email=user@email.com
+organization=None
+license=MIT
+
+[application]
+name=${appName}
+brief=${appBrief}
+board=${targetBoard.label}
+
+[user]
+name=VS Code User
+email=user@example.com
+organization=None`;
+		const tempCfgPath = path.join(targetDirPath, 'temp_cpp.cfg');
+		try {
+			await vscode.window.withProgress({
+				location: vscode.ProgressLocation.Notification,
+				title: 'Creating RIOT Application',
+				cancellable: false
+			}, async (progress) => {
+				progress.report({ message: 'Generating files...'});
+				fs.writeFileSync(tempCfgPath, cfgContent, 'utf8');
+				console.log(``);
+				await execAsync(`riotgen application -c ${tempCfgPath} -r ${riotBasePath}`);
+
+				progress.report({ message: 'Running initial make...' });
+                await execAsync(`make -C "${targetDirPath}"`);
+				await fs.promises.unlink(tempCfgPath);
+
+			});
+
+			const openProject = 'Open Project';
+			const selection = await vscode.window.showInformationMessage(
+				`Successfully created RIOT application at ${targetDirPath}`,
+				openProject
+			);
+			if(selection === openProject) {
+				vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(targetDirPath), true);
+			}
+		}catch (error: any) {
+			vscode.window.showErrorMessage(`Failed to create application: ${error.message}`);
+			// if (fs.existsSync(tempCfgPath)) {
+            //     await fs.promises.unlink(tempCfgPath);
+            // }
+		}
+		context.subscriptions.push(createProjectDisposable);
+	});
+
 	const changePortDisposable = vscode.commands.registerCommand('riot-launcher.changePortDevice', async (treeItem : PortTreeItem) => {
 		if(!treeItem) {
 			vscode.window.showErrorMessage("Please execute this command via RIOT panel.");
