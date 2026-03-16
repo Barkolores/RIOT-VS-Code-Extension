@@ -209,18 +209,48 @@ export async function activate(context: vscode.ExtensionContext) {
 	const changeBoardDisposable = vscode.commands.registerCommand('riot-launcher.changeBoardDevice', async (treeItem : BoardTreeItem) => {
 		if(!treeItem) {
 			vscode.window.showErrorMessage("Please execute this command via RIOT panel.");
+			return;
 		}
-		const pick : string | undefined = await vscode.window.showQuickPick(boards, {
+		const RECENT_BOARDS_KEY = 'riot-launcher.recentBoards';
+		const recentBoards = context.globalState.get<string[]>(RECENT_BOARDS_KEY, []);
+
+		const quickPickItems : vscode.QuickPickItem[] = [];
+		if(recentBoards.length > 0) {
+			quickPickItems.push({
+				label: 'Recently Used',
+				kind: vscode.QuickPickItemKind.Separator
+			});
+			recentBoards.forEach(board => {
+				quickPickItems.push({ label : board});
+			});
+		}
+		quickPickItems.push({
+			label: 'All Boards',
+			kind: vscode.QuickPickItemKind.Separator
+		});
+		boards.forEach(board => {
+			if(!recentBoards.includes(board)) {
+				quickPickItems.push({ label : board});
+			}
+		});
+
+		const pick : vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(quickPickItems, {
 			title: 'Device configuration',
 			placeHolder: 'Select new board for device'
 		});
 		
 		if(pick) {
-			treeItem.changeBoard({id : pick, name : pick});
+			const selectedBoard = pick.label;
+			const updateRecents = [
+				pick,
+				...recentBoards.filter(b => b !== selectedBoard)
+			].slice(0, 5);
+			await context.globalState.update(RECENT_BOARDS_KEY, updateRecents);
+			treeItem.changeBoard({ id : selectedBoard, name: selectedBoard});
 			vscode.window.showInformationMessage(`Changed board of device to: ${pick}`);
-			devicesTreeItemProvider.refresh();
-			const device = treeItem.getDevice();
-			executeCompileCommandsTask(device);
+            devicesTreeItemProvider.refresh();
+            const device = treeItem.getDevice();
+            executeCompileCommandsTask(device);
 		}
 	});
 
