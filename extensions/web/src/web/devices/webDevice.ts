@@ -80,6 +80,44 @@ export abstract class WebDevice extends DeviceTreeItem {
         return true;
     }
 
+    private sendMessage(message: outboundDeviceMessage): void {
+        this._messagePort.postMessage(message);
+    }
+
+    private sendRST(receiver: shellAddress, terminationType: terminationTypes, reason: string) {
+        this.sendMessage([
+            messageTypes.RST,
+            this._deviceAddress,
+            receiver,
+            terminationType,
+            reason
+        ] as outboundDeviceMessage);
+    };
+
+    protected sendLog() {
+        if (this._logMessages !== '') {
+            this.sendMessage([
+                messageTypes.LOG,
+                this._deviceAddress,
+                this._currentlyLockedTo,
+                logTypes.LOG,
+                this._logMessages
+            ] as outboundDeviceMessage);
+            this._logMessages = '';
+        }
+    }
+
+    protected startLogBundling() {
+        this.stopLogBundling();
+        this._logMessagesTimer = setInterval(this.sendLog.bind(this), 100);
+    }
+
+    protected stopLogBundling() {
+        clearInterval(this._logMessagesTimer);
+        //send out any remaining logs
+        this.sendLog();
+    }
+
     private unlockDevice() {
         this._requestedAction = undefined;
         if (this._currentlyLockedTo) {
@@ -172,44 +210,6 @@ export abstract class WebDevice extends DeviceTreeItem {
             newInstance,
             commandRequest
         ] as outboundDeviceMessage);
-    }
-
-    private sendMessage(message: outboundDeviceMessage): void {
-        this._messagePort.postMessage(message);
-    }
-
-    private sendRST(receiver: shellAddress, terminationType: terminationTypes, reason: string) {
-        this.sendMessage([
-            messageTypes.RST,
-            this._deviceAddress,
-            receiver,
-            terminationType,
-            reason
-        ] as outboundDeviceMessage);
-    };
-
-    protected sendLog() {
-        if (this._logMessages !== '') {
-            this.sendMessage([
-                messageTypes.LOG,
-                this._deviceAddress,
-                this._currentlyLockedTo,
-                logTypes.LOG,
-                this._logMessages
-            ] as outboundDeviceMessage);
-            this._logMessages = '';
-        }
-    }
-
-    protected startLogBundling() {
-        this.stopLogBundling();
-        this._logMessagesTimer = setInterval(this.sendLog.bind(this), 100);
-    }
-
-    protected stopLogBundling() {
-        clearInterval(this._logMessagesTimer);
-        //send out any remaining logs
-        this.sendLog();
     }
 
     async handleMessage(message: inboundDeviceMessage): Promise<void> {
@@ -308,6 +308,14 @@ export abstract class WebDevice extends DeviceTreeItem {
                     } as SerialOptions);
                 }
                 break;
+        }
+    }
+
+    getShellId() {
+        //returns the ID of the shell the device is currently locked to (or else undefined)
+        //only used for terminal closed callback
+        if (this._currentlyLockedTo) {
+            return this._currentlyLockedTo[1];
         }
     }
 }

@@ -329,6 +329,21 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         {dispose: webSocketManager.close}
     );
+
+    //Terminal Closed Callback
+    vscode.window.onDidCloseTerminal(async (terminal) => {
+        const processId = await terminal.processId;
+        if (processId) {
+            deviceManager.handleClosedTerminal(processId);
+        }
+    });
+
+    //Terminal Cleanup on Startup
+    //TODO Check if this even works
+    for (const terminal of vscode.window.terminals) {
+        terminal.dispose();
+    }
+
 }
 
 
