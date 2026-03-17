@@ -373,8 +373,8 @@ organization=None`;
 			}, async (progress) => {
 				progress.report({ message: 'Generating files...'});
 				fs.writeFileSync(tempCfgPath, cfgContent, 'utf8');
-				console.log(``);
-				await execAsync(`riotgen application -c ${tempCfgPath} -r ${riotBasePath}`);
+				console.log(`riotgen application -c ${tempCfgPath} -r ${riotBasePath}`);
+				await execAsync(`cd ${targetDirPath} && riotgen application -c ${tempCfgPath} -r ${riotBasePath}`);
 
 				progress.report({ message: 'Running initial make...' });
                 await execAsync(`make -C "${targetDirPath}"`);
@@ -382,13 +382,16 @@ organization=None`;
 
 			});
 
-			const openProject = 'Open Project';
-			const selection = await vscode.window.showInformationMessage(
-				`Successfully created RIOT application at ${targetDirPath}`,
-				openProject
-			);
-			if(selection === openProject) {
-				vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(targetDirPath), true);
+			const addToView = 'Add to RIOT View';
+			const selection = await vscode.window.showInformationMessage(`Successully created RIOT application at ${targetDirPath}`, addToView);
+			if(selection === addToView) {
+				const newAppUri = vscode.Uri.file(targetDirPath);
+				riotFileTreeProvider.addAppFolder(newAppUri);
+				try {
+					await treeView.reveal(newAppUri, { focus: true, select: true, expand: true});
+				}catch (error) {
+					console.warn("Could not automatically reveal new application in tree view: ", error);
+				}
 			}
 		}catch (error: any) {
 			vscode.window.showErrorMessage(`Failed to create application: ${error.message}`);
