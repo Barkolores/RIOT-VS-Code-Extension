@@ -242,7 +242,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		if(pick) {
 			const selectedBoard = pick.label;
 			const updateRecents = [
-				pick,
+				selectedBoard,
 				...recentBoards.filter(b => b !== selectedBoard)
 			].slice(0, 5);
 			await context.globalState.update(RECENT_BOARDS_KEY, updateRecents);
