@@ -332,6 +332,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     //Terminal Closed Callback
     vscode.window.onDidCloseTerminal(async (terminal) => {
+        console.log('terminal closed');
         const processId = await terminal.processId;
         if (processId) {
             deviceManager.handleClosedTerminal(processId);
