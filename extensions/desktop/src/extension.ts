@@ -19,7 +19,13 @@ import { DeviceProvider } from '../../../shared/ui/deviceProvider';
 import { SerialPort } from 'serialport';
 import { RiotFileTreeProvider } from './treeView/uiFileTreeProvider';
 
-
+interface ActiveDebugSession {
+	gdbPort: number;
+	telnetPort: number;
+	tclPort: number;
+	taskExecution: vscode.TaskExecution;
+	debugSessionId?: string;
+}
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
@@ -29,6 +35,18 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	const transferDevices = context.globalState.get<DeviceConfig[]>(TRANSFER_DEVICES_KEY);
 
+	const activeDebugSessions: ActiveDebugSession[] = [];
+	function getNextAvailablePort(): { gdbPort: number; telnetPort: number; tclPort: number } {
+		let port = 3333; // Starting port
+		let telnetPort = 4444;
+		let tclPort = 5555;
+		while (activeDebugSessions.some(session => session.gdbPort === port || session.telnetPort === telnetPort || session.tclPort === tclPort)) {
+			port++;
+			telnetPort++;
+			tclPort++;
+		}
+		return { gdbPort: port, telnetPort, tclPort };
+	}
 
 	let initialDevicesConfig = context.workspaceState.get<DeviceConfig[]>(DEVICE_LIST_CACHE_KEY, []);
 
@@ -87,18 +105,20 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(vscode.window.registerTreeDataProvider('riotView', devicesTreeItemProvider));
 
-	let currentDebugServerTaskExecution : vscode.TaskExecution | undefined = undefined;
-
 	context.subscriptions.push(vscode.debug.onDidTerminateDebugSession( (session) =>{
-		if(session.name.startsWith('RIOT Debug') && currentDebugServerTaskExecution) {
+		const sessionIndex = activeDebugSessions.findIndex(s => s.debugSessionId === session.id
+			|| session.name.includes(`Port ${s.gdbPort}`)
+		);
+		if(sessionIndex !== -1) {
+			const terminatedSession = activeDebugSessions[sessionIndex];
 			try {
-				currentDebugServerTaskExecution.terminate();
-				vscode.window.showInformationMessage("Debug server task terminated.");
-			}catch (error) {
-				console.error("Error terminating debug server task: ", error);
+				terminatedSession.taskExecution.terminate();
+				console.log(`Terminated debug server task for session ${session.name}`);
+			}catch(error) {
+				console.log(`Error terminating debug server task for session ${session.name}: `, error);
 			}
-			currentDebugServerTaskExecution = undefined;
 		}
+		activeDebugSessions.splice(sessionIndex, 1);
 	}));
 
 	async function readBundledBoards(): Promise<string[]> {
@@ -178,15 +198,17 @@ export async function activate(context: vscode.ExtensionContext) {
 			vscode.window.showErrorMessage("Application folder or device not properly selected.");
 			return;
 		}
-		
-		const debugTask = new VsCodeRiotDebugTask(appPath.fsPath, device).getVscodeTask();
+		const ports = getNextAvailablePort();
+		const debugTask = new VsCodeRiotDebugTask(appPath.fsPath, device, ports.gdbPort, ports.telnetPort, ports.tclPort).getVscodeTask();
 		if(!debugTask) {
 			vscode.window.showErrorMessage("Something went wrong creating the Debug Task");
 			return;
 		}
 		try {
-			currentDebugServerTaskExecution = await vscode.tasks.executeTask(debugTask);
-			startDebugging(device);
+			const execution = await vscode.tasks.executeTask(debugTask);
+			const newSession: ActiveDebugSession = {...ports, taskExecution: execution};
+			activeDebugSessions.push(newSession);
+			startDebugging(device, newSession);
 		} catch (error) {
 			vscode.window.showErrorMessage("Error starting debug task: " + error);
 		}
@@ -586,7 +608,7 @@ organization=None`;
 		}
 	}
 
-	async function startDebugging(device: DeviceModel) {
+	async function startDebugging(device: DeviceModel, sessionRecord : ActiveDebugSession) {
 		const appPath = device.appPath;
 		const boardName = device.board?.id || 'native64';
 		const isNative : boolean = boardName.startsWith('native');
@@ -630,7 +652,7 @@ organization=None`;
 
 		const absoluteAppPath = appPath.fsPath.replace(/\\/g, '/');
 		const programPath = path.join(`${absoluteAppPath}/bin/${boardName}/${elfFileName}`);
-		const debugConfigName = `RIOT Debug (${boardName})`;
+		const debugConfigName = `RIOT Debug (${boardName} - Port ${sessionRecord.gdbPort})`;
 
 		const launchConfig = {
 			name : debugConfigName,
@@ -653,7 +675,7 @@ organization=None`;
 		if(!isNative) {
 			launchConfig.setupCommands.push(				{
 					description: 'Connect to GDB Server explicitely',
-					text: 'target remote localhost:3333',
+					text: `target remote localhost:${sessionRecord.gdbPort}`,
 					ignoreFailures: false
 				},
 				{
@@ -688,20 +710,11 @@ organization=None`;
 		}
 		const resolveConfig = JSON.parse(JSON.stringify(targetConfig));
 
-		// const resolveWorkspaceFolder = (obj: any) => {
-		// 	for (const key in obj) {
-		// 		if(typeof obj[key] === 'string') {
-		// 			const absolutePath = appPath.fsPath.replace(/\\/g, '/');
-		// 			obj[key] = obj[key].replace(/\$\{workspaceFolder\}/g, absolutePath);
-		// 		}else if (typeof obj[key] === 'object' && obj[key] !== null){
-		// 			resolveWorkspaceFolder(obj[key]);
-		// 		} 
-		// 	}
-		// };
-		// resolveWorkspaceFolder(resolveConfig);
-
 		try {
-			await vscode.debug.startDebugging(undefined, resolveConfig);
+			const success = await vscode.debug.startDebugging(undefined, resolveConfig);
+			if(success && vscode.debug.activeDebugSession) {
+				sessionRecord.debugSessionId = vscode.debug.activeDebugSession.id;
+			}
 		}catch (err) {
 			vscode.window.showErrorMessage(`Error starting debug session: ${err}`);
 		}
