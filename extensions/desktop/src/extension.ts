@@ -18,6 +18,7 @@ import { FolderTreeItem } from '../../../shared/ui/treeItems/folderTreeItem';
 import { DeviceProvider } from '../../../shared/ui/deviceProvider';					
 import { SerialPort } from 'serialport';
 import { RiotFileTreeProvider } from './treeView/uiFileTreeProvider';
+import { RiotBaseFileTreeProvider } from './treeView/uiBaseFileTreeProvider';
 
 interface ActiveDebugSession {
 	gdbPort: number;
@@ -77,6 +78,11 @@ export async function activate(context: vscode.ExtensionContext) {
 		treeDataProvider: riotFileTreeProvider
 	});
 
+	const riotBaseTreeProvider = new RiotBaseFileTreeProvider();
+	vscode.window.createTreeView('riotBaseFileView', {
+		treeDataProvider: riotBaseTreeProvider
+	});
+
 	context.subscriptions.push(
 		vscode.window.onDidChangeActiveTextEditor(editor => {
 			if(editor && editor.document.uri.scheme === 'file') {
@@ -100,7 +106,11 @@ export async function activate(context: vscode.ExtensionContext) {
 		);
 		if(matchedDevice) {
 			devicesTreeItemProvider.setActiveDevice(matchedDevice);
+			if(matchedDevice.riotBasePath) {
+				riotBaseTreeProvider.refresh(matchedDevice.riotBasePath);
+			}
 		}
+		
 	}
 
 	context.subscriptions.push(vscode.window.registerTreeDataProvider('riotView', devicesTreeItemProvider));
@@ -586,6 +596,7 @@ organization=None`;
 	
 		devicesTreeItemProvider.setActiveDevice(device);
 		context.workspaceState.update(ACTIVE_DEVICE_CACHE_KEY, device.toConfig());
+		riotBaseTreeProvider.refresh(riotBasePath);
 	}
 
 	async function configureCompiledCommands(riotBasePath : string, appFolderPath : string) {	

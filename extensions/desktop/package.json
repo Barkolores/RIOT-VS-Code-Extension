@@ -121,6 +121,10 @@
         {
           "id": "riotFileView",
           "name": "Application Files"
+        },
+        {
+          "id": "riotBaseFileView",
+          "name": "Active RIOT Base Path"
         }
       ]
     },
