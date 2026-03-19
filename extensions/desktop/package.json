@@ -33,6 +33,11 @@
   "contributes": {
     "commands": [
       {
+        "command": "riot-launcher.riotClean",
+        "title": "RIOT Clean",
+        "icon": "$(sparkle)"
+      },
+      {
         "command": "riot-launcher.createProject",
         "title": "RIOT Create Project",
         "icon": "$(file-code)"
@@ -144,6 +149,11 @@
         },
         {
           "command": "riot-launcher.riotDebug",
+          "when": "view == riotView && viewItem == riot-device",
+          "group": "inline"
+        },
+        {
+          "command": "riot-launcher.riotClean",
           "when": "view == riotView && viewItem == riot-device",
           "group": "inline"
         },

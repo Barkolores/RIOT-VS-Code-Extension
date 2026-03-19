@@ -19,6 +19,7 @@ import { DeviceProvider } from '../../../shared/ui/deviceProvider';
 import { SerialPort } from 'serialport';
 import { RiotFileTreeProvider } from './treeView/uiFileTreeProvider';
 import { RiotBaseFileTreeProvider } from './treeView/uiBaseFileTreeProvider';
+import { VsCodeRiotCleanTask } from './tasks/VsCodeRiotCleanTask';
 
 interface ActiveDebugSession {
 	gdbPort: number;
@@ -200,6 +201,20 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(termDisposable);
 	
+	const cleanDisposable = vscode.commands.registerCommand('riot-launcher.riotClean', (d : DesktopDeviceTreeItem) => {const device = d.getDevice();
+		const appPath = device.appPath;
+		if(!appPath || !device) {
+			vscode.window.showErrorMessage("Application folder or device not properly selected.");
+			return;
+		}
+		const cleanTask = new VsCodeRiotCleanTask(appPath.fsPath, device).getVscodeTask();
+		if(!cleanTask) {
+			vscode.window.showErrorMessage("Something went wrong creating the Clean Task");
+			return;
+		}
+		vscode.tasks.executeTask(cleanTask);
+	});
+
 	const debugDisposable = vscode.commands.registerCommand('riot-launcher.riotDebug', async (d: DesktopDeviceTreeItem) => {
 		if(!d) { return; }
 		const device = d.getDevice();
