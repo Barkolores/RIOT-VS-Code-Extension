@@ -243,7 +243,7 @@ export abstract class WebDevice extends DeviceTreeItem {
                 //wait for further instructions from shell
                 break;
             case messageTypes.RST:
-                if (this._requestedAction) {
+                if (this._requestedAction !== undefined) {
                     //shell is busy or gone, find new one
                     this._previouslyLockedTo = undefined;
                     vscode.window.showInformationMessage(`The last shell Device ${this.label} used isn't available anymore. Spawning new shell.`);

@@ -12,7 +12,7 @@ export abstract class DeviceTreeItem extends vscode.TreeItem {
         protected readonly _board: string,
         protected _port?: string
     ) {
-        super(label, vscode.TreeItemCollapsibleState.Collapsed);
+        super(label, vscode.TreeItemCollapsibleState.Expanded);
     }
 
     getActiveProject(): vscode.WorkspaceFolder | undefined {
