@@ -202,7 +202,7 @@ export class DeviceManager {
     handleClosedTerminal(processId: number) {
         for (const device of this._devices) {
             if (processId === device.getShellId()) {
-                device.cancel();
+                device.cancel(false);
             }
         }
     }

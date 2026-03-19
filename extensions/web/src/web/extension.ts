@@ -339,12 +339,6 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
-    //Terminal Cleanup on Startup
-    //TODO Check if this even works
-    for (const terminal of vscode.window.terminals) {
-        terminal.dispose();
-    }
-
 }
 
 

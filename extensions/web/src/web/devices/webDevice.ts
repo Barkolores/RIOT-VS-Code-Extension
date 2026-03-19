@@ -61,12 +61,12 @@ export abstract class WebDevice extends DeviceTreeItem {
         this._webPort.forget().then(() => console.log('Forgot ' + this.label));
     };
 
-    cancel() {
+    cancel(sendRSTMessage: boolean = true) {
         if (this._flashing) {
             vscode.window.showErrorMessage('Device is currently flashing. Please wait till flashing is complete.');
             return;
         }
-        if (this._currentlyLockedTo) {
+        if (this._currentlyLockedTo && sendRSTMessage) {
             this.sendRST(this._currentlyLockedTo, terminationTypes.ERROR, 'User canceled Action.');
         }
         this.close();

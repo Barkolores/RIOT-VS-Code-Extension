@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import {DeviceManager} from "../devices/deviceManager";
 import {outboundWSMessage} from "./api/outbound/outboundWSMessage";
 import {decode, encode} from 'cbor-x';
-import {addressTypes, clientAddress, messageTypes} from "./api/additionalTypes";
+import {addressTypes, clientAddress, messageTypes, shellAddress, terminationTypes} from "./api/additionalTypes";
 import {isValidInboundMessage} from "./api/inbound/inboundWSMessage.guard";
 import {inboundWSMessage} from "./api/inbound/inboundWSMessage";
 import {isValidOutboundMessage} from "./api/outbound/outboundWSMessage.guard";
@@ -44,10 +44,7 @@ export class WebSocketManager {
     }
 
     public isReady(): boolean {
-        //TESTING
-        //disabled for debug
-        // return this._socket !== undefined && this._socket.readyState === this._socket.OPEN && this._apiConnected;
-        return true;
+        return this._socket !== undefined && this._socket.readyState === this._socket.OPEN && this._apiConnected;
     }
 
     public open(): void {
@@ -98,9 +95,7 @@ export class WebSocketManager {
         vscode.commands.executeCommand('setContext', 'riot-web-extension.context.connectionEstablished', false);
         this.clearApiConnectInterval();
         vscode.window.showErrorMessage("Websocket closed. Connection reset in 10 seconds.");
-        //TESTING
-        //disabled for debug
-        // this._wsConnectionTimeout = setTimeout(this.open.bind(this), 10000);
+        this._wsConnectionTimeout = setTimeout(this.open.bind(this), 10000);
     }
 
     private onError(error: Event) {
@@ -137,6 +132,7 @@ export class WebSocketManager {
                 vscode.window.showInformationMessage('Connection fully established.');
                 console.log('Connection fully established.');
                 this.clearApiConnectInterval();
+                this.terminalCleanup();
                 break;
             case messageTypes.DISCONNECT:
                 this.resetApi();
@@ -203,5 +199,21 @@ export class WebSocketManager {
         this.close();
         this.open();
         vscode.window.showInformationMessage('URL has been changed. Reestablishing Websocket Connection');
+    }
+
+    async terminalCleanup() {
+        //Terminal Cleanup on Startup
+        for (const terminal of vscode.window.terminals) {
+            const id = await terminal.processId;
+            if (id) {
+                this.sendMessage([
+                    messageTypes.RST,
+                    ['client', 0] as clientAddress,
+                    ['shell', id] as shellAddress,
+                    terminationTypes.ERROR,
+                    'Extension initialization'
+                ]);
+            }
+        }
     }
 }
