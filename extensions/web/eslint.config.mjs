@@ -26,5 +26,5 @@ export default [{
         semi: "warn",
     },
 }, {
-    ignores: ["**/*.guard.ts"],
+    ignores: ["**/*.guard.ts", "**/*.min.js"],
 }];

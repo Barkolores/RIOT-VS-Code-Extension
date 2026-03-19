@@ -186,7 +186,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
         // find manifest file
         const manifestFile = zipEntries.find((zipEntry) => zipEntry.filename === "manifest.json");
         if(!manifestFile){
-            throw "manifest.json not found in firmware file!";
+            throw Error("manifest.json not found in firmware file!");
         }
 
         // read manifest file as text
@@ -243,9 +243,9 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
         await this.sleepMillis(this.SERIAL_PORT_OPEN_WAIT_TIME * 1000);
 
         // file sizes
-        var softdeviceSize = 0
-        var bootloaderSize = 0
-        var applicationSize = 0
+        var softdeviceSize = 0;
+        var bootloaderSize = 0;
+        var applicationSize = 0;
 
         // read bin file (firmware)
         const binFile = zipEntries.find((zipEntry) => zipEntry.filename === firmwareManifest.bin_file);
@@ -257,7 +257,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
 
         // only support flashing application for now
         if(programMode !== this.HEX_TYPE_APPLICATION){
-            throw "not implemented";
+            throw Error("not implemented");
         }
 
         // determine application size
