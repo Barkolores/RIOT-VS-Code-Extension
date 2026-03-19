@@ -254,5 +254,9 @@
     "cbor-x": "^1.6.0",
     "esptool-js": "^0.5.7",
     "shared": "../../shared"
+  },
+  "overrides": {
+    "serialize-javascript": "7.0.4",
+    "diff": "8.0.3"
   }
 }
