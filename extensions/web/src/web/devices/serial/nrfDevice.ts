@@ -1,8 +1,7 @@
 import {SerialDevice} from "./serialDevice";
 import {FlashInterface} from "../flash/flashInterface";
 import vscode from "vscode";
-//@ts-ignore
-import zip from "../../tools/zip.min.js";
+import * as zip from "@zip.js/zip.js";
 
 export class NrfDevice extends SerialDevice implements FlashInterface{
 
@@ -179,9 +178,10 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
         if(!manifestFile){
             throw Error("manifest.json not found in firmware file!");
         }
-
+        if (!('getData' in manifestFile)) {
+            throw Error('ManifestFile has not been parsed correctly');
+        }
         // read manifest file as text
-        //@ts-ignore
         const text = await manifestFile.getData(new zip.TextWriter());
 
         // parse manifest json
@@ -232,7 +232,9 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
         if (!binFile) {
             throw Error('BinFile could not be read');
         }
-        //@ts-ignore
+        if (!('getData' in binFile)) {
+            throw Error('BinFile has not been parsed correctly');
+        }
         const firmware = await binFile.getData(new zip.Uint8ArrayWriter());
 
         // read dat file (init packet)
@@ -240,7 +242,9 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
         if (!datFile) {
             throw Error('DatFile could not be read');
         }
-        //@ts-ignore
+        if (!('getData' in datFile)) {
+            throw Error('DatFile has not been parsed correctly');
+        }
         const init_packet = await datFile.getData(new zip.Uint8ArrayWriter());
 
         // only support flashing application for now
@@ -417,7 +421,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * @param initPacket
      * @returns {Promise<void>}
      */
-    async sendInitPacket(initPacket: number[]){
+    async sendInitPacket(initPacket: Uint8Array<ArrayBufferLike>) {
 
         // create frame
         const frame = [
@@ -437,7 +441,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * @param progressCallback
      * @returns {Promise<void>}
      */
-    async sendFirmware(firmware: number[], progressCallback: (log: number) => void) {
+    async sendFirmware(firmware: Uint8Array<ArrayBufferLike>, progressCallback: (log: number) => void) {
 
         const packets = [];
         var packetsSent = 0;

@@ -9,7 +9,7 @@ export abstract class DeviceTreeItem extends vscode.TreeItem {
     protected constructor(
         label: string,
         public readonly contextValue: string,
-        protected readonly _board: string,
+        protected readonly _board: string | undefined,
         protected _port?: string
     ) {
         super(label, vscode.TreeItemCollapsibleState.Expanded);
@@ -19,7 +19,7 @@ export abstract class DeviceTreeItem extends vscode.TreeItem {
         return this._activeProject;
     }
 
-    getBoard(): string {
+    getBoard(): string | undefined {
         return this._board;
     }
 

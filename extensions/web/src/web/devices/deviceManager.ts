@@ -89,7 +89,7 @@ export class DeviceManager {
                     break;
                 default:
                     //serial boards without flasher
-                    newDevice = new SerialDevice(newLabel, newDeviceId, 'None', serialPort, this._messagePort);
+                    newDevice = new SerialDevice(newLabel, newDeviceId, undefined, serialPort, this._messagePort);
                     break;
             }
         // } else if (usbBoards.includes(board)) {

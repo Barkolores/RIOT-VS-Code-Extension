@@ -52,16 +52,9 @@ export function activate(context: vscode.ExtensionContext) {
         //add new Device
         vscode.commands.registerCommand('riot-web-extension.device.add', async () => {
             console.log('RIOT Web Extension is registering new device...');
-            while (true) {
-                const board = await vscode.window.showQuickPick(supportedBoards);
-                if (board) {
-                    await deviceManager.addDevice(board);
-                    break;
-                } else {
-                    if (await vscode.window.showErrorMessage('No board has been selected', {modal: true}, 'Retry') === undefined) {
-                        break;
-                    }
-                }
+            const board = await vscode.window.showQuickPick(supportedBoards);
+            if (board) {
+                await deviceManager.addDevice(board);
             }
         }),
 

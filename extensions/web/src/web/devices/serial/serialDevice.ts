@@ -10,14 +10,14 @@ export class SerialDevice extends WebDevice {
     constructor(
         label: string,
         contextValue: string,
-        board: string,
+        board: string | undefined,
         serialPort: SerialPort,
         dmPort: MessagePort,
     ) {
         super(label, contextValue, board, serialPort, dmPort);
         const serialPortInfo = serialPort.getInfo();
         this._description = [
-            'WebApi: Serial',
+            'Web API: Serial',
             'USBVendorID: ' + (serialPortInfo.usbVendorId ? serialPortInfo.usbVendorId : 'Not specified'),
             'USBProductID: ' + (serialPortInfo.usbProductId ? serialPortInfo.usbProductId : 'Not specified'),
             'BluetoothServiceClassID: ' + (serialPortInfo.bluetoothServiceClassId ? serialPortInfo.bluetoothServiceClassId : 'Not specified'),

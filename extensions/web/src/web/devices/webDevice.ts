@@ -33,7 +33,7 @@ export abstract class WebDevice extends DeviceTreeItem {
     protected constructor(
         label: string,
         contextValue: string,
-        board: string,
+        board: string | undefined,
         protected _webPort: webPort,
         protected readonly _messagePort: MessagePort
     ) {

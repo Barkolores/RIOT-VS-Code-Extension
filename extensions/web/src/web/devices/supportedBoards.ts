@@ -28,15 +28,16 @@ export const espBoards = [
     'esp8266-sparkfun-thing',
 ];
 
+//nrf52840 Boards (Serial) using RNode flasher (adafruit-nrfutil javascript implementation by Liam Cottle)
 export const nrfBoards = [
     'nrf52840',
     'adafruit-feather-nrf52840-express',
     'adafruit-feather-nrf52840-sense'
 ];
 
-//Boards using WebSerial Api, no flasher
+//Boards using WebSerial Api, append standard without flasher
 export const serialBoards = [
-    'Standard Serial Board',
+    'Standard Serial Board (Term only)',
     ...espBoards,
     ...nrfBoards
 ];
