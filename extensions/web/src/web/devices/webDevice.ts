@@ -239,8 +239,14 @@ export abstract class WebDevice extends DeviceTreeItem {
         switch (message[0]) {
             case messageTypes.ACK:
                 this._requestedAction = undefined;
-                //TODO focus shell
                 //wait for further instructions from shell
+                for (const terminal of vscode.window.terminals) {
+                    const processId = await terminal.processId;
+                    if (processId === message[1][1]) {
+                        terminal.show();
+                        break;
+                    }
+                }
                 break;
             case messageTypes.RST:
                 if (this._requestedAction !== undefined) {
@@ -296,10 +302,12 @@ export abstract class WebDevice extends DeviceTreeItem {
                         if (this._currentlyLockedTo) {
                             this.sendRST(this._currentlyLockedTo, terminationTypes.SUCCESS, `Flash complete.`);
                         }
-                    }).catch(() => {
+                        console.error('Flash complete');
+                    }).catch((e) => {
                         if (this._currentlyLockedTo) {
                             this.sendRST(this._currentlyLockedTo, terminationTypes.ERROR, `Flash failed.`);
                         }
+                        console.error('Flash failed', e);
                     }).finally(async () => {
                         await vscode.commands.executeCommand('riot-web-extension.eventListener.unlock');
                         await vscode.commands.executeCommand('riot-web-extension.device.cleanUp');
