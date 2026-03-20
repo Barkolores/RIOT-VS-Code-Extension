@@ -74,8 +74,11 @@ export abstract class WebDevice extends DeviceTreeItem {
     }
 
     private async checkBoard(board: string): Promise<boolean> {
-        if (this._board && this._board !== board || !this._board && WebDevice._defaultBoard !== board) {
-            return await vscode.window.showErrorMessage(`The board used for the Term/Flash does not match the specified board. Board of type ${WebDevice._defaultBoard} will be used instead.`, {modal: true}, 'Continue') !== undefined;
+        if (this._board === undefined) {
+            return await vscode.window.showWarningMessage(`No board has been specified for the Device. Board of type ${board} will be used instead. This can lead to problems.`, {modal: true}, 'Continue Anyway') !== undefined;
+        }
+        if (this._board !== board) {
+            return await vscode.window.showWarningMessage(`The board ${board} does not match the specified board of the Device (${this._board}). This can lead to problems.`, {modal: true}, 'Continue Anyway') !== undefined;
         }
         return true;
     }
@@ -137,9 +140,6 @@ export abstract class WebDevice extends DeviceTreeItem {
             vscode.window.showErrorMessage('No project in which to execute the flash command has been specified. Cancelling Flash...', {modal: true});
             return;
         }
-        if (!this._board) {
-            vscode.window.showWarningMessage(`No board has been specified. Board of type ${WebDevice._defaultBoard} will be used.`);
-        }
         if (this._currentlyLockedTo === undefined) {
             vscode.commands.executeCommand('riot-web-extension.context.device.add', this.contextValue);
             this._requestedAction = deviceAction.FLASH;
@@ -153,9 +153,6 @@ export abstract class WebDevice extends DeviceTreeItem {
         if (!this._activeProject) {
             vscode.window.showErrorMessage('No project in which to execute the term command has been specified. Cancelling Term...', {modal: true});
             return;
-        }
-        if (!this._board) {
-            vscode.window.showWarningMessage(`No board has been specified. Board of type ${WebDevice._defaultBoard} will be used.`);
         }
         if (this._currentlyLockedTo === undefined) {
             vscode.commands.executeCommand('riot-web-extension.context.device.add', this.contextValue);
