@@ -34,7 +34,7 @@ export class SerialDevice extends WebDevice {
             return;
         }
         if (this._reader) {
-            await this._reader.cancel();
+            this._reader.cancel();
             await this._readableStreamClosed;
             this._reader = undefined;
             this._readableStreamClosed = undefined;
