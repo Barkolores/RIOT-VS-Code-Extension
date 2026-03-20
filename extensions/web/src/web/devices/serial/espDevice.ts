@@ -9,7 +9,7 @@ export class EspDevice extends SerialDevice implements FlashInterface{
         console.log('args: ', argsArray);
         const loaderOptions: LoaderOptions = {
             transport: new Transport(this._webPort as SerialPort),
-            baudrate: Number.parseInt(args[argsArray.indexOf('--baud')+1]),
+            baudrate: Number.parseInt(argsArray[argsArray.indexOf('--baud')+1]),
             terminal: {
                 clean() {
                     super._logMessages += 'clear\n';
@@ -36,7 +36,7 @@ export class EspDevice extends SerialDevice implements FlashInterface{
             fileArray: file_array,
             flashSize: "keep",
             flashMode: "keep",
-            flashFreq: args[argsArray.indexOf('--flash-freq')+1],
+            flashFreq: argsArray[argsArray.indexOf('--flash-freq')+1],
             compress: true,
             eraseAll: false
         };
