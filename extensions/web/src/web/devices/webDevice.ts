@@ -133,7 +133,7 @@ export abstract class WebDevice extends DeviceTreeItem {
 
     requestFlash() {
         if (!implementsFlashInterface(this)) {
-            vscode.window.showErrorMessage(`Flashing ${this._board} is not supported in the Web.`, {modal: true});
+            vscode.window.showErrorMessage(`Flashing ${this._board ? this._board : 'an unknown board'} is not supported in the Web.`, {modal: true});
             return;
         }
         if (!this._activeProject) {
