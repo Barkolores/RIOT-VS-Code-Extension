@@ -98,6 +98,12 @@ export abstract class WebDevice extends DeviceTreeItem {
         ] as outboundDeviceMessage);
     };
 
+    protected appendLogMessage(message: string) {
+        if (!this._logBypass) {
+            this._logMessages += message;
+        }
+    }
+
     protected sendLog() {
         if (this._logMessages !== '') {
             this.sendMessage([

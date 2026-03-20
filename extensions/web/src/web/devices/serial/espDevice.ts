@@ -11,13 +11,13 @@ export class EspDevice extends SerialDevice implements FlashInterface{
             baudrate: Number.parseInt(argsArray[argsArray.indexOf('--baud')+1]),
             terminal: {
                 clean: () => {
-                    this._logMessages += 'clear\n';
+                    this.appendLogMessage('clear\n');
                 },
                 write: (data: string) => {
-                    this._logMessages += data;
+                    this.appendLogMessage(data);
                 },
                 writeLine: (data: string) => {
-                    this._logMessages += data + '\n';
+                    this.appendLogMessage(data + '\n');
                 }
             },
             debugLogging: true

@@ -170,7 +170,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
         const updates = new Blob([new Uint8Array(new Uint32Array([binary.length]).buffer), new Uint8Array(binary)]);
 
         const progressCallback = (log: number) => {
-            this._logMessages += 'Flashing in Progress... ' + log + '%\n';
+            this.appendLogMessage('Flashing in Progress... ' + log + '%\n');
         };
         
         // read zip file

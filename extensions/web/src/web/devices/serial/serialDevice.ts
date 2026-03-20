@@ -56,8 +56,8 @@ export class SerialDevice extends WebDevice {
         }
         while (true) {
             const {value, done} = await this._reader.read();
-            if (value && !this._logBypass) {
-                this._logMessages += value;
+            if (value) {
+                this.appendLogMessage(value);
             }
             if (done || !value) {
                 this._reader.releaseLock();
@@ -82,4 +82,6 @@ export class SerialDevice extends WebDevice {
             }
         );
     }
+
+
 }
