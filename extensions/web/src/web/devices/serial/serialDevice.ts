@@ -34,13 +34,14 @@ export class SerialDevice extends WebDevice {
             return;
         }
         if (this._reader) {
-            this._reader.cancel();
-            await this._readableStreamClosed;
+            await this._reader.cancel();
+            await this._readableStreamClosed?.catch(() => {});
             this._reader = undefined;
             this._readableStreamClosed = undefined;
         }
         this._webPort.close().then(() => {
             console.log('Connection to ' + this.label + ' closed');
+            return true;
         });
     }
 
