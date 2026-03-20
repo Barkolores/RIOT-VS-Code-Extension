@@ -258,8 +258,7 @@ export abstract class WebDevice extends DeviceTreeItem {
                 } else {
                     vscode.window.showErrorMessage(message[4]);
                 }
-                this.close();
-                this.unlockDevice();
+                this.cancel(false);
                 break;
             case messageTypes.CMD:
                 //new connection, lock to new shell

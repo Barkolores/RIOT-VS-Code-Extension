@@ -4,7 +4,6 @@ import {WebDevice} from "../webDevice";
 export class SerialDevice extends WebDevice {
 
     private _reader?: ReadableStreamDefaultReader<string>;
-    private _readableStreamClosed?: Promise<void>;
     private readonly _encoder = new TextEncoder();
 
     constructor(
@@ -34,25 +33,21 @@ export class SerialDevice extends WebDevice {
             return;
         }
         if (this._reader) {
-            this._reader.cancel();
-            await this._readableStreamClosed?.catch(() => {console.log('Read canceled');});
+            await this._reader.cancel();
             this._reader = undefined;
-            this._readableStreamClosed = undefined;
         }
         this._webPort.close().then(() => {
             console.log('Connection to ' + this.label + ' closed');
-            return true;
-        }).catch((e) => {
-            console.log(e);
         });
     }
 
     protected async read(): Promise<void> {
         this.startLogBundling();
-        const decoder = new TextDecoderStream();
         //@ts-ignore
-        this._readableStreamClosed = this._webPort.readable?.pipeTo(decoder.writable);
-        this._reader = decoder.readable.getReader();
+        this._reader = this._webPort.readable?.getReader();
+        if (this._reader === undefined) {
+            throw Error('Reader not accessible');
+        }
         while (true) {
             const {value, done} = await this._reader.read();
             if (value) {

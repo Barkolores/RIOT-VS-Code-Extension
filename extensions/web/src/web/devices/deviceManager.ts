@@ -94,7 +94,6 @@ export class DeviceManager {
             }
         // } else if (usbBoards.includes(board)) {
         //     //Add USB Device
-        //     //TODO
         //     return;
         } else {
             vscode.window.showErrorMessage('Board is not in supported boards declaration.');
@@ -158,14 +157,14 @@ export class DeviceManager {
             }
         }
         if (requestedDevice === undefined) {
-            this.sendErrorLTM(message[1][1], `No Device with the label '${deviceName}' is known.`);
+            this.sendErrorRST(message[1][1], `No Device with the label '${deviceName}' is known.`);
             return;
         }
         requestedDevice.handleMessage(message);
     }
 
-    private sendErrorLTM(shellId: number , reason: string) {
-        //send LTM when Device is not found
+    private sendErrorRST(shellId: number , reason: string) {
+        //send RST when Device is not found
         this._messagePort.postMessage([
             messageTypes.RST,
             [addressTypes.CLIENT, 0] as clientAddress,

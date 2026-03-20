@@ -1,4 +1,4 @@
-//Esp Boards (Serial) using esptool.js
+//Esp Boards (Serial) using esptool.js by espressif
 export const espBoards = [
     'esp32c3-devkit',
     'esp32c3-wemos-mini',

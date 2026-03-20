@@ -62,7 +62,6 @@ export class WebSocketManager {
         this._socket.onmessage = this.onMessage.bind(this);
         this._messagePort.onmessage = (event) => {
             const message = event.data;
-            //TESTING
             if (isValidOutboundMessage(message)) {
                 this.sendMessage(message);
             } else {
@@ -147,7 +146,6 @@ export class WebSocketManager {
 
     private sendMessage(message: outboundWSMessage) {
         this._socket?.send(encode(message));
-        //TESTING
         console.log('Send outbound message:', message);
     }
 
