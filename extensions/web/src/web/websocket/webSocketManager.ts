@@ -19,7 +19,6 @@ export class WebSocketManager {
         private _deviceManager: DeviceManager,
         private _messagePort: MessagePort,
         extensionUri: vscode.Uri,
-        private _testPort: MessagePort,
     ) {
         const parsed_expression = /^[^:]+/.exec(extensionUri.authority);
         if (!parsed_expression) {
@@ -61,8 +60,6 @@ export class WebSocketManager {
         this._socket.onclose = this.onClose.bind(this);
         this._socket.onerror = this.onError.bind(this);
         this._socket.onmessage = this.onMessage.bind(this);
-        //TESTING
-        this._testPort.onmessage = this.onMessage.bind(this);
         this._messagePort.onmessage = (event) => {
             const message = event.data;
             //TESTING
@@ -77,7 +74,6 @@ export class WebSocketManager {
 
     public close(): void {
         this._messagePort.onmessage = () => {};
-        this._testPort.onmessage = () => {};
         this._socket?.close();
         this._socket = undefined;
     }

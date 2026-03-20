@@ -1,6 +1,6 @@
 import {SerialDevice} from "./serialDevice";
 import {FlashInterface} from "../flash/flashInterface";
-import {ESPLoader, FlashOptions, IEspLoaderTerminal, LoaderOptions, Transport} from "esptool-js";
+import {ESPLoader, FlashOptions, LoaderOptions, Transport} from "esptool-js";
 
 export class EspDevice extends SerialDevice implements FlashInterface{
 
@@ -39,9 +39,10 @@ export class EspDevice extends SerialDevice implements FlashInterface{
             compress: true,
             eraseAll: false
         };
+        console.log('Starting Flash');
         const espLoader: ESPLoader = new ESPLoader(loaderOptions);
         await espLoader.main().then(value => console.log(value)).catch(e => console.error(e));
-        await espLoader.writeFlash(flashOptions).then(() => console.log('Programming Done')).catch(e => console.error(e));
+        await espLoader.writeFlash(flashOptions).then(() => console.log('Flash Complete')).catch(e => console.error(e));
         await espLoader.after();
         await espLoader.transport.disconnect();
     }

@@ -13,7 +13,7 @@ import {
     terminationTypes
 } from "../websocket/api/additionalTypes";
 import {EspDevice} from "./serial/espDevice";
-import {espBoards, nrfBoards, serialBoards, usbBoards} from "./supportedBoards";
+import {espBoards, nrfBoards, serialBoards} from "./supportedBoards";
 import {NrfDevice} from "./serial/nrfDevice";
 
 export class DeviceManager {
@@ -74,8 +74,7 @@ export class DeviceManager {
                 vscode.window.showErrorMessage('This serial port is already in use');
                 return;
             }
-            //@ts-ignore
-            serialPort.used = true;
+            (serialPort as SerialPort & {used: boolean}).used = true;
             switch (true) {
                 case espBoards.includes(board):
                     //esp boards with flasher esptool.js
@@ -93,12 +92,12 @@ export class DeviceManager {
                     newDevice = new SerialDevice(newLabel, newDeviceId, 'None', serialPort, this._messagePort);
                     break;
             }
-        } else if (usbBoards.includes(board)) {
-            //Add USB Device
-            //TODO
-            return;
+        // } else if (usbBoards.includes(board)) {
+        //     //Add USB Device
+        //     //TODO
+        //     return;
         } else {
-            vscode.window.showErrorMessage('Board is neither in supported USB nor Serial boards declaration.');
+            vscode.window.showErrorMessage('Board is not in supported boards declaration.');
             return;
         }
 
@@ -183,8 +182,7 @@ export class DeviceManager {
         }
     }
 
-    //removes all disconnected Devices from UI and unused connected Devices from serial Api
-    //TODO for WebUSB as well
+    //removes all disconnected Devices from UI and unused connected Devices (from all used APIs)
     async cleanUp() {
         for (const port of await navigator.serial.getPorts()) {
             if (this.includesPort(port) === undefined) {

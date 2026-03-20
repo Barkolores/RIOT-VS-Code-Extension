@@ -14,7 +14,7 @@ import {
 import {commandRequest, outboundDeviceMessage} from "../websocket/api/outbound/outboundDeviceMessage";
 import {implementsFlashInterface} from "./flash/flashInterface.guard";
 
-export type webPort = SerialPort | USBDevice
+export type webPort = SerialPort /*| USBDevice*/
 
 enum deviceAction {
     FLASH,

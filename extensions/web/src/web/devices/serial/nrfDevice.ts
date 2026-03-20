@@ -1,9 +1,7 @@
-//@ts-nocheck
 import {SerialDevice} from "./serialDevice";
 import {FlashInterface} from "../flash/flashInterface";
 import vscode from "vscode";
-import zip from "../../tools/zip.min.js";
-import {Container} from "../../placeholder";
+import * as zip from "@zip.js/zip.js";
 
 export class NrfDevice extends SerialDevice implements FlashInterface{
 
@@ -38,7 +36,6 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
     DFU_PACKET_MAX_SIZE = 512;
 
     private sequenceNumber;
-    private sd_size;
     private total_size;
 
     constructor(label: string,
@@ -49,7 +46,6 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
     ) {
         super(label, contextValue, board, serialPort, dmPort);
         this.sequenceNumber = 0;
-        this.sd_size = 0;
         this.total_size = 0;
     }
 
@@ -94,7 +90,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
             (await navigator.serial.getPorts()).forEach((serialPort) => {
                 if (!('used' in serialPort)) {
                     has_found = true;
-                    serialPort.used = true;
+                    (serialPort as SerialPort & {used: boolean}).used = true;
                     this._webPort = serialPort;
                     console.log('found');
                 }
@@ -113,7 +109,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * @param millis
      * @returns {Promise<void>}
      */
-    async sleepMillis(millis) {
+    async sleepMillis(millis: number) {
         await new Promise((resolve) => {
             setTimeout(resolve, millis);
         });
@@ -124,8 +120,11 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * @param data
      * @returns {Promise<void>}
      */
-    async sendPacket(data) {
-        const writer = this._webPort.writable.getWriter();
+    async sendPacket(data: number[]) {
+        const writer = (this._webPort as SerialPort).writable?.getWriter();
+        if (!writer) {
+            throw Error('Writer not accessible');
+        }
         try {
             await writer.write(new Uint8Array(data));
         } finally {
@@ -160,22 +159,13 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * @returns {Promise<void>}
      */
     async flash(binaries: {[offset:string]: Uint8Array}, args: string) {
-        console.log('starting flash');
-        const uri = Container.context.extensionUri;
 
-        if (!uri) {
-            console.log('undefined URI');
-            return;
-        }
+        const binary = Object.values(binaries)[0];
 
-        const updates = new Blob([await vscode.workspace.fs.readFile(vscode.Uri.joinPath(uri, 'sketch_oct30a.ino.zip'))]);
+        const updates = new Blob([new Uint8Array(new Uint32Array([binary.length]).buffer), new Uint8Array(binary)]);
 
-        const progressCallback = (log) => {
-            if (log === 100) {
-                this._logMessages += 'Flashing Complete';
-            } else {
-                this._logMessages += 'Flashing in Progress... ' + log + '%\n';
-            }
+        const progressCallback = (log: number) => {
+            this._logMessages += 'Flashing in Progress... ' + log + '%\n';
         };
         
         // read zip file
@@ -190,23 +180,12 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
         }
 
         // read manifest file as text
+        //@ts-ignore
         const text = await manifestFile.getData(new zip.TextWriter());
 
         // parse manifest json
         const json = JSON.parse(text);
         const manifest = json.manifest;
-
-        // todo softdevice_bootloader
-        // if self.manifest.softdevice_bootloader:
-        // self._dfu_send_image(HexType.SD_BL, self.manifest.softdevice_bootloader)
-
-        // todo softdevice
-        // if self.manifest.softdevice:
-        // self._dfu_send_image(HexType.SOFTDEVICE, self.manifest.softdevice)
-
-        // todo bootloader
-        // if self.manifest.bootloader:
-        // self._dfu_send_image(HexType.BOOTLOADER, self.manifest.bootloader)
 
         // flash application image
         if(manifest.application){
@@ -217,11 +196,12 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
                 //Device was not in DFU mode, need to find new Serial Port
                 await this.rediscoverPort();
             }
+            console.log('Starting Flash');
             await this.dfuSendImage(this.HEX_TYPE_APPLICATION, zipEntries, manifest.application, progressCallback);
             //Device exits DFU mode, need to find new Serial Port
             await this.rediscoverPort();
+            console.log('Flash Complete');
         }
-        console.log('ending flash');
     }
 
     /**
@@ -232,8 +212,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * @param progressCallback
      * @returns {Promise<void>}
      */
-    async dfuSendImage(programMode, zipEntries, firmwareManifest, progressCallback) {
-        console.log('starting dfu send image');
+    async dfuSendImage(programMode: number, zipEntries: zip.Entry[], firmwareManifest: {bin_file: string, dat_file: string}, progressCallback: (log:number) => void) {
         // open port
         await this._webPort.open({
             baudRate: this.FLASH_BAUD,
@@ -249,10 +228,18 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
 
         // read bin file (firmware)
         const binFile = zipEntries.find((zipEntry) => zipEntry.filename === firmwareManifest.bin_file);
+        if (!binFile) {
+            throw Error('BinFile could not be read');
+        }
+        //@ts-ignore
         const firmware = await binFile.getData(new zip.Uint8ArrayWriter());
 
         // read dat file (init packet)
         const datFile = zipEntries.find((zipEntry) => zipEntry.filename === firmwareManifest.dat_file);
+        if (!datFile) {
+            throw Error('DatFile could not be read');
+        }
+        //@ts-ignore
         const init_packet = await datFile.getData(new zip.Uint8ArrayWriter());
 
         // only support flashing application for now
@@ -282,7 +269,6 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
         console.log('ending dfu send image');
 
         this.sequenceNumber = 0;
-        this.sd_size = 0;
         this.total_size = 0;
     }
 
@@ -292,11 +278,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * @param {number} crc - CRC value to start calculation with
      * @return {number} - Calculated CRC value of binaryData
      */
-    calcCrc16(binaryData, crc = 0xffff) {
-
-        if(!(binaryData instanceof Uint8Array)){
-            throw new Error("calcCrc16 requires Uint8Array input");
-        }
+    calcCrc16(binaryData: Uint8Array, crc = 0xffff) {
 
         for(let b of binaryData){
             crc = (crc >> 8 & 0x00FF) | (crc << 8 & 0xFF00);
@@ -316,7 +298,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * @param dataIn
      * @returns {*[]}
      */
-    slipEncodeEscChars(dataIn) {
+    slipEncodeEscChars(dataIn: number[]) {
 
         let result = [];
 
@@ -343,7 +325,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * @param frame
      * @returns {*[]}
      */
-    createHciPacketFromFrame(frame) {
+    createHciPacketFromFrame(frame: number[]) {
 
         // increase sequence number, but roll over at 8
         this.sequenceNumber = (this.sequenceNumber + 1) % 8;
@@ -409,7 +391,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * @param app_size
      * @returns {Promise<void>}
      */
-    async sendStartDfu(mode, softdevice_size = 0, bootloader_size = 0, app_size = 0){
+    async sendStartDfu(mode: number, softdevice_size = 0, bootloader_size = 0, app_size = 0){
 
         // create frame
         const frame = [
@@ -422,7 +404,6 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
         await this.sendPacket(this.createHciPacketFromFrame(frame));
 
         // remember file sizes for calculating erase wait time
-        this.sd_size = softdevice_size;
         this.total_size = softdevice_size + bootloader_size + app_size;
 
         // wait for initial erase
@@ -435,7 +416,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * @param initPacket
      * @returns {Promise<void>}
      */
-    async sendInitPacket(initPacket){
+    async sendInitPacket(initPacket: number[]){
 
         // create frame
         const frame = [
@@ -455,7 +436,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * @param progressCallback
      * @returns {Promise<void>}
      */
-    async sendFirmware(firmware, progressCallback) {
+    async sendFirmware(firmware: number[], progressCallback: (log: number) => void) {
 
         const packets = [];
         var packetsSent = 0;
@@ -511,7 +492,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * @param {number} pktLen - Packet length
      * @return {Uint8Array} - SLIP header
      */
-    createSlipHeader(seq, dip, rp, pktType, pktLen) {
+    createSlipHeader(seq: number, dip: number, rp: number, pktType: number, pktLen: number) {
         let ints = [0, 0, 0, 0];
         ints[0] = seq | (((seq + 1) % 8) << 3) | (dip << 6) | (rp << 7);
         ints[1] = pktType | ((pktLen & 0x000F) << 4);
@@ -525,7 +506,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * @param num
      * @returns {number[]}
      */
-    int32ToBytes(num){
+    int32ToBytes(num: number){
         return [
             (num & 0x000000ff),
             (num & 0x0000ff00) >> 8,
@@ -539,7 +520,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * @param num
      * @returns {number[]}
      */
-    int16ToBytes(num){
+    int16ToBytes(num: number){
         return [
             (num & 0x00FF),
             (num & 0xFF00) >> 8,

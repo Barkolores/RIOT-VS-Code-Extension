@@ -30,7 +30,8 @@ export const espBoards = [
 
 export const nrfBoards = [
     'nrf52840',
-    'Adafruit Feather Sense'
+    'adafruit-feather-nrf52840-express',
+    'adafruit-feather-nrf52840-sense'
 ];
 
 //Boards using WebSerial Api, no flasher
@@ -43,10 +44,10 @@ export const serialBoards = [
 
 
 //Boards using WebUSB Api, no flasher
-export const usbBoards = [
-    'Standard USB Board',
-];
+// export const usbBoards = [
+//     'Standard USB Board',
+// ];
 
 
 
-export const supportedBoards = [...serialBoards, ...usbBoards].sort();
+export const supportedBoards = [...serialBoards/*, ...usbBoards*/].sort();

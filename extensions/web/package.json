@@ -75,38 +75,6 @@
       {
         "command": "riot-web-extension.eventListener.unlock",
         "title": "Unlock Connect & Disconnect EventListeners"
-      },
-      {
-        "command": "riot-web-extension.test.receiveConnectACK",
-        "title": "Receive Connect ACK"
-      },
-      {
-        "command": "riot-web-extension.test.receiveDisconnect",
-        "title": "Receive Disconnect"
-      },
-      {
-        "command": "riot-web-extension.test.receiveACK",
-        "title": "Receive ACK"
-      },
-      {
-        "command": "riot-web-extension.test.receiveRSTSuccess",
-        "title": "Receive RST Success"
-      },
-      {
-        "command": "riot-web-extension.test.receiveRSTError",
-        "title": "Receive RST Error"
-      },
-      {
-        "command": "riot-web-extension.test.receiveFlashCMD",
-        "title": "Receive Flash CMD"
-      },
-      {
-        "command": "riot-web-extension.test.receiveTermCMD",
-        "title": "Receive Term CMD"
-      },
-      {
-        "command": "riot-web-extension.test.receiveInput",
-        "title": "Receive Input"
       }
     ],
     "viewsContainers": {
@@ -250,7 +218,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@zip.js/zip.js": "^2.8.20",
+    "@zip.js/zip.js": "^2.8.23",
     "cbor-x": "^1.6.0",
     "esptool-js": "^0.5.7",
     "shared": "../../shared"
