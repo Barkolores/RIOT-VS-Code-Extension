@@ -56,7 +56,7 @@ export class SerialDevice extends WebDevice {
         }
         while (true) {
             const {value, done} = await this._reader.read();
-            if (value) {
+            if (value && !this._logBypass) {
                 this._logMessages += value;
             }
             if (done || !value) {

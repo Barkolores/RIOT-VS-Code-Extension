@@ -29,6 +29,7 @@ export abstract class WebDevice extends DeviceTreeItem {
     protected _flashing: boolean = false;
     protected _logMessages: string = '';
     protected _logMessagesTimer: NodeJS.Timeout | undefined = undefined;
+    protected _logBypass: boolean = false;
 
     protected constructor(
         label: string,
@@ -119,6 +120,7 @@ export abstract class WebDevice extends DeviceTreeItem {
         clearInterval(this._logMessagesTimer);
         //send out any remaining logs
         this.sendLog();
+        this._logBypass = false;
     }
 
     private unlockDevice() {
@@ -251,6 +253,10 @@ export abstract class WebDevice extends DeviceTreeItem {
                     this._previouslyLockedTo = undefined;
                     vscode.window.showInformationMessage(`The last shell Device ${this.label} used isn't available anymore. Spawning new shell.`);
                     this.requestShell();
+                    return;
+                }
+                if (this._flashing) {
+                    this._logBypass = true;
                     return;
                 }
                 if (message[3] === terminationTypes.SUCCESS) {
