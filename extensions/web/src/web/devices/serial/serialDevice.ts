@@ -4,9 +4,9 @@ import {WebDevice} from "../webDevice";
 export class SerialDevice extends WebDevice {
 
     private _reader?: ReadableStreamDefaultReader<string>;
-
-    private readonly _encoder = new TextEncoder();
     private _readableStreamClosed?: Promise<void>;
+    private readonly _encoder = new TextEncoder();
+
     constructor(
         label: string,
         contextValue: string,

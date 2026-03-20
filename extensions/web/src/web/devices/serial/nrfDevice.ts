@@ -138,19 +138,21 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      */
     async enterDfuMode() {
         console.log('starting dfu enter');
-        // open port
-        await this._webPort.open({
-            baudRate: this.DFU_TOUCH_BAUD,
-        });
+        try {
+            // open port
+            await this._webPort.open({
+                baudRate: this.DFU_TOUCH_BAUD,
+            });
 
-        // wait SERIAL_PORT_OPEN_WAIT_TIME before closing port
-        await this.sleepMillis(this.SERIAL_PORT_OPEN_WAIT_TIME * 1000);
+            // wait SERIAL_PORT_OPEN_WAIT_TIME before closing port
+            await this.sleepMillis(this.SERIAL_PORT_OPEN_WAIT_TIME * 1000);
 
-        // close port
-        await this._webPort.close();
+            // close port
+            await this._webPort.close();
 
-        // wait TOUCH_RESET_WAIT_TIME for device to enter into DFU mode
-        await this.sleepMillis(this.TOUCH_RESET_WAIT_TIME * 1000);
+            // wait TOUCH_RESET_WAIT_TIME for device to enter into DFU mode
+            await this.sleepMillis(this.TOUCH_RESET_WAIT_TIME * 1000);
+        } catch {}
         console.log('ending dfu enter');
     }
 

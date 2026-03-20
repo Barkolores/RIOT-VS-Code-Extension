@@ -298,7 +298,7 @@ export abstract class WebDevice extends DeviceTreeItem {
                         if (this._currentlyLockedTo) {
                             this.sendRST(this._currentlyLockedTo, terminationTypes.SUCCESS, `Flash complete.`);
                         }
-                        console.error('Flash complete');
+                        console.log('Flash complete');
                     }).catch((e) => {
                         if (this._currentlyLockedTo) {
                             this.sendRST(this._currentlyLockedTo, terminationTypes.ERROR, `Flash failed.`);
