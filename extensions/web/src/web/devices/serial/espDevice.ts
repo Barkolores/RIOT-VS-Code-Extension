@@ -1,24 +1,23 @@
 import {SerialDevice} from "./serialDevice";
 import {FlashInterface} from "../flash/flashInterface";
-import {ESPLoader, FlashOptions, LoaderOptions, Transport} from "esptool-js";
+import {ESPLoader, FlashOptions, IEspLoaderTerminal, LoaderOptions, Transport} from "esptool-js";
 
 export class EspDevice extends SerialDevice implements FlashInterface{
 
     async flash(binaries: {[offset:string]: Uint8Array}, args: string): Promise<void> {
         const argsArray = args.split(' ');
-        console.log('args: ', argsArray);
         const loaderOptions: LoaderOptions = {
             transport: new Transport(this._webPort as SerialPort),
             baudrate: Number.parseInt(argsArray[argsArray.indexOf('--baud')+1]),
             terminal: {
-                clean() {
-                    super._logMessages += 'clear\n';
+                clean: () => {
+                    this._logMessages += 'clear\n';
                 },
-                write(data: string) {
-                    super._logMessages += data;
+                write: (data: string) => {
+                    this._logMessages += data;
                 },
-                writeLine(data: string) {
-                    super._logMessages += data + '\n';
+                writeLine: (data: string) => {
+                    this._logMessages += data + '\n';
                 }
             },
             debugLogging: true

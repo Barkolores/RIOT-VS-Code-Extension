@@ -292,11 +292,18 @@ export abstract class WebDevice extends DeviceTreeItem {
                 if (await this.checkBoard(command[1])) {
                     this.startLogBundling();
                     this._flashing = true;
-                    await this.flash(command[2], command[3]).finally(async () => {
+                    await this.flash(command[2], command[3]).then(() => {
+                        if (this._currentlyLockedTo) {
+                            this.sendRST(this._currentlyLockedTo, terminationTypes.SUCCESS, `Flash complete.`);
+                        }
+                    }).catch(() => {
+                        if (this._currentlyLockedTo) {
+                            this.sendRST(this._currentlyLockedTo, terminationTypes.ERROR, `Flash failed.`);
+                        }
+                    }).finally(async () => {
                         await vscode.commands.executeCommand('riot-web-extension.eventListener.unlock');
                         await vscode.commands.executeCommand('riot-web-extension.device.cleanUp');
                         this._flashing = false;
-                        this.stopLogBundling();
                         this.unlockDevice();
                     });
                 }
