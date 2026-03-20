@@ -25,9 +25,7 @@ export class EspDevice extends SerialDevice implements FlashInterface{
         } as LoaderOptions;
         let file_array: { address: number; data: string }[] = [];
         for (const [key, data] of Object.entries(binaries)) {
-            console.log('Address Raw: ', key);
-            const address: number = parseInt(key, 16);
-            console.log('Address Parsed: ', address);
+            const address: number = parseInt(key);
             if(isNaN(address)) {
                 throw new Error(`importFlasherArgs: Invalid address for file ${key}!`);
             }

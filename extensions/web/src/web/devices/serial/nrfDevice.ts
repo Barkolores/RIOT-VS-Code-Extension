@@ -159,7 +159,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * Flashes the provided firmware zip.
      * @returns {Promise<void>}
      */
-    async flash(binaries: {[offset:string]: any}, args: string) {
+    async flash(binaries: {[offset:string]: Uint8Array}, args: string) {
         console.log('starting flash');
         const uri = Container.context.extensionUri;
 
