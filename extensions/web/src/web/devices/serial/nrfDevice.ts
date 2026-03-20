@@ -152,7 +152,10 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
 
             // wait TOUCH_RESET_WAIT_TIME for device to enter into DFU mode
             await this.sleepMillis(this.TOUCH_RESET_WAIT_TIME * 1000);
-        } catch {}
+        } catch {
+            //sometimes enters dfu immediately after open, leads to error, but wait time still necessary for further execution
+            await this.sleepMillis(this.TOUCH_RESET_WAIT_TIME * 1000);
+        }
         console.log('ending dfu enter');
     }
 
