@@ -1,7 +1,8 @@
 import {SerialDevice} from "./serialDevice";
 import {FlashInterface} from "../flash/flashInterface";
 import vscode from "vscode";
-import * as zip from "@zip.js/zip.js";
+//@ts-ignore
+import zip from "../../tools/zip.min.js";
 
 export class NrfDevice extends SerialDevice implements FlashInterface{
 
@@ -174,7 +175,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
         const zipEntries = await zipReader.getEntries();
 
         // find manifest file
-        const manifestFile = zipEntries.find((zipEntry) => zipEntry.filename === "manifest.json");
+        const manifestFile = zipEntries.find((zipEntry: {filename: string}) => zipEntry.filename === "manifest.json");
         if(!manifestFile){
             throw Error("manifest.json not found in firmware file!");
         }

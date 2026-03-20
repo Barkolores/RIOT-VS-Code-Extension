@@ -218,7 +218,6 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@zip.js/zip.js": "^2.8.23",
     "cbor-x": "^1.6.0",
     "esptool-js": "^0.5.7",
     "shared": "../../shared"
