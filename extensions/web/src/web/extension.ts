@@ -12,10 +12,12 @@ import {Container} from "./placeholder";
 
 export function activate(context: vscode.ExtensionContext) {
 
-    if ((navigator as any).serial === undefined && (navigator as any).usb === undefined) {
+    //api compatibility check, can be extended with HID or USB
+    if ((navigator as any).serial === undefined) {
         console.log("No serial or USB support found. Aborting RIOT web extension.");
         return;
     }
+
     //TODO remove
     Container.context = context;
 
@@ -23,7 +25,9 @@ export function activate(context: vscode.ExtensionContext) {
     console.log("RIOT web extension activated");
 
     //initialize Context
+    //dont display ui buttons before connection to websocket server is established
     vscode.commands.executeCommand('setContext', 'riot-web-extension.context.connectionEstablished', false);
+    //switch ui buttons between flash/term and cancel
     vscode.commands.executeCommand('setContext', 'riot-web-extension.context.busyDevices', []);
 
     const deviceProvider = new DeviceProvider();
@@ -34,6 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
     const busyDevices = new Set<string>();
 
     let executeEventListeners = true;
+
     //Serial Events
     navigator.serial.addEventListener('connect', async (event) => {
         console.log('entered connect');
