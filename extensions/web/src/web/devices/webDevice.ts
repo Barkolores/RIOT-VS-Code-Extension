@@ -64,6 +64,10 @@ export abstract class WebDevice extends DeviceTreeItem {
 
     cancel(sendRSTMessage: boolean = true) {
         if (this._flashing) {
+            if (!sendRSTMessage) {
+                //Shell Terminated Connection, stop sending logs
+                this._logBypass = true;
+            }
             vscode.window.showErrorMessage('Device is currently flashing. Please wait till flashing is complete.');
             return;
         }
@@ -259,10 +263,6 @@ export abstract class WebDevice extends DeviceTreeItem {
                     this._previouslyLockedTo = undefined;
                     vscode.window.showInformationMessage(`The last shell Device ${this.label} used isn't available anymore. Spawning new shell.`);
                     this.requestShell();
-                    return;
-                }
-                if (this._flashing) {
-                    this._logBypass = true;
                     return;
                 }
                 if (message[3] === terminationTypes.SUCCESS) {
