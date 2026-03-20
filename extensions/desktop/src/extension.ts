@@ -107,6 +107,9 @@ export async function activate(context: vscode.ExtensionContext) {
 		);
 		if(matchedDevice) {
 			devicesTreeItemProvider.setActiveDevice(matchedDevice);
+			if(matchedDevice.appPath) {
+				riotFileTreeProvider.setActiveAppUri(matchedDevice.appPath);
+			}
 			if(matchedDevice.riotBasePath) {
 				riotBaseTreeProvider.refresh(matchedDevice.riotBasePath);
 			}
@@ -214,7 +217,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 		vscode.tasks.executeTask(cleanTask);
 	});
-
+	
 	const debugDisposable = vscode.commands.registerCommand('riot-launcher.riotDebug', async (d: DesktopDeviceTreeItem) => {
 		if(!d) { return; }
 		const device = d.getDevice();
@@ -612,6 +615,7 @@ organization=None`;
 		devicesTreeItemProvider.setActiveDevice(device);
 		context.workspaceState.update(ACTIVE_DEVICE_CACHE_KEY, device.toConfig());
 		riotBaseTreeProvider.refresh(riotBasePath);
+		riotFileTreeProvider.setActiveAppUri(device.appPath);
 	}
 
 	async function configureCompiledCommands(riotBasePath : string, appFolderPath : string) {	
