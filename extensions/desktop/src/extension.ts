@@ -21,6 +21,7 @@ import { RiotFileTreeProvider } from './treeView/uiFileTreeProvider';
 import { RiotBaseFileTreeProvider } from './treeView/uiBaseFileTreeProvider';
 import { VsCodeRiotCleanTask } from './tasks/VsCodeRiotCleanTask';
 
+
 interface ActiveDebugSession {
 	gdbPort: number;
 	telnetPort: number;
@@ -31,6 +32,10 @@ interface ActiveDebugSession {
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
+	const execAsync = util.promisify(exec);
+
+	checkAndInstallRiotgen();
+
 	const DEVICE_LIST_CACHE_KEY = 'riot-launcher.deviceList';
 	const ACTIVE_DEVICE_CACHE_KEY = 'riot-launcher.activeDevice';
 	const TRANSFER_DEVICES_KEY = 'riot-launcher.transferDevices';
@@ -88,7 +93,6 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.window.onDidChangeActiveTextEditor(editor => {
 			if(editor && editor.document.uri.scheme === 'file') {
 				treeView.reveal(editor.document.uri, { focus: true, select: true, expand: true});
-			
 			}
 		})
 	);
@@ -99,6 +103,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
+	//TODO Definitely clean this if-hell up
 	if(activeDeviceConfig) {
 		const matchedDevice = initialDevices.find( d => 
 			d.appPath?.fsPath === activeDeviceConfig.appPath &&
@@ -113,9 +118,15 @@ export async function activate(context: vscode.ExtensionContext) {
 			if(matchedDevice.riotBasePath) {
 				riotBaseTreeProvider.refresh(matchedDevice.riotBasePath);
 				riotBaseTreeView.description = matchedDevice.riotBasePath.fsPath;
+			}else {
+				checkAndCloneRiotBase();
 			}
+		}else {
+			checkAndCloneRiotBase();
 		}
 		
+	}else {	
+		checkAndCloneRiotBase();
 	}
 
 	context.subscriptions.push(vscode.window.registerTreeDataProvider('riotView', devicesTreeItemProvider));
@@ -135,6 +146,8 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 		activeDebugSessions.splice(sessionIndex, 1);
 	}));
+
+	
 
 	async function readBundledBoards(): Promise<string[]> {
 		const fileUri = vscode.Uri.joinPath(context.extensionUri, 'resources', 'boards.txt');
@@ -156,7 +169,68 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(addDeviceDisposable);
 
-	const execAsync = util.promisify(exec);
+	
+	async function checkAndInstallRiotgen() {
+		try {
+			await execAsync('riotgen --version');
+		}catch (error) {
+			console.log('riotgen not found, prompting user to install: ', error);
+			const installOption = 'Install riotgen (pip)';
+			const response = await vscode.window.showErrorMessage('The tool riotgen is required but not found in your system. Please install it to use the application creation feature.',
+				installOption, "Later"
+			);
+			if (response === installOption) {
+				await vscode.window.withProgress({
+					location: vscode.ProgressLocation.Notification,
+					title: 'Installing riotgen',
+					cancellable: false
+				}, async (progress) => {
+					try {
+						await execAsync('pip install riotgen');
+						vscode.window.showInformationMessage('Successfully installed riotgen!');
+					} catch(installError) {
+						vscode.window.showErrorMessage('Failed to install riotgen. Please try installing it manually via pip.');
+						console.log('Error installing riotgen: ', installError);
+					}
+				});
+			}
+		}
+	}
+
+	async function checkAndCloneRiotBase() {
+		const cloneOption = 'Clone RIOT from GitHub';
+		const response = await vscode.window.showInformationMessage('RIOT Base folder is not set. Make sure the RIOT Base is cloned on your system.',
+			cloneOption, "Later"
+		);
+		if(response === cloneOption) {
+			const targetDir = await vscode.window.showOpenDialog({
+				canSelectFiles: false,
+				canSelectFolders: true,
+				canSelectMany: false,
+				openLabel: 'Select Target Directory for RIOT clone'
+			});
+			if(targetDir && targetDir[0]) {
+				await vscode.window.withProgress({
+					location: vscode.ProgressLocation.Notification,
+					title: 'Cloning RIOT Base',
+					cancellable: true
+				}, async (progress) => {
+					try {
+						const targetPath = targetDir[0].fsPath;
+						await execAsync(`git clone https://github.com/RIOT-OS/RIOT.git "${targetPath}"`);
+						riotBaseTreeProvider.refresh(vscode.Uri.file(targetPath));
+						riotBaseTreeView.description = targetPath;
+						vscode.window.showInformationMessage('Successfully cloned RIOT Base and updated configuration!');
+						return vscode.Uri.file(targetPath);
+					} catch(cloneError) {
+						vscode.window.showErrorMessage('Failed to clone RIOT Base. Please try cloning it manually.');
+						console.log('Error cloning RIOT Base: ', cloneError);
+						return undefined;
+					}
+				});
+			}
+		}
+	}
 
 	context.subscriptions.push(vscode.tasks.onDidEndTaskProcess(async (e) => {
 		const taskName = e.execution.task.name.toLowerCase();

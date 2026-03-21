@@ -217,5 +217,8 @@
   },
   "dependencies": {
     "serialport": "^13.0.0"
-  }
+  },
+  "extensionDependencies": [
+    "ms-vscode.cpptools"
+  ]
 }
