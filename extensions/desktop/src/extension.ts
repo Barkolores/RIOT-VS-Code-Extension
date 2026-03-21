@@ -157,6 +157,43 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	const execAsync = util.promisify(exec);
 
+	context.subscriptions.push(vscode.tasks.onDidEndTaskProcess(async (e) => {
+		const taskName = e.execution.task.name.toLowerCase();
+		if(taskName.includes('make all') || taskName.includes('flash')) {
+			const activeDevice = devicesTreeItemProvider.getActiveDevice();
+			if(activeDevice && activeDevice.appPath && activeDevice.board) {
+				try {
+					const { stdout } = await execAsync(`make info-buildsize BOARD=${activeDevice.board.id}`,
+						{ cwd: activeDevice.appPath.fsPath }
+					);
+					const lines = stdout.toString().trim().split('\n').filter(line => line.trim().length > 0);
+					const dataLine = lines[lines.length - 1].trim().split(/\s+/);
+					console.log('Build size info: ', dataLine);
+					if(dataLine.length >= 3) {
+						const text = parseInt(dataLine[0], 10);
+						const data = parseInt(dataLine[1], 10);
+						const bss = parseInt(dataLine[2], 10);
+						if(!isNaN(text) && !isNaN(data) && !isNaN(bss)) {
+							const appRam = data + bss;
+							const appRom = text + data;
+							const sizeInfo = `ROM: ${appRom}B, RAM: ${appRam}B`;
+							let desc = activeDevice.description || [];
+							if(!Array.isArray(desc)) {
+								desc = [desc as unknown as string];		
+							}
+							desc = desc.filter((d: string) => !d.startsWith('ROM:'));
+							desc.push(sizeInfo);
+							activeDevice.description = desc;
+							devicesTreeItemProvider.refresh();
+						}
+					}
+				}catch (error) {
+					console.log('Error fetching build size info: ', error);
+				}
+			}
+		}
+	}));
+
 	async function loadBoards(appPath: vscode.Uri): Promise<string[]> {
 		try {
 			const { stdout } = await execAsync(
@@ -489,7 +526,14 @@ organization=None`;
 			treeItem.changePortPath(portPath);
 			let msg = `Changed port of device to: ${portPath}`;
 			const device = treeItem.getDevice();
-			device.description = details;
+			let newDesc = details || [];
+			if(device.description) {
+				const existingDesc = Array.isArray(device.description) ? device.description : [device.description];
+				const memoryInfo = existingDesc.filter((d: string) => d.startsWith('ROM') || d.startsWith('RAM') || d.startsWith('Board'));
+				newDesc = [...memoryInfo, ...newDesc];
+			}
+			device.description = newDesc;
+			
 			vscode.window.showInformationMessage(msg);
 			devicesTreeItemProvider.refresh();
 			quickPick.dispose();
@@ -612,6 +656,33 @@ organization=None`;
 		vscode.tasks.executeTask(compileTask);
 		await configureCompiledCommands(riotBasePath.fsPath, appFolderPath.fsPath);
 	
+		try {
+			const { stdout } = await execAsync(
+				`make info-debug-variable-RAM_LEN BOARD=${device.board?.id}`,
+				{ cwd: appFolderPath.fsPath }
+			);
+			const ramLen = stdout.toString().trim();
+			let romLen = 'Unknown';
+			try {
+				const { stdout: romOut } = await execAsync(
+					`make info-debug-variable-ROM_LEN BOARD=${device.board?.id}`,
+					{ cwd: appFolderPath.fsPath }
+				);
+				romLen = romOut.toString().trim();
+			}catch (err) {
+				console.log('Error fetching ROM length info: ', err);
+			}
+			let desc = device.description || [];
+			if(!Array.isArray(desc)) {
+				desc = [desc as unknown as string];		
+			}
+			desc = desc.filter((d: string) => !d.startsWith('Board Memory:'));
+			desc.push(`Board Memory: ROM ${romLen}B, ROM ${ramLen}B`);
+			device.description = desc;
+		}catch (err) {
+			console.log('Error fetching RAM length info: ', err);
+		}
+
 		devicesTreeItemProvider.setActiveDevice(device);
 		context.workspaceState.update(ACTIVE_DEVICE_CACHE_KEY, device.toConfig());
 		riotBaseTreeProvider.refresh(riotBasePath);
