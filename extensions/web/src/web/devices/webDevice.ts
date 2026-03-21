@@ -30,6 +30,7 @@ export abstract class WebDevice extends DeviceTreeItem {
     protected _logMessages: string = '';
     protected _logMessagesTimer: NodeJS.Timeout | undefined = undefined;
     protected _logBypass: boolean = false;
+    protected static readonly _defaultShellLabel: string = 'Shell';
 
     protected constructor(
         label: string,
@@ -138,6 +139,7 @@ export abstract class WebDevice extends DeviceTreeItem {
         if (this._currentlyLockedTo) {
             this._previouslyLockedTo = this._currentlyLockedTo;
             this._currentlyLockedTo = undefined;
+            this.renameShell(WebDevice._defaultShellLabel);
         }
         vscode.commands.executeCommand('riot-web-extension.context.device.remove', this.contextValue);
         this.stopLogBundling();
@@ -189,6 +191,7 @@ export abstract class WebDevice extends DeviceTreeItem {
             }
             newInstance = true;
             this._currentlyLockedTo = [addressTypes.SHELL, processId];
+            await this.renameShell(WebDevice._defaultShellLabel);
         }
         let commandRequest = undefined;
         switch (this._requestedAction) {
@@ -306,6 +309,7 @@ export abstract class WebDevice extends DeviceTreeItem {
                 if (await this.checkBoard(command[1])) {
                     this.startLogBundling();
                     this._flashing = true;
+                    await this.renameShell(this.label + ' | Flash');
                     await this.flash(command[2], command[3]).then(() => {
                         if (this._currentlyLockedTo) {
                             this.sendRST(this._currentlyLockedTo, terminationTypes.SUCCESS, `Flash complete.`);
@@ -326,6 +330,7 @@ export abstract class WebDevice extends DeviceTreeItem {
                 break;
             case commandTypes.TERM:
                 if (await this.checkBoard(command[1])) {
+                    await this.renameShell(this.label + ' | Term');
                     this.term({
                         baudRate: command[2]
                     } as SerialOptions);
@@ -339,6 +344,25 @@ export abstract class WebDevice extends DeviceTreeItem {
         //only used for terminal closed callback
         if (this._currentlyLockedTo) {
             return this._currentlyLockedTo[1];
+        }
+    }
+
+    async renameShell(newName: string) {
+        if (this._currentlyLockedTo) {
+            // const activeTerminal = vscode.window.activeTerminal;
+            for (const terminal of vscode.window.terminals) {
+                if (this._currentlyLockedTo[1] === await terminal.processId) {
+                    // const isDifferentTerminal = activeTerminal !== terminal;
+                    // if (isDifferentTerminal) {
+                    //     terminal.show(true);
+                    // }
+                    vscode.commands.executeCommand('workbench.action.terminal.rename', newName);
+                    // if (isDifferentTerminal) {
+                    //     activeTerminal?.show(true);
+                    // }
+                    break;
+                }
+            }
         }
     }
 }
