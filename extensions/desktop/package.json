@@ -139,6 +139,11 @@
           "command": "riot-launcher.addDevice",
           "when": "view == riotView",
           "group": "navigation"
+        },
+        {
+        "command": "riot-launcher.createProject",
+        "when": "view == riotFileView",
+        "group": "navigation"
         }
       ],
       "view/item/context": [

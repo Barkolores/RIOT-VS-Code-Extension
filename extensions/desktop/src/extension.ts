@@ -487,6 +487,38 @@ export async function activate(context: vscode.ExtensionContext) {
 			placeHolder: 'An awesome RIOT application'
 		});
 		if(!appBrief) { return; }
+		//optional fields
+		const authorName = await vscode.window.showInputBox( {
+			title: 'Create RIOT Application',
+			prompt: 'Enter author name (optional)',
+			placeHolder: 'VS Code User'
+		}); if(authorName === undefined) { return; }
+		
+		const authorEmail = await vscode.window.showInputBox( {
+			title: 'Create RIOT Application',
+			prompt: 'Enter author email (optional)',
+			placeHolder: 'user@example.com'
+		}); if(authorEmail === undefined) { return; }
+		
+		const organization = await vscode.window.showInputBox( {
+			title: 'Create RIOT Application',
+			prompt: 'Enter organization (optional)',
+			placeHolder: 'None'
+		}); if(organization === undefined) { return; }
+		const licenseOptions = [
+			{label: 'MIT'},
+			{label: 'LGPL21'},
+			{label: 'Apache2'},
+			{label: 'BSD'},
+			{label: 'None', description: 'Skip license selection'}
+		];
+		const targetLicense = await vscode.window.showQuickPick(licenseOptions, {
+			title: 'Create RIOT Application',
+			placeHolder: 'Select a license for your application'
+		});
+		const licenseValue = targetLicense?.label === 'None' ? '' : targetLicense?.label;
+		//end optional fields
+		
 		const boardOptions = boards.map(board => ({ label: board }));
 		const targetBoard = await vscode.window.showQuickPick(boardOptions, {
 			title: 'Create RIOT Application',
@@ -512,10 +544,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		if(!targetDirUri || targetDirUri.length === 0) { return; }
 		const targetDirPath = targetDirUri[0].fsPath;
 		const cfgContent = `[global]
-author_name=VS Code User
-author_email=user@email.com
-organization=None
-license=MIT
+author_name=${authorName}
+author_email=${authorEmail}
+organization=${organization}
+license=${licenseValue}
 
 [application]
 name=${appName}
@@ -523,9 +555,9 @@ brief=${appBrief}
 board=${targetBoard.label}
 
 [user]
-name=VS Code User
-email=user@example.com
-organization=None`;
+name=${authorName}
+email=${authorEmail}
+organization=${organization}`;
 		const tempCfgPath = path.join(targetDirPath, 'temp_cpp.cfg');
 		try {
 			await vscode.window.withProgress({
