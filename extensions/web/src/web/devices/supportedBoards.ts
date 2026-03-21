@@ -26,13 +26,28 @@ export const espBoards = [
     'esp8266-esp-12x',
     'esp8266-olimex-mod',
     'esp8266-sparkfun-thing',
+    'seeedstudio-xiao-esp32c3',
+    'seeedstudio-xiao-esp32s3'
 ];
 
 //nrf52840 Boards (Serial) using RNode flasher (adafruit-nrfutil javascript implementation by Liam Cottle)
 export const nrfBoards = [
-    'nrf52840',
+    'adafruit-clue',
     'adafruit-feather-nrf52840-express',
-    'adafruit-feather-nrf52840-sense'
+    'adafruit-feather-nrf52840-sense',
+    'adafruit-grand-central-m4-express',
+    'adafruit-itsybitsy-m4',
+    'adafruit-itsybitsy-nrf52',
+    'adafruit-metro-m4-express',
+    'adafruit-pybadge',
+    'nrf52840-mdk-dongle',
+    'nrf52840-mdk',
+    'nrf52840dk',
+    'nrf52840dongle',
+    'nrf52dk',
+    'pro-micro-nrf52840',
+    'seeedstudio-xiao-nrf52840-sense',
+    'seeedstudio-xiao-nrf52840'
 ];
 
 //Boards using WebSerial Api, append standard without flasher
