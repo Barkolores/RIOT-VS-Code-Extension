@@ -80,7 +80,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 
 	const riotBaseTreeProvider = new RiotBaseFileTreeProvider();
-	vscode.window.createTreeView('riotBaseFileView', {
+	const riotBaseTreeView =vscode.window.createTreeView('riotBaseFileView', {
 		treeDataProvider: riotBaseTreeProvider
 	});
 
@@ -112,6 +112,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			}
 			if(matchedDevice.riotBasePath) {
 				riotBaseTreeProvider.refresh(matchedDevice.riotBasePath);
+				riotBaseTreeView.description = matchedDevice.riotBasePath.fsPath;
 			}
 		}
 		
@@ -686,6 +687,7 @@ organization=None`;
 		devicesTreeItemProvider.setActiveDevice(device);
 		context.workspaceState.update(ACTIVE_DEVICE_CACHE_KEY, device.toConfig());
 		riotBaseTreeProvider.refresh(riotBasePath);
+		riotBaseTreeView.description = riotBasePath.fsPath;
 		riotFileTreeProvider.setActiveAppUri(device.appPath);
 	}
 
