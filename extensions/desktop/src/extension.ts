@@ -291,6 +291,117 @@ export async function activate(context: vscode.ExtensionContext) {
 		}	
 	}
 	
+	let clipBoardUri: vscode.Uri | undefined = undefined;
+	let isCutOperation : boolean = false;
+
+	const copyRelPathDisposable = vscode.commands.registerCommand('riotFileView.copyRelativePath', async (uri: vscode.Uri) => {
+		if(!uri) { return; }
+		const relativePath = vscode.workspace.asRelativePath(uri, false);
+		await vscode.env.clipboard.writeText(relativePath);
+	});
+	context.subscriptions.push(copyRelPathDisposable);
+
+	const copyDisposable = vscode.commands.registerCommand('riotFileView.copyFile', async (uri: vscode.Uri) => {
+		if(!uri) { return; }
+		clipBoardUri = uri;
+		isCutOperation = false;
+
+		await vscode.env.clipboard.writeText(uri.fsPath);
+		vscode.window.showInformationMessage('File path copied to clipboard');
+	});
+	context.subscriptions.push(copyDisposable);
+
+	const cutDisposable = vscode.commands.registerCommand('riotFileView.cutFile', async (uri: vscode.Uri) => {
+		if(!uri) { return; }
+		clipBoardUri = uri;
+		isCutOperation = true;
+	
+		await vscode.env.clipboard.writeText(uri.fsPath);
+		vscode.window.showInformationMessage('File path copied to clipboard. Ready to move.');
+	});
+	context.subscriptions.push(cutDisposable);
+
+	const newFileDisposable = vscode.commands.registerCommand('riotFileView.newFile', async (uri: vscode.Uri) => {
+		if(!uri) { return; }
+		const fileName = await vscode.window.showInputBox({
+			prompt: 'Enter the name of the new file',
+			placeHolder: 'main.c',
+		});
+		if(fileName) {
+			const newFileUri = vscode.Uri.joinPath(uri, fileName);
+			try {
+				await vscode.workspace.fs.writeFile(newFileUri, new Uint8Array(0));
+				const doc = await vscode.workspace.openTextDocument(newFileUri);
+				await vscode.window.showTextDocument(doc);
+			}catch (error) {
+				vscode.window.showErrorMessage('Error creating file: ' + error);
+			}
+		}
+	});
+	context.subscriptions.push(newFileDisposable);
+
+	const deleteDisposable = vscode.commands.registerCommand('riotFileView.deleteFile', async (uri: vscode.Uri) => {
+		if(!uri) { return; }
+		const fileName = path.basename(uri.fsPath);
+		const confirm = await vscode.window.showWarningMessage(
+			`Are you sure you want to delete ${fileName}?`,
+			{ modal: true },
+			'Yes'
+		);
+		if(confirm === 'Yes') {
+			try {
+				await vscode.workspace.fs.delete(uri, { recursive: true, useTrash: true });
+				riotFileTreeProvider.refresh();
+			} catch (error) {
+				vscode.window.showErrorMessage('Error deleting file: ' + error);
+			}
+		}
+	});
+	context.subscriptions.push(deleteDisposable);
+
+	const pasteDisposable = vscode.commands.registerCommand('riotFileView.pasteFile', async (uri: vscode.Uri) => {
+		if(!uri || !clipBoardUri) { return; }
+		
+		const clipboardText = await vscode.env.clipboard.readText();
+
+		let sourceUri: vscode.Uri | undefined = undefined;
+
+		if (clipboardText && fs.existsSync(clipboardText.trim())) {
+			sourceUri = vscode.Uri.file(clipboardText.trim());
+		} else if (clipBoardUri) {
+			sourceUri = clipBoardUri;
+		}
+		if(!sourceUri) {
+			return;
+		}
+
+		let targetDir = uri;
+		try {
+			const stat = await vscode.workspace.fs.stat(uri);
+			if(stat.type !== vscode.FileType.Directory) {
+				targetDir = vscode.Uri.file(path.dirname(uri.fsPath));		
+			}
+		} catch (error) {
+			vscode.window.showErrorMessage('Error pasting file: ' + error);
+			return;
+		}
+		const fileName = path.basename(clipBoardUri.fsPath);
+		const finalTargetUri = vscode.Uri.joinPath(targetDir, fileName);
+		try {
+			if(isCutOperation && sourceUri.fsPath === clipBoardUri?.fsPath) {
+				await vscode.workspace.fs.rename(clipBoardUri, finalTargetUri, { overwrite: false });
+				clipBoardUri = undefined;
+				isCutOperation = false;
+			} else {
+				await vscode.workspace.fs.copy(clipBoardUri, finalTargetUri, { overwrite: false });
+			}
+			riotFileTreeProvider.refresh();
+		} catch (error) {
+			vscode.window.showErrorMessage('Error pasting file: ' + error);
+		}
+	});
+	context.subscriptions.push(pasteDisposable);
+
 	const flashDisposable = vscode.commands.registerCommand('riot-launcher.riotFlash', (d : DesktopDeviceTreeItem)=> {
 		if(!d) { return; }
 		d.flash();

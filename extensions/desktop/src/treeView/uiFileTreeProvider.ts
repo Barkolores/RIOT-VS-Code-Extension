@@ -18,8 +18,17 @@ export class RiotFileTreeProvider implements vscode.TreeDataProvider<RiotTreeEle
     private _onDidChangeTreeData: vscode.EventEmitter<RiotTreeElement | undefined | void> = new vscode.EventEmitter<RiotTreeElement | undefined | void>();
     readonly onDidChangeTreeData: vscode.Event<RiotTreeElement | undefined | void> = this._onDidChangeTreeData.event;
     
+
     private rootUris: vscode.Uri[] = [];
     private activeAppUri?: vscode.Uri; 
+    private fileWatcher?: vscode.FileSystemWatcher;
+
+    constructor() {
+        this.fileWatcher = vscode.workspace.createFileSystemWatcher('**/*');
+        this.fileWatcher.onDidChange(uri => this.refresh());
+        this.fileWatcher.onDidCreate(uri => this.refresh());
+        this.fileWatcher.onDidDelete(uri => this.refresh());
+    }
 
     public addAppFolder(uri: vscode.Uri) {
         if(!this.rootUris.some(r => r.fsPath === uri.fsPath)) {
@@ -145,5 +154,12 @@ export class RiotFileTreeProvider implements vscode.TreeDataProvider<RiotTreeEle
             console.error(`Error reading directory: `, err);
             return [];
         }
+    }
+
+    public dispose() {
+        if (this.fileWatcher) {
+            this.fileWatcher.dispose();
+        }
+        this._onDidChangeTreeData.dispose();
     }
 }
