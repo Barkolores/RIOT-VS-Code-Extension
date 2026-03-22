@@ -27,8 +27,6 @@ export abstract class WebDevice extends DeviceTreeItem {
     protected _previouslyLockedTo: shellAddress | undefined = undefined;
     protected _requestedAction: deviceAction | undefined = undefined;
     protected _flashing: boolean = false;
-    protected _logMessages: string = '';
-    protected _logMessagesTimer: NodeJS.Timeout | undefined = undefined;
     protected _logBypass: boolean = false;
     static readonly _defaultShellLabel: string = 'shell';
 
@@ -54,7 +52,7 @@ export abstract class WebDevice extends DeviceTreeItem {
 
     protected abstract read(webSocketManager: WebSocketManager): void;
 
-    protected abstract write(message: string): void;
+    protected abstract write(message: Uint8Array): void;
 
     protected abstract term(param?: object): void;
 
@@ -103,35 +101,23 @@ export abstract class WebDevice extends DeviceTreeItem {
         ] as outboundDeviceMessage);
     };
 
-    protected appendLogMessage(message: string) {
-        if (!this._logBypass) {
-            this._logMessages += message;
-        }
+    protected sendLog(message: string) {
+        this.sendMessage([
+            messageTypes.LOG,
+            this._deviceAddress,
+            this._currentlyLockedTo,
+            logTypes.LOG,
+            message
+        ] as outboundDeviceMessage);
     }
 
-    protected sendLog() {
-        if (this._logMessages !== '') {
-            this.sendMessage([
-                messageTypes.LOG,
-                this._deviceAddress,
-                this._currentlyLockedTo,
-                logTypes.LOG,
-                this._logMessages
-            ] as outboundDeviceMessage);
-            this._logMessages = '';
-        }
-    }
-
-    protected startLogBundling() {
-        this.stopLogBundling();
-        this._logMessagesTimer = setInterval(this.sendLog.bind(this), 100);
-    }
-
-    protected stopLogBundling() {
-        clearInterval(this._logMessagesTimer);
-        //send out any remaining logs
-        this.sendLog();
-        this._logBypass = false;
+    protected sendIO(message: Uint8Array<ArrayBufferLike>) {
+        this.sendMessage([
+            messageTypes.IO,
+            this._deviceAddress,
+            this._currentlyLockedTo,
+            message
+        ] as outboundDeviceMessage);
     }
 
     private unlockDevice() {
@@ -143,7 +129,6 @@ export abstract class WebDevice extends DeviceTreeItem {
             });
         }
         vscode.commands.executeCommand('riot-web-extension.context.device.remove', this.contextValue);
-        this.stopLogBundling();
     }
 
     requestFlash() {
@@ -283,7 +268,7 @@ export abstract class WebDevice extends DeviceTreeItem {
                 }
                 await this.executeCommand(message[3]);
                 break;
-            case messageTypes.INPUT:
+            case messageTypes.IO:
                 this.write(message[3]);
                 break;
         }
@@ -301,7 +286,6 @@ export abstract class WebDevice extends DeviceTreeItem {
                     return;
                 }
                 if (await this.checkBoard(command[1])) {
-                    this.startLogBundling();
                     this._flashing = true;
                     await this.renameTerminal(this.label + ' | Flash');
                     await this.flash(command[2], command[3]).then(() => {

@@ -42,6 +42,14 @@ export function isValidOutboundMessage(obj: unknown): obj is outboundWSMessage {
                 typedObj[3] === logTypes.ERROR) &&
             typeof typedObj[4] === "string" ||
             Array.isArray(typedObj) &&
+            typedObj[0] === messageTypes.IO &&
+            Array.isArray(typedObj[1]) &&
+            typedObj[1][0] === addressTypes.DEVICE &&
+            typeof typedObj[1][1] === "string" &&
+            Array.isArray(typedObj[2]) &&
+            typedObj[2][0] === addressTypes.SHELL &&
+            typeof typedObj[2][1] === "number" ||
+            Array.isArray(typedObj) &&
             typedObj[0] === messageTypes.REQ &&
             Array.isArray(typedObj[1]) &&
             typedObj[1][0] === addressTypes.DEVICE &&

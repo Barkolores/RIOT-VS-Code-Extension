@@ -3,7 +3,7 @@ import {WebDevice} from "../webDevice";
 
 export class SerialDevice extends WebDevice {
 
-    private _reader?: ReadableStreamDefaultReader<string>;
+    private _reader?: ReadableStreamDefaultReader<Uint8Array<ArrayBufferLike>>;
     private _readableStreamClosed?: Promise<void>;
     private readonly _encoder = new TextEncoder();
 
@@ -46,33 +46,28 @@ export class SerialDevice extends WebDevice {
     }
 
     protected async read(): Promise<void> {
-        this.startLogBundling();
-        const decoder = new TextDecoderStream();
-        //@ts-ignore
-        this._readableStreamClosed = this._webPort.readable?.pipeTo(decoder.writable);
-        this._reader = decoder.readable.getReader();
+        this._reader = this._webPort.readable?.getReader();
         if (this._reader === undefined) {
             throw Error('Reader not accessible');
         }
         while (true) {
             const {value, done} = await this._reader.read();
             if (value) {
-                this.appendLogMessage(value);
+                this.sendIO(value);
             }
             if (done || !value) {
                 this._reader.releaseLock();
                 break;
             }
         }
-        this.stopLogBundling();
     }
 
-    protected write(message: string): void {
+    protected write(message: Uint8Array): void {
         const writer = (this._webPort as SerialPort).writable?.getWriter();
         if (writer === undefined) {
             return;
         }
-        writer.write(this._encoder.encode(message)).then(() => console.log('Wrote Message: ' + message + ' to ' + this.label));
+        writer.write(message).then(() => console.log('Wrote Message: ' + message + ' to ' + this.label));
         writer.releaseLock();
     }
 

@@ -34,7 +34,7 @@ export type inboundDeviceMessage = [
     ...deviceReceiveAddress,
     command
 ] | [
-    messageTypes.INPUT,
+    messageTypes.IO,
     ...deviceReceiveAddress,
-    input: string
+    input: Uint8Array<ArrayBufferLike>
 ]

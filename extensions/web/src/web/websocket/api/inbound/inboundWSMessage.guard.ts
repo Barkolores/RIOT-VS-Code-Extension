@@ -49,14 +49,13 @@ export function isValidInboundMessage(obj: unknown): obj is inboundWSMessage {
                 typeof typedObj[3][1] === "string" &&
                 typeof typedObj[3][2] === "number") ||
             Array.isArray(typedObj) &&
-            typedObj[0] === messageTypes.INPUT &&
+            typedObj[0] === messageTypes.IO &&
             Array.isArray(typedObj[1]) &&
             typedObj[1][0] === addressTypes.SHELL &&
             typeof typedObj[1][1] === "number" &&
             Array.isArray(typedObj[2]) &&
             typedObj[2][0] === addressTypes.DEVICE &&
-            typeof typedObj[2][1] === "string" &&
-            typeof typedObj[3] === "string" ||
+            typeof typedObj[2][1] === "string" ||
             Array.isArray(typedObj) &&
             (typedObj[0] === messageTypes.CONNECT_ACK ||
                 typedObj[0] === messageTypes.DISCONNECT))

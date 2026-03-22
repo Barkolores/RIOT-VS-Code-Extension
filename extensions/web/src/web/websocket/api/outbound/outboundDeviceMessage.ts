@@ -30,6 +30,10 @@ export type outboundDeviceMessage = [
     logTypes,
     msg: string
 ] | [
+    messageTypes.IO,
+    ...deviceSendAddress,
+    input: Uint8Array<ArrayBufferLike>
+] | [
     messageTypes.REQ,
     ...deviceSendAddress,
     newInstance: boolean,

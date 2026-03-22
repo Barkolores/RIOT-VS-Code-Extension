@@ -6,8 +6,8 @@ export enum messageTypes {
     ACK = 'ACK',
     RST = 'RST',
     CMD = 'CMD',
-    LOG = 'log',
-    INPUT = 'input'
+    LOG = 'LOG',
+    IO = 'IO',
 }
 
 export enum commandTypes {
