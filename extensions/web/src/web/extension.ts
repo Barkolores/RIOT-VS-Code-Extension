@@ -4,38 +4,51 @@ import {WebDevice} from "./devices/webDevice";
 import {DeviceManager} from "./devices/deviceManager";
 import {WebSocketManager} from "./websocket/webSocketManager";
 import {FolderTreeItem} from "shared/ui/treeItems/folderTreeItem";
-import {BoardTreeItem} from "shared/ui/treeItems/boardTreeItem";
-import {FileManager} from "./utility/fileManager";
-import {BoardTypes} from "shared/ui/boardTypes";
+import {supportedBoards} from "./devices/supportedBoards";
 
 export function activate(context: vscode.ExtensionContext) {
 
-    if ((navigator as any).serial === undefined && (navigator as any).usb === undefined) {
-        console.log("No serial or USB support found. Aborting RIOT web extension.");
+    //navigator serial not available in non secure context
+    if (!isSecureContext) {
+        vscode.window.showErrorMessage('Context is not secure. Aborting RIOT web extension.');
+        return;
+    }
+
+    //api compatibility check, can be extended with HID or USB
+    if ((navigator as any).serial === undefined) {
+        vscode.window.showErrorMessage("No serial support found. Aborting RIOT web extension.");
         return;
     }
 
     console.log("RIOT web extension activated");
 
-    const deviceProvider = new DeviceProvider();
-    const deviceManager = new DeviceManager(deviceProvider);
-    const webSocketManager: WebSocketManager = new WebSocketManager();
-    const fileManager = new FileManager();
-    let boards: string[] = [];
-    fileManager.readBundledBoards(context.extensionUri).then((result) => {
-        console.log('Supported boards have been parsed');
-        boards = result;
-    });
+    //initialize Context
+    //dont display ui buttons before connection to websocket server is established
+    vscode.commands.executeCommand('setContext', 'riot-web-extension.context.connectionEstablished', false);
+    //switch ui buttons between flash/term and cancel
+    vscode.commands.executeCommand('setContext', 'riot-web-extension.context.busyDevices', []);
 
-    //initialize context
-    vscode.commands.executeCommand('setContext', 'riot-web-extension.context.websocketOpen', true);
+    const deviceProvider = new DeviceProvider();
+    const {port1: devicesPort, port2: websocketPort} = new MessageChannel();
+    const deviceManager = new DeviceManager(deviceProvider, devicesPort);
+    const webSocketManager = new WebSocketManager(deviceManager, websocketPort, context.extensionUri);
+    const busyDevices = new Set<string>();
+
+    //bypass for eventListeners ()
+    let executeEventListeners = true;
 
     //Serial Events
+    //Reconnect Event (when reconnecting already known device) => forget, state can not be serialized
     navigator.serial.addEventListener('connect', (event) => {
-        deviceManager.handleConnectEvent(event.target as SerialPort);
+        if (executeEventListeners) {
+            (event.target as SerialPort).forget();
+        }
     });
+    //Disconnect event => update UI
     navigator.serial.addEventListener('disconnect', (event) => {
-        deviceManager.handleDisconnectEvent(event.target as SerialPort);
+        if (executeEventListeners) {
+            deviceManager.handleDisconnectEvent(event.target as SerialPort);
+        }
     });
 
     //Commands
@@ -43,13 +56,9 @@ export function activate(context: vscode.ExtensionContext) {
         //add new Device
         vscode.commands.registerCommand('riot-web-extension.device.add', async () => {
             console.log('RIOT Web Extension is registering new device...');
-            const serialPortInfo: SerialPortInfo = await vscode.commands.executeCommand(
-                "workbench.experimental.requestSerialPort"
-            );
-            if (serialPortInfo) {
-                deviceManager.checkForAddedDevices();
-            } else {
-                vscode.window.showErrorMessage('No new Serial Device selected!');
+            const board = await vscode.window.showQuickPick(supportedBoards);
+            if (board) {
+                await deviceManager.addDevice(board);
             }
         }),
 
@@ -75,12 +84,19 @@ export function activate(context: vscode.ExtensionContext) {
                     }
                 } else {
                     newLabel = newLabel.trim();
+                    if (newLabel.includes(' ')) {
+                        if (await vscode.window.showErrorMessage('New label must not contain spaces. Please specify a unique label without spaces.', {modal: true}, 'Retry') === undefined) {
+                            break;
+                        }
+                        defaultLabel = newLabel;
+                        continue;
+                    }
                     if (deviceManager.checkLabelAvailable(newLabel, currentLabel)) {
                         device.changeLabel(newLabel);
-                        deviceManager.sortDevices();
+                        deviceManager.updateDeviceProvider();
                         break;
                     } else {
-                        if (await vscode.window.showErrorMessage('New label is already in use. Please specify a unique label.', {modal: true}, 'Retry') === undefined) {
+                        if (await vscode.window.showErrorMessage('New label is already in use. Please specify a unique label without spaces.', {modal: true}, 'Retry') === undefined) {
                             break;
                         }
                         defaultLabel = newLabel;
@@ -91,7 +107,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         //select project
         vscode.commands.registerCommand('riot-web-extension.device.selectProject', async (folderItem: FolderTreeItem) => {
-            const device = folderItem.getParentDevice();
+            const device = folderItem.getParentDevice() as WebDevice;
             const folders = vscode.workspace.workspaceFolders;
             if (!folders) {
                 vscode.window.showWarningMessage("No open projects.");
@@ -116,60 +132,66 @@ export function activate(context: vscode.ExtensionContext) {
             deviceManager.refreshDeviceProvider();
         }),
 
-        //select board
-        vscode.commands.registerCommand('riot-web-extension.device.selectBoard', async (boardTreeItem: BoardTreeItem) => {
-            if (boards.length === 0) {
-                vscode.window.showErrorMessage('Supported boards have not been parsed yet. Please try again in a few moments.');
+        //term
+        vscode.commands.registerCommand('riot-web-extension.device.term', (device: WebDevice)=> {
+            if (!webSocketManager.isReady()) {
+                vscode.window.showErrorMessage('Cannot open Terminal. Connection to WebsocketServer is not fully established.');
                 return;
             }
-            const device = boardTreeItem.getParentDevice();
-            const label = device.label as string;
-            while (true) {
-                const pick : string | undefined = await vscode.window.showQuickPick(boards, {
-                    title: 'Select a new board for Device "' + label + '"',
-                    placeHolder: 'Select new board for device'
-                });
-                if (!pick) {
-                    if (await vscode.window.showErrorMessage('No new board was specified', {modal: true}, 'Retry') === undefined) {
-                        break;
-                    }
-                } else {
-                    //Placeholder
-                    device.changeBoard({
-                        id: pick,
-                        name: pick,
-                        loaderType: "esp"
-                    } as BoardTypes);
-                    break;
-                }
-            }
-            deviceManager.refreshDeviceProvider();
+            device.requestTerm();
         }),
 
-        //make Term
-        vscode.commands.registerCommand('riot-web-extension.device.term', async (device: WebDevice)=> {
-            if (!webSocketManager.isOpen()) {
-                vscode.window.showErrorMessage('Cannot make Terminal. Websocket is not connected.');
+        //flash
+        vscode.commands.registerCommand('riot-web-extension.device.flash', (device: WebDevice) => {
+            if (!webSocketManager.isReady()) {
+                vscode.window.showErrorMessage('Cannot flash device. Connection to WebsocketServer is not fully established.');
+                return;
             }
-
+            device.requestFlash();
         }),
 
-        //flash Device
-        vscode.commands.registerCommand('riot-web-extension.device.flash', async (device: WebDevice) => {
-            if (!webSocketManager.isOpen()) {
-                vscode.window.showErrorMessage('Cannot flash Device. Websocket is not connected.');
+        //cancel current Action
+        vscode.commands.registerCommand('riot-web-extension.device.cancelAction', (device: WebDevice) => {
+           device.cancel();
+        }),
+
+        //cleanUp devices
+        vscode.commands.registerCommand('riot-web-extension.device.cleanUp', async () => {
+            await deviceManager.cleanUp();
+        }),
+
+        //set custom Websocket URL
+        vscode.commands.registerCommand('riot-web-extension.websocket.setURL', async () => {
+            let newURL = await vscode.window.showInputBox({
+                title: 'Choose a new URL for the Websocket Connection',
+                value: webSocketManager.getURL(),
+            });
+            if (newURL) {
+                webSocketManager.setURL(newURL.trim());
             }
         }),
 
-        //open Websocket
-        vscode.commands.registerCommand('riot-web-extension.websocket.open', () => {
-            webSocketManager.open();
+        //add Device to context (to change UI buttons)
+        vscode.commands.registerCommand('riot-web-extension.context.device.add', (contextValue: string) => {
+            busyDevices.add(contextValue);
+            vscode.commands.executeCommand('setContext', 'riot-web-extension.context.busyDevices', Array.from(busyDevices));
         }),
 
-        //close Websocket
-        vscode.commands.registerCommand('riot-web-extension.websocket.close', () => {
-            webSocketManager.close();
+        //remove Device from context
+        vscode.commands.registerCommand('riot-web-extension.context.device.remove', (contextValue: string) => {
+            busyDevices.delete(contextValue);
+            vscode.commands.executeCommand('setContext', 'riot-web-extension.context.busyDevices', Array.from(busyDevices));
         }),
+
+        //lock EventListeners
+        vscode.commands.registerCommand('riot-web-extension.eventListener.lock', async () => {
+            executeEventListeners = false;
+        }),
+
+        //unlock EventListeners
+        vscode.commands.registerCommand('riot-web-extension.eventListener.unlock', async () => {
+            executeEventListeners = true;
+        })
     );
 
     //Views
@@ -182,6 +204,15 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         {dispose: webSocketManager.close}
     );
+
+    //Terminal Closed Callback, cancel device action
+    vscode.window.onDidCloseTerminal(async (terminal) => {
+        const processId = await terminal.processId;
+        if (processId) {
+            deviceManager.handleClosedTerminal(processId);
+        }
+    });
+
 }
 
 

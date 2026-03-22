@@ -25,4 +25,6 @@ export default [{
         "no-throw-literal": "warn",
         semi: "warn",
     },
+}, {
+    ignores: ["**/*.guard.ts", "**/*.min.js"],
 }];

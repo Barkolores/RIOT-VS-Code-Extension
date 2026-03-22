@@ -5,7 +5,7 @@
   "publisher": "Barkolores78",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.106.0"
+    "vscode": "1.109.2"
   },
   "categories": [
     "Other"
@@ -37,11 +37,6 @@
         "icon": "$(folder)"
       },
       {
-        "command": "riot-web-extension.device.selectBoard",
-        "title": "Select board",
-        "icon": "$(circuit-board)"
-      },
-      {
         "command": "riot-web-extension.device.term",
         "title": "Open Terminal",
         "icon": "$(terminal)"
@@ -52,14 +47,34 @@
         "icon": "$(zap)"
       },
       {
-        "command": "riot-web-extension.websocket.open",
-        "title": "Open Websocket",
+        "command": "riot-web-extension.device.cancelAction",
+        "title": "Cancel current Action",
+        "icon": "$(x)"
+      },
+      {
+        "command": "riot-web-extension.device.cleanUp",
+        "title": "CleanUp Devices"
+      },
+      {
+        "command": "riot-web-extension.websocket.setURL",
+        "title": "Set custom Websocket URL",
         "icon": "$(rss)"
       },
       {
-        "command": "riot-web-extension.websocket.close",
-        "title": "Close Websocket",
-        "icon": "$(close)"
+        "command": "riot-web-extension.context.device.add",
+        "title": "Add Device to Context"
+      },
+      {
+        "command": "riot-web-extension.context.device.remove",
+        "title": "Remove Device from Context"
+      },
+      {
+        "command": "riot-web-extension.eventListener.lock",
+        "title": "Lock Connect & Disconnect EventListeners"
+      },
+      {
+        "command": "riot-web-extension.eventListener.unlock",
+        "title": "Unlock Connect & Disconnect EventListeners"
       }
     ],
     "viewsContainers": {
@@ -98,20 +113,32 @@
           "when": "false"
         },
         {
+          "command": "riot-web-extension.device.cancelAction",
+          "when": "false"
+        },
+        {
           "command": "riot-web-extension.device.selectProject",
           "when": "false"
         },
         {
-          "command": "riot-web-extension.device.selectBoard",
+          "command": "riot-web-extension.device.cleanUp",
           "when": "false"
         },
         {
-          "command": "riot-web-extension.websocket.open",
-          "when": "riot-web-extension.context.websocketOpen == false"
+          "command": "riot-web-extension.context.device.add",
+          "when": "false"
         },
         {
-          "command": "riot-web-extension.websocket.close",
-          "when": "riot-web-extension.context.websocketOpen == true"
+          "command": "riot-web-extension.context.device.remove",
+          "when": "false"
+        },
+        {
+          "command": "riot-web-extension.eventListener.lock",
+          "when": "false"
+        },
+        {
+          "command": "riot-web-extension.eventListener.unlock",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -119,47 +146,37 @@
           "command": "riot-web-extension.device.add",
           "group": "navigation",
           "when": "view == riot-web-extension.view.devices"
-        },
-        {
-          "command": "riot-web-extension.websocket.open",
-          "group": "navigation",
-          "when": "view == riot-web-extension.view.devices && riot-web-extension.context.websocketOpen == false"
-        },
-        {
-          "command": "riot-web-extension.websocket.close",
-          "group": "navigation",
-          "when": "view == riot-web-extension.view.devices && riot-web-extension.context.websocketOpen == true"
         }
       ],
       "view/item/context": [
         {
           "command": "riot-web-extension.device.rename",
-          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != boardItem && viewItem != folderItem && viewItem != portItem",
+          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != folderItem && viewItem != portItem && viewItem not in riot-web-extension.context.busyDevices",
           "group": "dummy@1"
         },
         {
           "command": "riot-web-extension.device.remove",
-          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != boardItem && viewItem != folderItem && viewItem != portItem",
+          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != folderItem && viewItem != portItem && viewItem not in riot-web-extension.context.busyDevices",
           "group": "dummy@2"
         },
         {
           "command": "riot-web-extension.device.term",
-          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != boardItem && viewItem != folderItem && viewItem != portItem",
+          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != folderItem && viewItem != portItem && viewItem not in riot-web-extension.context.busyDevices && riot-web-extension.context.connectionEstablished",
           "group": "inline"
         },
         {
           "command": "riot-web-extension.device.flash",
-          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != boardItem && viewItem != folderItem && viewItem != portItem",
+          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != folderItem && viewItem != portItem && viewItem not in riot-web-extension.context.busyDevices && riot-web-extension.context.connectionEstablished",
+          "group": "inline"
+        },
+        {
+          "command": "riot-web-extension.device.cancelAction",
+          "when": "view == riot-web-extension.view.devices && viewItem != descriptionItem && viewItem != folderItem && viewItem != portItem && viewItem in riot-web-extension.context.busyDevices && riot-web-extension.context.connectionEstablished",
           "group": "inline"
         },
         {
           "command": "riot-web-extension.device.selectProject",
           "when": "view == riot-web-extension.view.devices && viewItem == folderItem",
-          "group": "inline"
-        },
-        {
-          "command": "riot-web-extension.device.selectBoard",
-          "when": "view == riot-web-extension.view.devices && viewItem == boardItem",
           "group": "inline"
         }
       ]
@@ -174,8 +191,9 @@
     "watch-web:tsc": "tsc --noEmit --watch --project tsconfig.json",
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
-    "run-in-browser": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. .",
-    "package": "vsce package --allow-missing-repository"
+    "run-in-browser": "vscode-test-web --quality=stable --browserType=chromium --extensionDevelopmentPath=. .",
+    "package": "vsce package --allow-missing-repository",
+    "generate-type-guards": "ts-auto-guard"
   },
   "devDependencies": {
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
@@ -188,23 +206,25 @@
     "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.46.4",
     "@typescript-eslint/parser": "^8.46.4",
-    "@vscode/test-web": "^0.0.78",
+    "@vscode/test-web": "^0.0.79",
     "@vscode/vsce": "^3.7.0",
     "assert": "^2.1.0",
     "esbuild": "^0.25.12",
     "esbuild-plugin-copy": "^2.1.1",
     "eslint": "^9.39.1",
-    "mocha": "^11.7.5",
+    "mocha": "^11.3.0",
     "npm-run-all": "^4.1.5",
+    "ts-auto-guard": "^5.0.1",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@zip.js/zip.js": "^2.8.23",
+    "cbor-x": "^1.6.0",
     "esptool-js": "^0.5.7",
     "shared": "../../shared"
   },
   "overrides": {
-    "@vscode/vsce": {
-      "js-yaml": "^4.1.1"
-    }
+    "serialize-javascript": "7.0.4",
+    "diff": "8.0.3"
   }
 }

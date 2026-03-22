@@ -1,69 +1,126 @@
-import {WebDevice} from "./webDevice";
-import {webPort} from "./webPort";
+import {WebDevice, webPort} from "./webDevice";
 import {SerialDevice} from "./serial/serialDevice";
 import {DeviceProvider} from "shared/ui/deviceProvider";
 import vscode from "vscode";
+import {inboundDeviceMessage} from "../websocket/api/inbound/inboundDeviceMessage";
+import {outboundDeviceMessage} from "../websocket/api/outbound/outboundDeviceMessage";
+import {
+    addressTypes,
+    clientAddress,
+    messageTypes,
+    shellAddress,
+    terminationTypes
+} from "../websocket/api/additionalTypes";
+import {EspDevice} from "./serial/espDevice";
+import {espBoards, nrfBoards, serialBoards} from "./supportedBoards";
+import {NrfDevice} from "./serial/nrfDevice";
 
 export class DeviceManager {
     private _devices: WebDevice[] = [];
-    private _counter: number = 1;
+
     constructor(
-        private _devicesProvider: DeviceProvider
+        private _devicesProvider: DeviceProvider,
+        private _messagePort: MessagePort,
     ) {
-        //initialize Devices
+        //discard Devices on reload
         navigator.serial.getPorts().then((ports) => {
-            for (const port of ports) {
-                this._devices.push(this.deviceGenerator(port));
-            }
-            this.updateDeviceProvider();
+            ports.forEach((port) => {port.forget();});
         });
+    }
+
+    checkLabelAvailable(newLabel: string, excludeLabel?: string): boolean {
+        for (const device of Object.values(this._devices)) {
+            if (newLabel === device.label && newLabel !== excludeLabel) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private getNextDefaultLabel(): string {
+        let counter = 1;
+        while (true) {
+            const newLabel = 'Device' + counter++;
+            if (this.checkLabelAvailable(newLabel)) {
+                return newLabel;
+            }
+        }
+    }
+
+    async addDevice(board: string) {
+        let newDevice: WebDevice | undefined = undefined;
+        let newDeviceId: string | undefined = undefined;
+        while (true) {
+            //get new Unique Id
+            newDeviceId = crypto.randomUUID();
+            if (!(newDeviceId in this._devices)) {
+                break;
+            }
+        }
+        const newLabel = this.getNextDefaultLabel();
+        if (serialBoards.includes(board)) {
+            //Add Serial Device
+            let serialPort: SerialPort | undefined;
+            await vscode.commands.executeCommand("workbench.experimental.requestSerialPort");
+            for (const port of await navigator.serial.getPorts()) {
+                if (this.includesPort(port) === undefined) {
+                    serialPort = port;
+                    break;
+                }
+            }
+            if (!serialPort) {
+                vscode.window.showErrorMessage('This serial port is already in use');
+                return;
+            }
+            (serialPort as SerialPort & {used: boolean}).used = true;
+            switch (true) {
+                case espBoards.includes(board):
+                    //esp boards with flasher esptool.js
+                    newDevice = new EspDevice(newLabel, newDeviceId, board, serialPort, this._messagePort);
+                    break;
+                case nrfBoards.includes(board):
+                    //nrf boards with flasher rnode flasher
+                    newDevice = new NrfDevice(newLabel, newDeviceId, board, serialPort, this._messagePort);
+                    if (!await (newDevice as NrfDevice).init()) {
+                        return;
+                    }
+                    break;
+                default:
+                    //serial boards without flasher
+                    newDevice = new SerialDevice(newLabel, newDeviceId, undefined, serialPort, this._messagePort);
+                    break;
+            }
+        // } else if (usbBoards.includes(board)) {
+        //     //Add USB Device
+        //     return;
+        } else {
+            vscode.window.showErrorMessage('Board is not in supported boards declaration.');
+            return;
+        }
+
+        this._devices.push(newDevice);
+        vscode.window.showInformationMessage('New Device with label "'+ newLabel +'" added');
+        this.updateDeviceProvider();
     }
 
     private includesPort(port: webPort): number | undefined {
-        for (const device of this._devices) {
-            if (device.comparePort(port)) {
-                return this._devices.indexOf(device);
+        for (let i = 0; i < this._devices.length; i++) {
+            if (this._devices[i].comparePort(port)) {
+                console.log('found port');
+                return i;
             }
         }
-        return;
-    }
-
-    checkForAddedDevices() {
-        navigator.serial.getPorts().then((ports) => {
-            let newDeviceFound = false;
-            for (const port of ports) {
-                if (this.includesPort(port) === undefined) {
-                    const newDevice = this.deviceGenerator(port);
-                    this._devices.push(newDevice);
-                    vscode.window.showInformationMessage('New Device with label "'+ newDevice.label +'" added');
-                    newDeviceFound = true;
-                }
-            }
-            if (newDeviceFound) {
-                this.sortDevices();
-            }
-        });
-    }
-
-    handleConnectEvent(port: webPort) {
-        const index = this.includesPort(port);
-        if (index !== undefined) {
-            return;
-        }
-        if (port instanceof SerialPort) {
-            const connectedDevice = this.deviceGenerator(port);
-            this._devices.push(this.deviceGenerator(port));
-            vscode.window.showInformationMessage('New device with label "'+ connectedDevice.label +'" has been connected');
-        }
-        this.sortDevices();
+        console.log('did not find port');
+        return undefined;
     }
 
     handleDisconnectEvent(port: webPort) {
-        const index = this.includesPort(port);
-        if (index === undefined) {
+        const id = this.includesPort(port);
+        if (id === undefined) {
             return;
         }
-        const disconnectedDevice = this._devices.splice(index, 1)[0];
+        const disconnectedDevice = this._devices[id];
+        this._devices.splice(id, 1);
         vscode.window.showInformationMessage('Device "'+ disconnectedDevice.label +'" has been disconnected');
         this.updateDeviceProvider();
     }
@@ -74,48 +131,72 @@ export class DeviceManager {
         this.updateDeviceProvider();
     }
 
+    //use when TreeItems change (e.g. label)
     refreshDeviceProvider() {
         this._devicesProvider.refresh();
     }
 
-    private deviceGenerator(port: SerialPort): WebDevice {
-        return new SerialDevice(port, crypto.randomUUID(), this.getNextDefaultLabel(), this._devicesProvider.onDidChangeTreeDataEventEmitter);
-    }
-
-    private updateDeviceProvider() {
-        this._devicesProvider.setDevices(this._devices);
+    //use when TreeItems are added or removed, or when sorting TreeItems
+    updateDeviceProvider() {
+        const devices = Object.values(this._devices).sort((device1, device2) => {
+            return (device1.label as string).localeCompare(device2.label as string);
+        });
+        this._devicesProvider.setDevices(devices);
         this.refreshDeviceProvider();
     }
 
-    checkLabelAvailable(newLabel: string, excludeLabel?: string): boolean {
+    handleMessage(message: inboundDeviceMessage) {
+        let requestedDevice: WebDevice | undefined = undefined;
+        const deviceName = message[2][1];
         for (const device of this._devices) {
-            if (newLabel === device.label && newLabel !== excludeLabel) {
-                return false;
+            if (device.label === deviceName) {
+                requestedDevice = device;
+                break;
             }
         }
-        return true;
+        if (requestedDevice === undefined) {
+            this.sendErrorRST(message[1][1], `No Device with the label '${deviceName}' is known.`);
+            return;
+        }
+        requestedDevice.handleMessage(message);
     }
 
-    private getNextDefaultLabel(): string {
-        // while (true) {
-        //     const newLabel = 'Device ' + this._counter++;
-        //     if (this.checkLabelAvailable(newLabel)) {
-        //         return newLabel;
-        //     }
-        // }
-        let counter = 1;
-        while (true) {
-            const newLabel = 'Device ' + counter++;
-            if (this.checkLabelAvailable(newLabel)) {
-                return newLabel;
+    private sendErrorRST(shellId: number , reason: string) {
+        //send RST when Device is not found
+        this._messagePort.postMessage([
+            messageTypes.RST,
+            [addressTypes.CLIENT, 0] as clientAddress,
+            [addressTypes.SHELL, shellId] as shellAddress,
+            terminationTypes.ERROR,
+            reason
+        ] as outboundDeviceMessage);
+    }
+
+    cancelAllDeviceActions() {
+        for (const device of Object.values(this._devices)) {
+            device.cancel();
+        }
+    }
+
+    //removes all disconnected Devices from UI and unused connected Devices (from all used APIs)
+    async cleanUp() {
+        for (const port of await navigator.serial.getPorts()) {
+            if (this.includesPort(port) === undefined) {
+                await port.forget();
+            }
+            if (!port.connected) {
+                this.handleDisconnectEvent(port);
+                await port.forget();
             }
         }
     }
 
-    sortDevices() {
-        this._devices = this._devices.sort((device1, device2) => {
-            return (device1.label as string).localeCompare(device2.label as string);
-        });
-        this.updateDeviceProvider();
+    //finds the device that is locked to the terminal and cancels all actions
+    handleClosedTerminal(processId: number) {
+        for (const device of this._devices) {
+            if (processId === device.getShellId()) {
+                device.cancel(false);
+            }
+        }
     }
 }
