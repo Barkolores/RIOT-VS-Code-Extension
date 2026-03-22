@@ -91,15 +91,7 @@ function getWebBuildOptions() {
                     to: ['./dist/assets'],
                 },
                 watch: true,
-            }),
-			copy({
-				resolveFrom: 'cwd',
-				assets: {
-					from: ['../../shared/boards.txt'],
-					to: ['./dist/boards.txt'],
-				},
-				watch: true,
-			}),
+            })
 		],
 	};
 }
