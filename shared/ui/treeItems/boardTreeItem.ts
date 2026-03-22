@@ -1,22 +1,18 @@
 import * as vscode from 'vscode';
 import {DeviceTreeItem} from "./deviceTreeItem";
-import { DeviceModel } from '../deviceModel';
-import { BoardTypes } from '../boardTypes';
+import { DeviceModel } from '../../../extensions/desktop/src/treeView/deviceModel';
 
 export class BoardTreeItem extends vscode.TreeItem {
     constructor(
-        protected readonly _device: DeviceModel,
+        protected readonly _device: DeviceTreeItem,
     ) {
-        const board = _device.board;
-        super((board ? board.name : 'Unknown board'), vscode.TreeItemCollapsibleState.None);
+        const board = _device.getBoard();
+        super((`Board: ${board ? board : 'Not specified'}`), vscode.TreeItemCollapsibleState.None);
         this.contextValue = 'boardItem'
     }
 
-    getDevice(): DeviceModel {
+    getParentDevice(): DeviceTreeItem {
         return this._device;
     }
 
-    changeBoard(board : BoardTypes) : void {
-        this._device.board = board;
-    }
 }

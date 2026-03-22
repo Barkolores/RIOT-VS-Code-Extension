@@ -5,29 +5,19 @@ import {PortTreeItem} from "./treeItems/portTreeItem";
 import {BoardTreeItem} from "./treeItems/boardTreeItem";
 import {DescriptionTreeItem} from "./treeItems/descriptionTreeItem";
 import {DescriptionHeaderTreeItem} from "./treeItems/descriptionHeaderTreeItem";
-import { DeviceModel } from './deviceModel';
+import { DeviceModel } from '../../extensions/desktop/src/treeView/deviceModel';
 import { DesktopDeviceTreeItem } from '../../extensions/desktop/src/treeView/uiDevice';
 
 export class DeviceProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
     protected _devices : DeviceTreeItem[];
-    protected _activeDevice : DeviceModel | undefined;
 
     readonly onDidChangeTreeDataEventEmitter: vscode.EventEmitter<DeviceTreeItem | undefined> = new vscode.EventEmitter<DeviceTreeItem | undefined>();
     readonly onDidChangeTreeData = this.onDidChangeTreeDataEventEmitter.event;
 
     constructor(
-        devices? : DeviceModel[],
-        initialActiveDevice? : DeviceModel
+        devices? : DeviceTreeItem[]
     ) {
-        this._devices = devices ? devices.map(
-            d => {
-                return new DesktopDeviceTreeItem(d, this.onDidChangeTreeDataEventEmitter)
-            }
-        ) : [];
-    }
-
-    getDeviceModels() : DeviceModel[] {
-        return this._devices.map( di => (di as DesktopDeviceTreeItem).getDevice() );
+        this._devices = devices ?? [];
     }
 
     getTreeItem(element: vscode.TreeItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
@@ -43,12 +33,12 @@ export class DeviceProvider implements vscode.TreeDataProvider<vscode.TreeItem> 
                 //Device subtree
                 const device = element as DeviceTreeItem;
                 items.push(
-                    new FolderTreeItem(device.getDevice()),
-                    new BoardTreeItem(device.getDevice()),
+                    new FolderTreeItem(device),
+                    new BoardTreeItem(device)
                 )
                 // if (device.getPort() !== undefined) {
                 items.push(
-                    new PortTreeItem(device.getDevice())
+                    new PortTreeItem(device)
                 )
                 // }
                 if (device.getDescription() !== undefined) {
@@ -71,15 +61,6 @@ export class DeviceProvider implements vscode.TreeDataProvider<vscode.TreeItem> 
         }
     }
 
-    createDeviceTreeItem(deviceModel: DeviceModel): DesktopDeviceTreeItem {
-        const isActive = this._activeDevice === deviceModel;
-        return new DesktopDeviceTreeItem(deviceModel, this.onDidChangeTreeDataEventEmitter, isActive);
-    }
-    
-    getActiveDevice() : DeviceModel | undefined {
-        return this._activeDevice;
-    }
-    
 
     refresh(): void {
         this.onDidChangeTreeDataEventEmitter.fire(undefined);
@@ -99,18 +80,5 @@ export class DeviceProvider implements vscode.TreeDataProvider<vscode.TreeItem> 
         this.refresh();
     }
 
-    setActiveDevice(device : DeviceModel | undefined) : void {
-        this._activeDevice = device;
-
-        if(this._devices) {
-            this._devices.forEach( d => {
-                if(d instanceof DesktopDeviceTreeItem) {
-                    const isItemActive = d.getDevice() === this._activeDevice;
-                    d.setActiveState(isItemActive);
-                }
-            });
-        }
-        this.refresh();
-    }
 
 }

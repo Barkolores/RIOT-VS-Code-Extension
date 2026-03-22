@@ -7,7 +7,7 @@ import * as util from 'util';
 import { realpathSync } from 'fs';
 import * as path from 'path';
 import { PortDiscovery } from './boards/PortDiscoverer';
-import { DeviceModel, DeviceConfig } from '../../../shared/ui/deviceModel';
+import { DeviceModel, DeviceConfig } from './treeView/deviceModel';
 import { VsCodeCompileCommandsTask } from './tasks/VsCodeCompileCommandsTask';
 import { VsCodeRiotTermTask } from './tasks/VsCodeRiotTermTask';
 import { DesktopDeviceTreeItem } from './treeView/uiDevice';
@@ -20,6 +20,7 @@ import { SerialPort } from 'serialport';
 import { RiotFileTreeProvider } from './treeView/uiFileTreeProvider';
 import { RiotBaseFileTreeProvider } from './treeView/uiBaseFileTreeProvider';
 import { VsCodeRiotCleanTask } from './tasks/VsCodeRiotCleanTask';
+import { DesktopDeviceProvider } from './treeView/uiDesktopDeviceProvider';
 
 
 interface ActiveDebugSession {
@@ -70,7 +71,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	const initialDevices : DeviceModel[] = initialDevicesConfig.map(d => DeviceModel.fromConfig(d));
 
 
-	const devicesTreeItemProvider = new DeviceProvider(initialDevices);
+	const devicesTreeItemProvider = new DesktopDeviceProvider(initialDevices);
 	devicesTreeItemProvider.onDidChangeTreeData( () => {
 		const currentDevices = devicesTreeItemProvider.getDeviceModels();
 		const configsToSave = currentDevices.map(d => d.toConfig());
@@ -107,7 +108,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	if(activeDeviceConfig) {
 		const matchedDevice = initialDevices.find( d => 
 			d.appPath?.fsPath === activeDeviceConfig.appPath &&
-			d.board?.id === activeDeviceConfig.board &&
+			d.board === activeDeviceConfig.board &&
 			d.portPath === activeDeviceConfig.portPath
 		);
 		if(matchedDevice) {
@@ -238,7 +239,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			const activeDevice = devicesTreeItemProvider.getActiveDevice();
 			if(activeDevice && activeDevice.appPath && activeDevice.board) {
 				try {
-					const { stdout } = await execAsync(`make info-buildsize BOARD=${activeDevice.board.id}`,
+					const { stdout } = await execAsync(`make info-buildsize BOARD=${activeDevice.board}`,
 						{ cwd: activeDevice.appPath.fsPath }
 					);
 					const lines = stdout.toString().trim().split('\n').filter(line => line.trim().length > 0);
@@ -519,10 +520,10 @@ export async function activate(context: vscode.ExtensionContext) {
 				...recentBoards.filter(b => b !== selectedBoard)
 			].slice(0, 5);
 			await context.globalState.update(RECENT_BOARDS_KEY, updateRecents);
-			treeItem.changeBoard({ id : selectedBoard, name: selectedBoard});
+			(treeItem.getParentDevice() as DesktopDeviceTreeItem).getDevice().board = selectedBoard;
 			vscode.window.showInformationMessage(`Changed board of device to: ${pick}`);
             devicesTreeItemProvider.refresh();
-            const device = treeItem.getDevice();
+            const device = (treeItem.getParentDevice() as DesktopDeviceTreeItem).getDevice();
             executeCompileCommandsTask(device);
 		}
 	});
@@ -551,8 +552,8 @@ export async function activate(context: vscode.ExtensionContext) {
 				loadBoards(appFolderUri).then((loadedBoards : string[]) => boards = loadedBoards);
 
 			
-				treeItem.setAppPath(appFolderUri);
-				treeItem.setBasePath(riotBasePath);
+				(treeItem.getParentDevice() as DesktopDeviceTreeItem).getDevice().appPath = appFolderUri;
+				(treeItem.getParentDevice() as DesktopDeviceTreeItem).getDevice().riotBasePath = riotBasePath;
 				
 				devicesTreeItemProvider.refresh();
 
@@ -567,7 +568,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 await context.workspaceState.update(DEVICE_LIST_CACHE_KEY, configsToSave);
                 await context.workspaceState.update(ACTIVE_DEVICE_CACHE_KEY, activeDevice?.toConfig());
 				/* Compile commands and configuring IntelliSense */
-				const device = treeItem.getDevice();
+				const device = (treeItem.getParentDevice() as DesktopDeviceTreeItem).getDevice();
 				if(device.board){
 					await executeCompileCommandsTask(device);
 				}
@@ -741,9 +742,9 @@ organization=${organization}`;
 		quickPick.items = items;
 
 		const updateDevice = async (portPath: string, details? : string[]) => {
-			treeItem.changePortPath(portPath);
+			(treeItem.getParentDevice() as DesktopDeviceTreeItem).getDevice().portPath = portPath === 'None' ? undefined : portPath;
 			let msg = `Changed port of device to: ${portPath}`;
-			const device = treeItem.getDevice();
+			const device = (treeItem.getParentDevice() as DesktopDeviceTreeItem).getDevice();
 			let newDesc = details || [];
 			if(device.description) {
 				const existingDesc = Array.isArray(device.description) ? device.description : [device.description];
@@ -778,7 +779,7 @@ organization=${organization}`;
 				const customPort = await vscode.window.showInputBox({
 					title: 'Device configuration',
 					prompt: 'Enter new port path',
-					value: treeItem.getDevice().portPath || ''
+					value: (treeItem.getParentDevice() as DesktopDeviceTreeItem).getDevice().portPath || ''
 				});
 				if(customPort) {
 					await updateDevice(customPort);
@@ -876,14 +877,14 @@ organization=${organization}`;
 	
 		try {
 			const { stdout } = await execAsync(
-				`make info-debug-variable-RAM_LEN BOARD=${device.board?.id}`,
+				`make info-debug-variable-RAM_LEN BOARD=${device.board}`,
 				{ cwd: appFolderPath.fsPath }
 			);
 			const ramLen = stdout.toString().trim();
 			let romLen = 'Unknown';
 			try {
 				const { stdout: romOut } = await execAsync(
-					`make info-debug-variable-ROM_LEN BOARD=${device.board?.id}`,
+					`make info-debug-variable-ROM_LEN BOARD=${device.board}`,
 					{ cwd: appFolderPath.fsPath }
 				);
 				romLen = romOut.toString().trim();
@@ -895,7 +896,7 @@ organization=${organization}`;
 				desc = [desc as unknown as string];		
 			}
 			desc = desc.filter((d: string) => !d.startsWith('Board Memory:'));
-			desc.push(`Board Memory: ROM ${romLen}B, ROM ${ramLen}B`);
+			desc.push(`Board Memory: ROM ${romLen}B, RAM ${ramLen}B`);
 			device.description = desc;
 		}catch (err) {
 			console.log('Error fetching RAM length info: ', err);
@@ -930,7 +931,7 @@ organization=${organization}`;
 
 	async function startDebugging(device: DeviceModel, sessionRecord : ActiveDebugSession) {
 		const appPath = device.appPath;
-		const boardName = device.board?.id || 'native64';
+		const boardName = device.board || 'native64';
 		const isNative : boolean = boardName.startsWith('native');
 		if(!appPath) {
 			vscode.window.showErrorMessage("Application folder not properly selected.");

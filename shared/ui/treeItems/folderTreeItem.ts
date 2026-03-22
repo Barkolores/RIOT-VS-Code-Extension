@@ -1,40 +1,31 @@
 import * as vscode from 'vscode';
 import {DeviceTreeItem} from "./deviceTreeItem";
-import { DeviceModel } from '../deviceModel';
-import { BoardTypes } from '../boardTypes';
 import path from 'path';
+import { DesktopDeviceTreeItem } from '../../../extensions/desktop/src/treeView/uiDevice';
 
 export class FolderTreeItem extends vscode.TreeItem {
     constructor(
-        protected readonly _device: DeviceModel,
+        protected readonly _device: DeviceTreeItem,
     ) {
-        const appUri = _device.appPath;
-        const labelStr = `${appUri ? path.basename(appUri.fsPath) : 'Unknown application path'} `;       
-        super(labelStr, vscode.TreeItemCollapsibleState.None);
-        this.tooltip = appUri ? appUri.fsPath : "No application path set";
-        this.contextValue = 'folderItem'
-    }
+        let label = 'None';
+        let tooltipText: string | undefined = undefined;
 
-    getDevice(): DeviceModel {
-        return this._device;
-    }
-
-    getBoard(): BoardTypes | undefined {
-        return this._device.board;
-    }
-
-    setAppPath(appPath : vscode.Uri) : void {
-        this._device.appPath = appPath;
-    }
-
-    setBasePath(riotBasePath : vscode.Uri) : void {
-        this._device.riotBasePath = riotBasePath;
-    }
-
-    changeDirectory(param?: object): void {
-        if(param && typeof param === 'string') {
-            this._device.appPath = param;
+        if ('getActiveProject' in _device && typeof(_device.getActiveProject) === 'function') {
+            label = 'Active Project: ' + (_device.getActiveProject() as vscode.WorkspaceFolder).name;
+        } else {
+            const desktopDevice = _device as DesktopDeviceTreeItem;
+            const appUri = desktopDevice.getDevice().appPath;
+            label = `${appUri ? path.basename(appUri.fsPath) : 'Unknown application path'} `;       
+            tooltipText = appUri ? appUri.fsPath : "No application path set";
         }
+
+        super(label, vscode.TreeItemCollapsibleState.None);
+        this.tooltip = tooltipText;
+        this.contextValue = 'folderItem';
+    }
+
+    getParentDevice(): DeviceTreeItem {
+        return this._device;
     }
     
 }

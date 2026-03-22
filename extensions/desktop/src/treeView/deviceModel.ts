@@ -1,5 +1,4 @@
 import vscode, { Uri } from "vscode";
-import { BoardTypes } from "./boardTypes";
 
 
 
@@ -17,7 +16,7 @@ export class DeviceModel {
     public constructor(
         public portPath? : string,
 
-        public board? : BoardTypes,
+        public board? : string,
 
         public title? : string,
             
@@ -31,7 +30,7 @@ export class DeviceModel {
     public toConfig(): DeviceConfig {
         return {
             portPath: this.portPath,
-            board: this.board?.id,
+            board: this.board,
             title: this.title,
             appPath: this.appPath?.fsPath,
             riotBasePath: this.riotBasePath?.fsPath,
@@ -42,9 +41,9 @@ export class DeviceModel {
     public static fromConfig(config: DeviceConfig) {
         const appUri = config.appPath ? Uri.file(config.appPath) : undefined;
         const riotBaseUri = config.riotBasePath ? Uri.file(config.riotBasePath) : undefined;
-        let board : BoardTypes | undefined;
+        let board : string | undefined;
         if(config.board) {
-            board = { id : config.board, name : config.board };
+            board = config.board;
         }
         return new DeviceModel(config.portPath, board, config.title, appUri, riotBaseUri, config.description);
     }

@@ -1,7 +1,6 @@
 import { SerialPort } from "serialport";
 import vscode from "vscode";
-import { DeviceModel } from '../../../../shared/ui/deviceModel';
-import { BoardTypes } from "../../../../shared/ui/boardTypes";
+import { DeviceModel } from '../treeView/deviceModel';
 
 export class PortDiscovery {
 

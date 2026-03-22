@@ -1,6 +1,6 @@
 import vscode from "vscode";
 import { AbstractRiotTask } from "./AbstractRiotTask";
-import { DeviceModel } from '../../../../shared/ui/deviceModel';
+import { DeviceModel } from '../treeView/deviceModel';
 
 export abstract class VsCodeAbstractRiotTask extends AbstractRiotTask{
 
@@ -16,7 +16,7 @@ export abstract class VsCodeAbstractRiotTask extends AbstractRiotTask{
     protected internalCreateTask(): vscode.Task {
         const definition: vscode.TaskDefinition = {
             type : 'riot-launcher',
-            board : this.device.board?.id,
+            board : this.device.board,
             mode : this.taskMode
         };
 

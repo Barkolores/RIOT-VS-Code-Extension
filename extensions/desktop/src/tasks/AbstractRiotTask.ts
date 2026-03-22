@@ -1,5 +1,5 @@
 import vscode from "vscode";
-import { DeviceModel } from '../../../../shared/ui/deviceModel';
+import { DeviceModel } from '../treeView/deviceModel';
 
 
 export abstract class AbstractRiotTask {

@@ -1,4 +1,4 @@
-import { DeviceModel } from '../../../../shared/ui/deviceModel';
+import { DeviceModel } from '../treeView/deviceModel';
 import { VsCodeAbstractRiotDeviceTask } from './VsCodeAbstractRiotDeviceTask';
 
 export class VsCodeRiotDebugTask extends VsCodeAbstractRiotDeviceTask {
