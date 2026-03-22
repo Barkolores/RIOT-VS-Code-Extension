@@ -8,9 +8,14 @@ import {supportedBoards} from "./devices/supportedBoards";
 
 export function activate(context: vscode.ExtensionContext) {
 
+    if (!isSecureContext) {
+        vscode.window.showErrorMessage('Context is not secure. Aborting RIOT web extension.');
+        return;
+    }
+
     //api compatibility check, can be extended with HID or USB
     if ((navigator as any).serial === undefined) {
-        console.log("No serial or USB support found. Aborting RIOT web extension.");
+        vscode.window.showErrorMessage("No serial support found. Aborting RIOT web extension.");
         return;
     }
 

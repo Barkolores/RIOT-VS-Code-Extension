@@ -14,6 +14,7 @@ export class WebSocketManager {
     private _wsConnectionTimeout: NodeJS.Timeout | undefined = undefined;
     private _apiConnected: boolean = false;
     private _apiConnectInterval: NodeJS.Timeout | undefined = undefined;
+    private static _localHosts: string[] = ['localhost', '127.0.0.1'];
 
     constructor(
         private _deviceManager: DeviceManager,
@@ -31,7 +32,7 @@ export class WebSocketManager {
             return;
         }
         let url = '://' + host + ':' + this._port;
-        this._url = 'ws' + (isSecureContext ? 's' : '') + url;
+        this._url = 'ws' + (!WebSocketManager._localHosts.includes(host) ? 's' : '') + url;
     }
 
     public isReady(): boolean {
