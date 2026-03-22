@@ -139,7 +139,8 @@ export abstract class WebDevice extends DeviceTreeItem {
         if (this._currentlyLockedTo) {
             this._previouslyLockedTo = this._currentlyLockedTo;
             this._currentlyLockedTo = undefined;
-            this.renameTerminal(WebDevice._defaultShellLabel);
+            console.log('unlock');
+            this.renameTerminal(WebDevice._defaultShellLabel).finally(() => {console.log('done renaming');});
         }
         vscode.commands.executeCommand('riot-web-extension.context.device.remove', this.contextValue);
         this.stopLogBundling();
