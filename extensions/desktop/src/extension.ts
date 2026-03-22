@@ -520,8 +520,8 @@ export async function activate(context: vscode.ExtensionContext) {
 				...recentBoards.filter(b => b !== selectedBoard)
 			].slice(0, 5);
 			await context.globalState.update(RECENT_BOARDS_KEY, updateRecents);
-			(treeItem.getParentDevice() as DesktopDeviceTreeItem).getDevice().board = selectedBoard;
-			vscode.window.showInformationMessage(`Changed board of device to: ${pick}`);
+			(treeItem.getParentDevice() as DesktopDeviceTreeItem).setBoard(selectedBoard);
+			vscode.window.showInformationMessage(`Changed board of device to: ${selectedBoard}`);
             devicesTreeItemProvider.refresh();
             const device = (treeItem.getParentDevice() as DesktopDeviceTreeItem).getDevice();
             executeCompileCommandsTask(device);
@@ -552,8 +552,8 @@ export async function activate(context: vscode.ExtensionContext) {
 				loadBoards(appFolderUri).then((loadedBoards : string[]) => boards = loadedBoards);
 
 			
-				(treeItem.getParentDevice() as DesktopDeviceTreeItem).getDevice().appPath = appFolderUri;
-				(treeItem.getParentDevice() as DesktopDeviceTreeItem).getDevice().riotBasePath = riotBasePath;
+				(treeItem.getParentDevice() as DesktopDeviceTreeItem).setAppPath(appFolderUri);
+				(treeItem.getParentDevice() as DesktopDeviceTreeItem).setRiotBasePath(riotBasePath);
 				
 				devicesTreeItemProvider.refresh();
 
@@ -742,7 +742,7 @@ organization=${organization}`;
 		quickPick.items = items;
 
 		const updateDevice = async (portPath: string, details? : string[]) => {
-			(treeItem.getParentDevice() as DesktopDeviceTreeItem).getDevice().portPath = portPath === 'None' ? undefined : portPath;
+			(treeItem.getParentDevice() as DesktopDeviceTreeItem).setPortPath(portPath === 'None' ? undefined : portPath);
 			let msg = `Changed port of device to: ${portPath}`;
 			const device = (treeItem.getParentDevice() as DesktopDeviceTreeItem).getDevice();
 			let newDesc = details || [];

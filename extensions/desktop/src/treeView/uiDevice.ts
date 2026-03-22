@@ -21,6 +21,17 @@ export class DesktopDeviceTreeItem extends DeviceTreeItem {
         this.updateAppearance();
     }
 
+    override getBoard(): string | undefined {
+        return this._device.board;
+    }
+
+    override getPort(): string | undefined {
+        return this._device.portPath;
+    }
+
+    override getDescription(): string[] | undefined {
+        return this._device.description;
+    }
 
     flash(): void {
         const device = this.getDevice();
@@ -46,16 +57,42 @@ export class DesktopDeviceTreeItem extends DeviceTreeItem {
         this.updateAppearance();
     }
 
+    setAppPath(appPath: vscode.Uri) : void {
+        this._device.appPath = appPath;
+        this.updateAppearance();
+    }
+
+    setPortPath(portPath: string | undefined) : void {
+        this._device.portPath = portPath;
+        this.updateAppearance();
+    }
+
+    setDescription(description: string[]) : void {
+        this._device.description = description;
+        this.updateAppearance();
+    }
+
+    setBoard(board: string) : void {
+        this._device.board = board;
+        this.updateAppearance();
+    }
+
+    setRiotBasePath(riotBasePath: vscode.Uri) : void {
+        this._device.riotBasePath = riotBasePath;
+        this.updateAppearance();
+    }
+
     getTitle(): string | undefined {
         return this._device.title;
     }
 
     changeBoard(newBoard: string) {
-        this._device.board = newBoard;
+        this.setBoard(newBoard);
     }
 
     changeDescription(newDescription: string[]) {
         this._device.description = newDescription;
+        this.updateAppearance();
     }
 
     protected updateAppearance() {
