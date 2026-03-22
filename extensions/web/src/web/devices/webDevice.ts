@@ -137,10 +137,10 @@ export abstract class WebDevice extends DeviceTreeItem {
     private unlockDevice() {
         this._requestedAction = undefined;
         if (this._currentlyLockedTo) {
-            this._previouslyLockedTo = this._currentlyLockedTo;
-            this._currentlyLockedTo = undefined;
-            console.log('unlock');
-            this.renameTerminal(WebDevice._defaultShellLabel).finally(() => {console.log('done renaming');});
+            this.renameTerminal(WebDevice._defaultShellLabel).finally(() => {
+                this._previouslyLockedTo = this._currentlyLockedTo;
+                this._currentlyLockedTo = undefined;
+            });
         }
         vscode.commands.executeCommand('riot-web-extension.context.device.remove', this.contextValue);
         this.stopLogBundling();
@@ -192,7 +192,6 @@ export abstract class WebDevice extends DeviceTreeItem {
             }
             newInstance = true;
             this._currentlyLockedTo = [addressTypes.SHELL, processId];
-            await this.renameTerminal(WebDevice._defaultShellLabel);
         }
         let commandRequest = undefined;
         switch (this._requestedAction) {
