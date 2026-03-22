@@ -317,7 +317,7 @@ export abstract class WebDevice extends DeviceTreeItem {
                         this.unlockDevice();
                     });
                 } else {
-                    this.unlockDevice();
+                    this.cancel(true);
                 }
                 break;
             case commandTypes.TERM:
@@ -327,7 +327,7 @@ export abstract class WebDevice extends DeviceTreeItem {
                         baudRate: command[2]
                     } as SerialOptions);
                 } else {
-                    this.unlockDevice();
+                    this.cancel(true);
                 }
                 break;
         }

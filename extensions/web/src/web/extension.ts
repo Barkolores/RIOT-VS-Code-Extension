@@ -207,7 +207,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     //Terminal Opened Callback, set default name (important when refreshing page)
     vscode.window.onDidOpenTerminal(async (terminal) => {
-        // terminal.show(true);
+        terminal.show(true);
         await vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', {
             name: WebDevice._defaultShellLabel
         });
