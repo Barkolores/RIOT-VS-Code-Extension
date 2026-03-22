@@ -84,7 +84,6 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
     }
 
     async rediscoverPort() {
-        console.log('starting rediscover');
         let has_found = false;
         while (true) {
             (await navigator.serial.getPorts()).forEach((serialPort) => {
@@ -92,7 +91,6 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
                     has_found = true;
                     (serialPort as SerialPort & {used: boolean}).used = true;
                     this._webPort = serialPort;
-                    console.log('found');
                 }
             });
             if (has_found) {
@@ -101,7 +99,6 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
             await vscode.window.showErrorMessage('Physical Device could not be rediscovered. Please grant access to the device again.', {modal: true});
             await vscode.commands.executeCommand('workbench.experimental.requestSerialPort');
         }
-        console.log('ending rediscover');
     }
 
     /**
@@ -137,7 +134,6 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
      * @returns {Promise<void>}
      */
     async enterDfuMode() {
-        console.log('starting dfu enter');
         try {
             // open port
             await this._webPort.open({
@@ -156,7 +152,6 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
             //sometimes enters dfu immediately after open, leads to error, but wait time still necessary for further execution
             await this.sleepMillis(this.TOUCH_RESET_WAIT_TIME * 1000);
         }
-        console.log('ending dfu enter');
     }
 
     /**
@@ -206,7 +201,6 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
             await this.dfuSendImage(this.HEX_TYPE_APPLICATION, zipEntries, manifest.application, progressCallback);
             //Device exits DFU mode, need to find new Serial Port
             await this.rediscoverPort();
-            console.log('Flash Complete');
         }
     }
 

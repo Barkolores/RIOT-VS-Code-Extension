@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import {DeviceManager} from "../devices/deviceManager";
 import {outboundWSMessage} from "./api/outbound/outboundWSMessage";
 import {decode, encode} from 'cbor-x';
-import {addressTypes, clientAddress, messageTypes, shellAddress, terminationTypes} from "./api/additionalTypes";
+import {addressTypes, clientAddress, messageTypes} from "./api/additionalTypes";
 import {isValidInboundMessage} from "./api/inbound/inboundWSMessage.guard";
 import {inboundWSMessage} from "./api/inbound/inboundWSMessage";
 import {isValidOutboundMessage} from "./api/outbound/outboundWSMessage.guard";
@@ -14,6 +14,7 @@ export class WebSocketManager {
     private _wsConnectionTimeout: NodeJS.Timeout | undefined = undefined;
     private _apiConnected: boolean = false;
     private _apiConnectInterval: NodeJS.Timeout | undefined = undefined;
+    //localhost can work with unsecure websocket
     private static _localHosts: string[] = ['localhost', '127.0.0.1'];
 
     constructor(
@@ -71,7 +72,7 @@ export class WebSocketManager {
     }
 
     private onOpen() {
-        console.log("Websocket connected.");
+        console.log("Websocket connected");
         this.startApiConnectInterval();
     }
 
@@ -116,15 +117,12 @@ export class WebSocketManager {
             case messageTypes.CONNECT_ACK:
                 this._apiConnected = true;
                 vscode.commands.executeCommand('setContext', 'riot-web-extension.context.connectionEstablished', true);
-                console.log('Connection fully established.');
+                console.log('API connected');
                 this.clearApiConnectInterval();
-                for (const terminal of vscode.window.terminals) {
-                    this.resetTerminal(terminal);
-                }
                 break;
             case messageTypes.DISCONNECT:
                 this.resetApi();
-                vscode.window.showErrorMessage('Received Disconnect Message, reestablishing connection in 10 seconds...');
+                vscode.window.showErrorMessage('Received disconnect message, reestablishing connection in 10 seconds...');
                 this._apiConnectInterval = setTimeout(this.startApiConnectInterval.bind(this), 10000);
                 break;
             default:
@@ -186,18 +184,5 @@ export class WebSocketManager {
         this.close();
         this.open();
         vscode.window.showInformationMessage('URL has been changed. Reestablishing Websocket Connection');
-    }
-
-    async resetTerminal(terminal: vscode.Terminal) {
-        const id = await terminal.processId;
-        if (id) {
-            this.sendMessage([
-                messageTypes.RST,
-                ['client', 0] as clientAddress,
-                ['shell', id] as shellAddress,
-                terminationTypes.ERROR,
-                'Extension initialization'
-            ]);
-        }
     }
 }

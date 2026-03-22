@@ -50,11 +50,12 @@ export const serialBoards = [
 
 
 
-//Boards using WebUSB Api, no flasher
+//Boards using WebUSB Api, append standard without flasher
 // export const usbBoards = [
 //     'Standard USB Board',
+//     ...usbFlasherGroup1
 // ];
 
 
-
+//All supported Boards that are displayed when adding a device
 export const supportedBoards = [...serialBoards/*, ...usbBoards*/].sort();

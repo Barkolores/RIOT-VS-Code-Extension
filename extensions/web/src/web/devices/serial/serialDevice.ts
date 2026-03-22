@@ -5,7 +5,6 @@ export class SerialDevice extends WebDevice {
 
     private _reader?: ReadableStreamDefaultReader<Uint8Array<ArrayBufferLike>>;
     private _readableStreamClosed?: Promise<void>;
-    private readonly _encoder = new TextEncoder();
 
     constructor(
         label: string,
@@ -42,7 +41,7 @@ export class SerialDevice extends WebDevice {
         this._webPort.close().then(() => {
             console.log('Connection to ' + this.label + ' closed');
             return true;
-        });
+        }).catch(() => {});
     }
 
     protected async read(): Promise<void> {

@@ -5,10 +5,10 @@ import {DeviceManager} from "./devices/deviceManager";
 import {WebSocketManager} from "./websocket/webSocketManager";
 import {FolderTreeItem} from "shared/ui/treeItems/folderTreeItem";
 import {supportedBoards} from "./devices/supportedBoards";
-import {clientAddress, messageTypes, shellAddress, terminationTypes} from "./websocket/api/additionalTypes";
 
 export function activate(context: vscode.ExtensionContext) {
 
+    //navigator serial not available in non secure context
     if (!isSecureContext) {
         vscode.window.showErrorMessage('Context is not secure. Aborting RIOT web extension.');
         return;
@@ -34,20 +34,19 @@ export function activate(context: vscode.ExtensionContext) {
     const webSocketManager = new WebSocketManager(deviceManager, websocketPort, context.extensionUri);
     const busyDevices = new Set<string>();
 
+    //bypass for eventListeners ()
     let executeEventListeners = true;
 
     //Serial Events
-    navigator.serial.addEventListener('connect', async (event) => {
-        console.log('entered connect');
+    //Reconnect Event (when reconnecting already known device) => forget, state can not be serialized
+    navigator.serial.addEventListener('connect', (event) => {
         if (executeEventListeners) {
-            console.log('executed connect');
             (event.target as SerialPort).forget();
         }
     });
+    //Disconnect event => update UI
     navigator.serial.addEventListener('disconnect', (event) => {
-        console.log('entered disconnect');
         if (executeEventListeners) {
-            console.log('executed disconnect');
             deviceManager.handleDisconnectEvent(event.target as SerialPort);
         }
     });
@@ -158,25 +157,17 @@ export function activate(context: vscode.ExtensionContext) {
 
         //cleanUp devices
         vscode.commands.registerCommand('riot-web-extension.device.cleanUp', async () => {
-            console.log('cleanUp');
             await deviceManager.cleanUp();
         }),
 
         //set custom Websocket URL
         vscode.commands.registerCommand('riot-web-extension.websocket.setURL', async () => {
-            while (true) {
-                let newURL = await vscode.window.showInputBox({
-                    title: 'Choose a new URL for the Websocket Connection',
-                    value: webSocketManager.getURL(),
-                });
-                if (!newURL) {
-                    if (await vscode.window.showErrorMessage('No new URL was specified', {modal: true}, 'Retry') === undefined) {
-                        break;
-                    }
-                } else {
-                    webSocketManager.setURL(newURL.trim());
-                    break;
-                }
+            let newURL = await vscode.window.showInputBox({
+                title: 'Choose a new URL for the Websocket Connection',
+                value: webSocketManager.getURL(),
+            });
+            if (newURL) {
+                webSocketManager.setURL(newURL.trim());
             }
         }),
 
@@ -194,13 +185,11 @@ export function activate(context: vscode.ExtensionContext) {
 
         //lock EventListeners
         vscode.commands.registerCommand('riot-web-extension.eventListener.lock', async () => {
-            console.log('lock');
             executeEventListeners = false;
         }),
 
         //unlock EventListeners
         vscode.commands.registerCommand('riot-web-extension.eventListener.unlock', async () => {
-            console.log('unlock');
             executeEventListeners = true;
         })
     );
@@ -216,19 +205,8 @@ export function activate(context: vscode.ExtensionContext) {
         {dispose: webSocketManager.close}
     );
 
-    //Set default terminal name on open
-    vscode.window.onDidOpenTerminal(async (terminal) => {
-        console.log('terminal opened');
-        terminal.show(true);
-        vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', {
-            name: WebDevice._defaultShellLabel
-        });
-        webSocketManager.resetTerminal(terminal);
-    });
-
-    //Terminal Closed Callback
+    //Terminal Closed Callback, cancel device action
     vscode.window.onDidCloseTerminal(async (terminal) => {
-        console.log('terminal closed');
         const processId = await terminal.processId;
         if (processId) {
             deviceManager.handleClosedTerminal(processId);

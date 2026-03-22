@@ -1,5 +1,4 @@
-import {WebDevice} from "./webDevice";
-import {webPort} from "./webDevice";
+import {WebDevice, webPort} from "./webDevice";
 import {SerialDevice} from "./serial/serialDevice";
 import {DeviceProvider} from "shared/ui/deviceProvider";
 import vscode from "vscode";
@@ -18,7 +17,6 @@ import {NrfDevice} from "./serial/nrfDevice";
 
 export class DeviceManager {
     private _devices: WebDevice[] = [];
-    private _randomArray = new Uint32Array(1);
 
     constructor(
         private _devicesProvider: DeviceProvider,
@@ -54,7 +52,7 @@ export class DeviceManager {
         let newDeviceId: string | undefined = undefined;
         while (true) {
             //get new Unique Id
-            newDeviceId = crypto.getRandomValues(this._randomArray)[0].toString();
+            newDeviceId = crypto.randomUUID();
             if (!(newDeviceId in this._devices)) {
                 break;
             }
@@ -81,7 +79,7 @@ export class DeviceManager {
                     newDevice = new EspDevice(newLabel, newDeviceId, board, serialPort, this._messagePort);
                     break;
                 case nrfBoards.includes(board):
-                    //nrf boards with flasher pc-nrf-dfu-js
+                    //nrf boards with flasher rnode flasher
                     newDevice = new NrfDevice(newLabel, newDeviceId, board, serialPort, this._messagePort);
                     if (!await (newDevice as NrfDevice).init()) {
                         return;
@@ -175,7 +173,6 @@ export class DeviceManager {
     }
 
     cancelAllDeviceActions() {
-        console.log('Cancelling all device actions...');
         for (const device of Object.values(this._devices)) {
             device.cancel();
         }
@@ -185,17 +182,16 @@ export class DeviceManager {
     async cleanUp() {
         for (const port of await navigator.serial.getPorts()) {
             if (this.includesPort(port) === undefined) {
-                console.log('not included');
                 await port.forget();
             }
             if (!port.connected) {
-                console.log('not connected');
                 this.handleDisconnectEvent(port);
                 await port.forget();
             }
         }
     }
 
+    //finds the device that is locked to the terminal and cancels all actions
     handleClosedTerminal(processId: number) {
         for (const device of this._devices) {
             if (processId === device.getShellId()) {

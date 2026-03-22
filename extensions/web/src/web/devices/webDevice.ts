@@ -102,22 +102,26 @@ export abstract class WebDevice extends DeviceTreeItem {
     };
 
     protected sendLog(message: string) {
-        this.sendMessage([
-            messageTypes.LOG,
-            this._deviceAddress,
-            this._currentlyLockedTo,
-            logTypes.LOG,
-            message
-        ] as outboundDeviceMessage);
+        if (!this._logBypass) {
+            this.sendMessage([
+                messageTypes.LOG,
+                this._deviceAddress,
+                this._currentlyLockedTo,
+                logTypes.LOG,
+                message
+            ] as outboundDeviceMessage);
+        }
     }
 
     protected sendIO(message: Uint8Array<ArrayBufferLike>) {
-        this.sendMessage([
-            messageTypes.IO,
-            this._deviceAddress,
-            this._currentlyLockedTo,
-            message
-        ] as outboundDeviceMessage);
+        if (!this._logBypass) {
+            this.sendMessage([
+                messageTypes.IO,
+                this._deviceAddress,
+                this._currentlyLockedTo,
+                message
+            ] as outboundDeviceMessage);
+        }
     }
 
     private unlockDevice() {
@@ -128,6 +132,7 @@ export abstract class WebDevice extends DeviceTreeItem {
                 this._currentlyLockedTo = undefined;
             });
         }
+        this._logBypass = false;
         vscode.commands.executeCommand('riot-web-extension.context.device.remove', this.contextValue);
     }
 
@@ -327,9 +332,10 @@ export abstract class WebDevice extends DeviceTreeItem {
 
     async renameTerminal(newName: string, focus: boolean = false) {
         if (this._currentlyLockedTo) {
+            const id = this._currentlyLockedTo[1];
             const activeTerminal = vscode.window.activeTerminal;
             for (const terminal of vscode.window.terminals) {
-                if (this._currentlyLockedTo[1] === await terminal.processId) {
+                if (id === await terminal.processId) {
                     const isDifferentTerminal = activeTerminal !== terminal;
                     if (isDifferentTerminal) {
                         terminal.show(true);
