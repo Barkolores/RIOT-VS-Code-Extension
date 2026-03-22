@@ -173,7 +173,9 @@ export abstract class WebDevice extends DeviceTreeItem {
         if (this._previouslyLockedTo) {
             this._currentlyLockedTo = this._previouslyLockedTo;
         } else {
-            await vscode.commands.executeCommand('workbench.action.terminal.new');
+            await vscode.commands.executeCommand('workbench.action.terminal.newWithCwd', {
+                cwd: this._activeProject
+            });
             const processId = await vscode.window.activeTerminal?.processId;
             if (!processId) {
                 vscode.window.showErrorMessage('ProcessId was undefined, cannot connect to Shell');
