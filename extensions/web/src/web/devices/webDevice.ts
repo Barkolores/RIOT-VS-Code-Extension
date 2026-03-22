@@ -30,7 +30,7 @@ export abstract class WebDevice extends DeviceTreeItem {
     protected _logMessages: string = '';
     protected _logMessagesTimer: NodeJS.Timeout | undefined = undefined;
     protected _logBypass: boolean = false;
-    static readonly _defaultShellLabel: string = 'Shell';
+    static readonly _defaultShellLabel: string = 'shell';
 
     protected constructor(
         label: string,

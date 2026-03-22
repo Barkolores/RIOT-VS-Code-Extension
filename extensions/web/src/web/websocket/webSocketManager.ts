@@ -31,7 +31,7 @@ export class WebSocketManager {
             return;
         }
         let url = '://' + host + ':' + this._port;
-        url = 'ws' + (isSecureContext ? 's' : '') + url;
+        this._url = 'ws' + (isSecureContext ? 's' : '') + url;
     }
 
     public isReady(): boolean {
