@@ -65,6 +65,9 @@ function getWebBuildOptions() {
 			'src/web/test/suite/extensionTests.ts',
 		],
         bundle: true,
+		alias: {
+			path: "path-browserify",
+		},
 		format: 'cjs',
 		minify: production,
 		sourcemap: !production,

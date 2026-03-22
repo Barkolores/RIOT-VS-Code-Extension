@@ -2,8 +2,8 @@
  * Generated type guards for "inboundWSMessage.ts".
  * WARNING: Do not manually change this file.
  */
-import { messageTypes, addressTypes, terminationTypes, commandTypes } from "../additionalTypes";
-import { inboundWSMessage } from "./inboundWSMessage";
+import {addressTypes, commandTypes, messageTypes, terminationTypes} from "../additionalTypes";
+import {inboundWSMessage} from "./inboundWSMessage";
 
 export function isValidInboundMessage(obj: unknown): obj is inboundWSMessage {
     const typedObj = obj as inboundWSMessage

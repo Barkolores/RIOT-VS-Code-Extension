@@ -7,11 +7,12 @@ export class FolderTreeItem extends vscode.TreeItem {
     constructor(
         protected readonly _device: DeviceTreeItem,
     ) {
-        let label = 'None';
+        let label: string;
         let tooltipText: string | undefined = undefined;
 
         if ('getActiveProject' in _device && typeof(_device.getActiveProject) === 'function') {
-            label = 'Active Project: ' + (_device.getActiveProject() as vscode.WorkspaceFolder).name;
+            const activeProject = _device.getActiveProject() as vscode.WorkspaceFolder | undefined;
+            label = 'Active Project: ' + (activeProject ? activeProject.name : 'None');
         } else {
             const desktopDevice = _device as DesktopDeviceTreeItem;
             const appUri = desktopDevice.getDevice().appPath;
