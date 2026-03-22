@@ -34,11 +34,11 @@ export class DeviceProvider implements vscode.TreeDataProvider<vscode.TreeItem> 
                     new FolderTreeItem(device),
                     new BoardTreeItem(device)
                 )
-                // if (device.getPort() !== undefined) {
+                if (device.getPort() !== undefined) {
                 items.push(
                     new PortTreeItem(device)
                 )
-                // }
+                }
                 if (device.getDescription() !== undefined) {
                     items.push(
                         new DescriptionHeaderTreeItem(device)

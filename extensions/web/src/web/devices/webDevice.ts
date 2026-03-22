@@ -278,10 +278,6 @@ export abstract class WebDevice extends DeviceTreeItem {
                     this.unlockDevice();
                     return;
                 }
-                if (this._currentlyLockedTo === undefined) {
-                    vscode.commands.executeCommand('riot-web-extension.context.device.add', this.contextValue);
-                    this._currentlyLockedTo = message[1];
-                }
                 await this.executeCommand(message[3]);
                 break;
             case messageTypes.IO:
@@ -295,9 +291,9 @@ export abstract class WebDevice extends DeviceTreeItem {
             case commandTypes.FLASH:
                 if (!implementsFlashInterface(this)) {
                     if (this._currentlyLockedTo) {
-                        this.sendRST(this._currentlyLockedTo, terminationTypes.ERROR, `Flashing ${this._board} is not supported in the Web.`);
+                        this.sendRST(this._currentlyLockedTo, terminationTypes.ERROR, `Flashing ${this._board ? this._board : 'an unknown board'} is not supported in the Web.`);
                     }
-                    vscode.window.showErrorMessage(`Flashing ${this._board} is not supported in the Web.`, {modal: true});
+                    vscode.window.showErrorMessage(`Flashing ${this._board ? this._board : 'an unknown board'} is not supported in the Web.`, {modal: true});
                     this.unlockDevice();
                     return;
                 }
@@ -320,6 +316,8 @@ export abstract class WebDevice extends DeviceTreeItem {
                         this._flashing = false;
                         this.unlockDevice();
                     });
+                } else {
+                    this.unlockDevice();
                 }
                 break;
             case commandTypes.TERM:
@@ -328,6 +326,8 @@ export abstract class WebDevice extends DeviceTreeItem {
                     this.term({
                         baudRate: command[2]
                     } as SerialOptions);
+                } else {
+                    this.unlockDevice();
                 }
                 break;
         }
@@ -351,7 +351,7 @@ export abstract class WebDevice extends DeviceTreeItem {
                     if (isDifferentTerminal) {
                         terminal.show(true);
                     }
-                    vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', {
+                    await vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', {
                         name: newName
                     });
                     if (!focus && isDifferentTerminal) {

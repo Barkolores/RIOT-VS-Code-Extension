@@ -106,11 +106,9 @@ export class DeviceManager {
     private includesPort(port: webPort): number | undefined {
         for (let i = 0; i < this._devices.length; i++) {
             if (this._devices[i].comparePort(port)) {
-                console.log('found port');
                 return i;
             }
         }
-        console.log('did not find port');
         return undefined;
     }
 
