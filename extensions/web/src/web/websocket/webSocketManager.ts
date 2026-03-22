@@ -71,7 +71,6 @@ export class WebSocketManager {
     }
 
     private onOpen() {
-        vscode.window.showInformationMessage('Websocket connected.');
         console.log("Websocket connected.");
         this.startApiConnectInterval();
     }
@@ -117,10 +116,11 @@ export class WebSocketManager {
             case messageTypes.CONNECT_ACK:
                 this._apiConnected = true;
                 vscode.commands.executeCommand('setContext', 'riot-web-extension.context.connectionEstablished', true);
-                vscode.window.showInformationMessage('Connection fully established.');
                 console.log('Connection fully established.');
                 this.clearApiConnectInterval();
-                this.terminalCleanup();
+                for (const terminal of vscode.window.terminals) {
+                    this.resetTerminal(terminal);
+                }
                 break;
             case messageTypes.DISCONNECT:
                 this.resetApi();
@@ -188,19 +188,16 @@ export class WebSocketManager {
         vscode.window.showInformationMessage('URL has been changed. Reestablishing Websocket Connection');
     }
 
-    async terminalCleanup() {
-        //Terminal Cleanup on Startup
-        for (const terminal of vscode.window.terminals) {
-            const id = await terminal.processId;
-            if (id) {
-                this.sendMessage([
-                    messageTypes.RST,
-                    ['client', 0] as clientAddress,
-                    ['shell', id] as shellAddress,
-                    terminationTypes.ERROR,
-                    'Extension initialization'
-                ]);
-            }
+    async resetTerminal(terminal: vscode.Terminal) {
+        const id = await terminal.processId;
+        if (id) {
+            this.sendMessage([
+                messageTypes.RST,
+                ['client', 0] as clientAddress,
+                ['shell', id] as shellAddress,
+                terminationTypes.ERROR,
+                'Extension initialization'
+            ]);
         }
     }
 }

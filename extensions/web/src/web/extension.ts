@@ -5,6 +5,7 @@ import {DeviceManager} from "./devices/deviceManager";
 import {WebSocketManager} from "./websocket/webSocketManager";
 import {FolderTreeItem} from "shared/ui/treeItems/folderTreeItem";
 import {supportedBoards} from "./devices/supportedBoards";
+import {clientAddress, messageTypes, shellAddress, terminationTypes} from "./websocket/api/additionalTypes";
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -19,7 +20,6 @@ export function activate(context: vscode.ExtensionContext) {
         return;
     }
 
-    console.clear();
     console.log("RIOT web extension activated");
 
     //initialize Context
@@ -223,6 +223,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', {
             name: WebDevice._defaultShellLabel
         });
+        webSocketManager.resetTerminal(terminal);
     });
 
     //Terminal Closed Callback
