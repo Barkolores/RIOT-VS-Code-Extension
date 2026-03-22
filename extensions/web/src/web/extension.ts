@@ -211,6 +211,22 @@ export function activate(context: vscode.ExtensionContext) {
         {dispose: webSocketManager.close}
     );
 
+    //Set default terminal name on open
+    vscode.window.onDidOpenTerminal(async (terminal) => {
+        console.log('terminal opened');
+        const activeTerminal = vscode.window.activeTerminal;
+        const isDifferentTerminal = activeTerminal !== terminal;
+        if (isDifferentTerminal) {
+            terminal.show(true);
+        }
+        vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', {
+            name: WebDevice._defaultShellLabel
+        });
+        if (isDifferentTerminal) {
+            activeTerminal?.show(true);
+        }
+    });
+
     //Terminal Closed Callback
     vscode.window.onDidCloseTerminal(async (terminal) => {
         console.log('terminal closed');
