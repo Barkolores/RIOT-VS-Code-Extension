@@ -107,7 +107,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         //select project
         vscode.commands.registerCommand('riot-web-extension.device.selectProject', async (folderItem: FolderTreeItem) => {
-            const device = folderItem.getParentDevice();
+            const device = folderItem.getParentDevice() as WebDevice;
             const folders = vscode.workspace.workspaceFolders;
             if (!folders) {
                 vscode.window.showWarningMessage("No open projects.");

@@ -22,6 +22,7 @@ enum deviceAction {
 }
 
 export abstract class WebDevice extends DeviceTreeItem {
+    protected _activeProject?: vscode.WorkspaceFolder;
     protected _deviceAddress: deviceAddress;
     protected _currentlyLockedTo: shellAddress | undefined = undefined;
     protected _previouslyLockedTo: shellAddress | undefined = undefined;
@@ -39,6 +40,14 @@ export abstract class WebDevice extends DeviceTreeItem {
     ) {
         super(label, contextValue, board);
         this._deviceAddress = [addressTypes.DEVICE, label];
+    }
+
+    getActiveProject(): vscode.WorkspaceFolder | undefined {
+        return this._activeProject;
+    }
+
+    changeActiveProject(newProject: vscode.WorkspaceFolder) {
+        this._activeProject = newProject;
     }
 
     changeLabel(newLabel: string) {
