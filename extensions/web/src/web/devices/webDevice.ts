@@ -139,7 +139,7 @@ export abstract class WebDevice extends DeviceTreeItem {
         if (this._currentlyLockedTo) {
             this._previouslyLockedTo = this._currentlyLockedTo;
             this._currentlyLockedTo = undefined;
-            this.renameShell(WebDevice._defaultShellLabel);
+            this.renameTerminal(WebDevice._defaultShellLabel);
         }
         vscode.commands.executeCommand('riot-web-extension.context.device.remove', this.contextValue);
         this.stopLogBundling();
@@ -191,7 +191,7 @@ export abstract class WebDevice extends DeviceTreeItem {
             }
             newInstance = true;
             this._currentlyLockedTo = [addressTypes.SHELL, processId];
-            await this.renameShell(WebDevice._defaultShellLabel);
+            await this.renameTerminal(WebDevice._defaultShellLabel);
         }
         let commandRequest = undefined;
         switch (this._requestedAction) {
@@ -251,14 +251,8 @@ export abstract class WebDevice extends DeviceTreeItem {
         switch (message[0]) {
             case messageTypes.ACK:
                 this._requestedAction = undefined;
-                //wait for further instructions from shell
-                for (const terminal of vscode.window.terminals) {
-                    const processId = await terminal.processId;
-                    if (processId === message[1][1]) {
-                        terminal.show();
-                        break;
-                    }
-                }
+                //rename and focus shell, wait for further instructions from shell
+                await this.renameTerminal(this.label + ' | Busy', true);
                 break;
             case messageTypes.RST:
                 if (this._requestedAction !== undefined) {
@@ -309,7 +303,7 @@ export abstract class WebDevice extends DeviceTreeItem {
                 if (await this.checkBoard(command[1])) {
                     this.startLogBundling();
                     this._flashing = true;
-                    await this.renameShell(this.label + ' | Flash');
+                    await this.renameTerminal(this.label + ' | Flash');
                     await this.flash(command[2], command[3]).then(() => {
                         if (this._currentlyLockedTo) {
                             this.sendRST(this._currentlyLockedTo, terminationTypes.SUCCESS, `Flash complete.`);
@@ -330,7 +324,7 @@ export abstract class WebDevice extends DeviceTreeItem {
                 break;
             case commandTypes.TERM:
                 if (await this.checkBoard(command[1])) {
-                    await this.renameShell(this.label + ' | Term');
+                    await this.renameTerminal(this.label + ' | Term');
                     this.term({
                         baudRate: command[2]
                     } as SerialOptions);
@@ -347,19 +341,21 @@ export abstract class WebDevice extends DeviceTreeItem {
         }
     }
 
-    async renameShell(newName: string) {
+    async renameTerminal(newName: string, focus: boolean = false) {
         if (this._currentlyLockedTo) {
-            // const activeTerminal = vscode.window.activeTerminal;
+            const activeTerminal = vscode.window.activeTerminal;
             for (const terminal of vscode.window.terminals) {
                 if (this._currentlyLockedTo[1] === await terminal.processId) {
-                    // const isDifferentTerminal = activeTerminal !== terminal;
-                    // if (isDifferentTerminal) {
-                    //     terminal.show(true);
-                    // }
-                    vscode.commands.executeCommand('workbench.action.terminal.rename', newName);
-                    // if (isDifferentTerminal) {
-                    //     activeTerminal?.show(true);
-                    // }
+                    const isDifferentTerminal = activeTerminal !== terminal;
+                    if (isDifferentTerminal) {
+                        terminal.show(true);
+                    }
+                    vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', {
+                        name: newName
+                    });
+                    if (!focus && isDifferentTerminal) {
+                        activeTerminal?.show(true);
+                    }
                     break;
                 }
             }
