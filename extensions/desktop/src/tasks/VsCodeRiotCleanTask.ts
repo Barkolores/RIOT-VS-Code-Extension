@@ -1,16 +1,17 @@
 import { DeviceModel } from '../treeView/deviceModel';
 import { VsCodeAbstractRiotDeviceTask } from "./VsCodeAbstractRiotDeviceTask";
 
-export class VsCodeRiotFlashTask extends VsCodeAbstractRiotDeviceTask {
+
+export class VsCodeRiotCleanTask extends VsCodeAbstractRiotDeviceTask {
 
     constructor (
         applicationPath: string,
         device : DeviceModel
     ) {
-        super(applicationPath, device, "RIOT Flash", "flash");
+        super(applicationPath, device, "RIOT Clean", "clean");
     }
 
     protected getStringMakeCommand(): string {
-        return 'make flash';
+        return 'make clean';
     }
 }

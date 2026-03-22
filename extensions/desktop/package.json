@@ -15,9 +15,41 @@
   "activationEvents": [
     "*"
   ],
+  "taskDefinitions": [
+    {
+        "type": "riot-launcher",
+        "properties": {
+            "board": {
+                "type": "string"
+            },
+            "mode": {
+                "type": "string",
+                "description": "debug, term, flash, compile-commands"
+            }
+        }
+    }
+  ],
   "main": "out/RIOT-VS-Code-Extension/extensions/desktop/src/extension.js",
   "contributes": {
     "commands": [
+      {
+        "command": "riotFileView.newFile",
+        "title": "New File..."
+      },
+      {
+        "command": "riotFileView.deleteFile",
+        "title": "Delete File"
+      },
+      {
+        "command": "riot-launcher.riotClean",
+        "title": "RIOT Clean",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "riot-launcher.createProject",
+        "title": "RIOT Create Project",
+        "icon": "$(file-code)"
+      },
       {
         "command": "riot-launcher.riotFlash",
         "title": "RIOT Flash",
@@ -52,12 +84,12 @@
       {
         "command": "riot-launcher.changePortDevice",
         "title": "Change Port",
-        "icon": "$(gear)"
+        "icon": "$(plug)"
       },
       {
         "command": "riot-launcher.changeBoardDevice",
         "title": "Change Board",
-        "icon": "$(circuit)"
+        "icon": "$(circuit-board)"
       },
       {
         "command": "riot-launcher.forgetDevice",
@@ -72,6 +104,22 @@
       {
         "command": "riot-launcher.setActive",
         "title": "Set Active"
+      },
+      {
+        "command": "riotFileView.copyRelativePath",
+        "title": "Copy Relative Path"
+      },
+      {
+        "command": "riotFileView.copyFile",
+        "title": "Copy"
+      },
+      {
+        "command": "riotFileView.cutFile",
+        "title": "Cut"
+      },
+      {
+        "command": "riotFileView.pasteFile",
+        "title": "Paste"
       }
     ],
     "configuration": {
@@ -98,6 +146,14 @@
         {
           "id": "riotView",
           "name": "Desktop Extension"
+        },
+        {
+          "id": "riotFileView",
+          "name": "Application Files"
+        },
+        {
+          "id": "riotBaseFileView",
+          "name": "Active RIOT Base Path"
         }
       ]
     },
@@ -107,6 +163,11 @@
           "command": "riot-launcher.addDevice",
           "when": "view == riotView",
           "group": "navigation"
+        },
+        {
+        "command": "riot-launcher.createProject",
+        "when": "view == riotFileView",
+        "group": "navigation"
         }
       ],
       "view/item/context": [
@@ -121,8 +182,28 @@
           "group": "inline"
         },
         {
+          "command": "riot-launcher.riotClean",
+          "when": "view == riotView && viewItem == riot-device",
+          "group": "inline"
+        },
+        {
           "command": "riot-launcher.riotTerm",
           "when": "view == riotView && viewItem == riot-device",
+          "group": "inline"
+        },
+        {
+          "command": "riot-launcher.changeBoardDevice",
+          "when": "view == riotView && viewItem == boardItem",
+          "group": "inline"
+        },
+        {
+          "command": "riot-launcher.changeFolderDevice",
+          "when": "view == riotView && viewItem == folderItem",
+          "group": "inline"
+        },
+        {
+          "command": "riot-launcher.changePortDevice",
+          "when": "view == riotView && viewItem == portItem",
           "group": "inline"
         },
         {
@@ -139,7 +220,38 @@
           "command": "riot-launcher.setActive",
           "when": "view == riotView && viewItem == riot-device",
           "group": "1_modification"
+        },
+        {
+          "command": "riotFileView.newFile",
+          "when": "view == riotFileView && viewItem == folder",
+          "group": "1_modification"
+        },
+        {
+          "command": "riotFileView.deleteFile",
+          "when": "view == riotFileView && (viewItem == file || viewItem == folder)",
+          "group": "1_modification"
+        },
+        {
+          "command": "riotFileView.cutFile",
+          "when": "view == riotFileView && (viewItem == file || viewItem == folder)",
+          "group": "2_clipboard@1"
+        },
+        {
+          "command": "riotFileView.copyFile",
+          "when": "view == riotFileView && (viewItem == file || viewItem == folder)",
+          "group": "2_clipboard@2"
+        },
+        {
+          "command": "riotFileView.pasteFile",
+          "when": "view == riotFileView && (viewItem == file || viewItem == folder)",
+          "group": "2_clipboard@3"
+        },
+        {
+          "command": "riotFileView.copyRelativePath",
+          "when": "view == riotFileView && (viewItem == file || viewItem == folder)",
+          "group": "3_compare@1"
         }
+
       ]
     }
   },
@@ -165,5 +277,8 @@
   },
   "dependencies": {
     "serialport": "^13.0.0"
-  }
+  },
+  "extensionDependencies": [
+    "ms-vscode.cpptools"
+  ]
 }

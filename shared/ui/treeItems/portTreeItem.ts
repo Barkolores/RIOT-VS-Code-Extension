@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
 import {DeviceTreeItem} from "./deviceTreeItem";
+import { DeviceModel } from '../../../extensions/desktop/src/treeView/deviceModel';
 
 export class PortTreeItem extends vscode.TreeItem {
     constructor(
-        protected readonly _device: DeviceTreeItem,
+        protected readonly _device: DeviceTreeItem
     ) {
         const port = _device.getPort();
         super('Selected Port: ' + port, vscode.TreeItemCollapsibleState.None);
@@ -13,4 +14,5 @@ export class PortTreeItem extends vscode.TreeItem {
     getParentDevice(): DeviceTreeItem {
         return this._device;
     }
+
 }

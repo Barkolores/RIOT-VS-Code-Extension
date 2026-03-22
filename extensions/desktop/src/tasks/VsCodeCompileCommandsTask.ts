@@ -1,4 +1,4 @@
-import { DeviceModel } from "../boards/device";
+import { DeviceModel } from '../treeView/deviceModel';
 import { VsCodeAbstractRiotDeviceTask } from "./VsCodeAbstractRiotDeviceTask";
 
 export class VsCodeCompileCommandsTask extends VsCodeAbstractRiotDeviceTask {
@@ -7,7 +7,7 @@ export class VsCodeCompileCommandsTask extends VsCodeAbstractRiotDeviceTask {
         applicationPath: string,
         device : DeviceModel
     ) {
-        super(applicationPath, device, "RIOT Compile Commands");
+        super(applicationPath, device, "RIOT Compile Commands", "compile-commands");
     }
 
     protected getStringMakeCommand(): string {

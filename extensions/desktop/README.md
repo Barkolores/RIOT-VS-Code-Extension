@@ -2,7 +2,7 @@
 
 This extension aims to facilitate your RIOT-OS workflow by integrating essential make commands directly into the VS Code UI.
 
-**Note**: This is currently a beta version. We appreciate your feedbuck to help us improve the extension before the final release in late February/early March.
+**Note**: This is currently a beta version. We appreciate your feedbuck to help us improve the extension before the final release in late February/early March. Additionally, some new UI changes have been staged that diverge from the GIFs down below. Regardless, there have been no changes in the usage of the features themselves.
 
 ## Features
 

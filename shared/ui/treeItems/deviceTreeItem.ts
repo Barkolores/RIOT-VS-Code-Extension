@@ -3,6 +3,7 @@ import vscode from "vscode";
 export abstract class DeviceTreeItem extends vscode.TreeItem {
 
     protected static readonly _defaultBoard: string = 'native';
+
     protected _description?: string[];
 
     protected constructor(
@@ -33,4 +34,5 @@ export abstract class DeviceTreeItem extends vscode.TreeItem {
     changePort(newPort: string) {
         this._port = newPort;
     }
+
 }

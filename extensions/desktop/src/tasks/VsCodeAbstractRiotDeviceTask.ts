@@ -1,24 +1,25 @@
 import vscode from "vscode";
 import { VsCodeAbstractRiotTask } from "./VsCodeAbstractRiotTask";
-import { DeviceModel } from "../boards/device";
+import { DeviceModel } from '../treeView/deviceModel';
 
 export abstract class VsCodeAbstractRiotDeviceTask extends VsCodeAbstractRiotTask{
 
     constructor(
         applicationPath: string,
         device: DeviceModel,
+        taskTitle : string,
         taskName : string
     ) {
-        super(applicationPath, device, taskName);
+        super(applicationPath, device, taskTitle, taskName);
     }
 
     protected getStringShellCommand(): string {
         const cDir = `cd ${this.applicationPath}`;
         const makeCommand = this.getStringMakeCommand();
                 var shellCommand = 
-            `cd ${this.applicationPath} && ${makeCommand} BOARD=${this.device.getBoardName() ?? 'native64'}`;
-        if(this.device.getPortPath()) {
-            shellCommand.concat(`PORT=${this.device.getPortPath ?? ''}`);
+            `cd ${this.applicationPath} && ${makeCommand} BOARD=${this.device.board ?? 'native64'}`;
+        if(this.device.portPath) {
+            shellCommand += ` PORT=${this.device.portPath}`;
         }
         return shellCommand;
     }

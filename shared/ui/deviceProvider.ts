@@ -5,6 +5,8 @@ import {PortTreeItem} from "./treeItems/portTreeItem";
 import {BoardTreeItem} from "./treeItems/boardTreeItem";
 import {DescriptionTreeItem} from "./treeItems/descriptionTreeItem";
 import {DescriptionHeaderTreeItem} from "./treeItems/descriptionHeaderTreeItem";
+import { DeviceModel } from '../../extensions/desktop/src/treeView/deviceModel';
+import { DesktopDeviceTreeItem } from '../../extensions/desktop/src/treeView/uiDevice';
 
 export class DeviceProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
     protected _devices : DeviceTreeItem[];
@@ -32,13 +34,13 @@ export class DeviceProvider implements vscode.TreeDataProvider<vscode.TreeItem> 
                 const device = element as DeviceTreeItem;
                 items.push(
                     new FolderTreeItem(device),
-                    new BoardTreeItem(device),
+                    new BoardTreeItem(device)
                 )
-                if (device.getPort() !== undefined) {
-                    items.push(
-                        new PortTreeItem(device)
-                    )
-                }
+                // if (device.getPort() !== undefined) {
+                items.push(
+                    new PortTreeItem(device)
+                )
+                // }
                 if (device.getDescription() !== undefined) {
                     items.push(
                         new DescriptionHeaderTreeItem(device)
@@ -59,6 +61,7 @@ export class DeviceProvider implements vscode.TreeDataProvider<vscode.TreeItem> 
         }
     }
 
+
     refresh(): void {
         this.onDidChangeTreeDataEventEmitter.fire(undefined);
     }
@@ -66,4 +69,16 @@ export class DeviceProvider implements vscode.TreeDataProvider<vscode.TreeItem> 
     setDevices(devices: DeviceTreeItem[]): void {
         this._devices = devices;
     }
+
+    public addDevice (device : DeviceTreeItem) : void {
+        this._devices.push(device);
+        this.refresh();
+    }
+
+    public removeDevice (device : DeviceTreeItem) : void {
+        this._devices = this._devices.filter(d => d !== device);
+        this.refresh();
+    }
+
+
 }

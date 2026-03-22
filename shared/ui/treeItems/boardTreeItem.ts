@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import {DeviceTreeItem} from "./deviceTreeItem";
+import { DeviceModel } from '../../../extensions/desktop/src/treeView/deviceModel';
 
 export class BoardTreeItem extends vscode.TreeItem {
     constructor(
@@ -13,4 +14,5 @@ export class BoardTreeItem extends vscode.TreeItem {
     getParentDevice(): DeviceTreeItem {
         return this._device;
     }
+
 }
