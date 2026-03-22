@@ -31,15 +31,7 @@ export class WebSocketManager {
             return;
         }
         let url = '://' + host + ':' + this._port;
-        switch (extensionUri.scheme) {
-            case 'https':
-                url = 'wss' + url;
-                break;
-            default:
-                url = 'ws' + url;
-                break;
-        }
-        this._url = url;
+        url = 'ws' + (isSecureContext ? 's' : '') + url;
     }
 
     public isReady(): boolean {

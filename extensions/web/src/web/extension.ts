@@ -214,10 +214,7 @@ export function activate(context: vscode.ExtensionContext) {
     //Set default terminal name on open
     vscode.window.onDidOpenTerminal(async (terminal) => {
         console.log('terminal opened');
-        terminal.show(true);
-        vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', {
-            name: WebDevice._defaultShellLabel
-        });
+        setDefaultTerminalName(terminal);
     });
 
     //Terminal Closed Callback
@@ -229,9 +226,26 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    //sets default Terminal name on startup
+    const activeTerminal = vscode.window.activeTerminal;
+    for (const terminal of vscode.window.terminals) {
+        setDefaultTerminalName(terminal);
+    }
+    activeTerminal?.show(true);
+
 }
 
 
 export function deactivate() {
     console.log('RIOT Web Extension deactivated');
+}
+
+function setDefaultTerminalName(terminal: vscode.Terminal) {
+    if (terminal.name !== 'shell') {
+        return;
+    }
+    terminal.show(true);
+    vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', {
+        name: WebDevice._defaultShellLabel
+    });
 }
