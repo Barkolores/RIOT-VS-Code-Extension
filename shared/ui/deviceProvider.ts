@@ -1,12 +1,10 @@
 import * as vscode from 'vscode';
-import { DeviceTreeItem } from './treeItems/deviceTreeItem';
+import {DeviceTreeItem} from './treeItems/deviceTreeItem';
 import {FolderTreeItem} from "./treeItems/folderTreeItem";
 import {PortTreeItem} from "./treeItems/portTreeItem";
 import {BoardTreeItem} from "./treeItems/boardTreeItem";
 import {DescriptionTreeItem} from "./treeItems/descriptionTreeItem";
 import {DescriptionHeaderTreeItem} from "./treeItems/descriptionHeaderTreeItem";
-import { DeviceModel } from '../../extensions/desktop/src/treeView/deviceModel';
-import { DesktopDeviceTreeItem } from '../../extensions/desktop/src/treeView/uiDevice';
 
 export class DeviceProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
     protected _devices : DeviceTreeItem[];
