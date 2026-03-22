@@ -5,8 +5,11 @@ export class FolderTreeItem extends vscode.TreeItem {
     constructor(
         protected readonly _device: DeviceTreeItem,
     ) {
-        const project = _device.getActiveProject();
-        super('Active Project: ' + (project ? project.name : 'None'), vscode.TreeItemCollapsibleState.None);
+        let name = 'None'
+        if ('getActiveProject' in _device && typeof(_device.getActiveProject) === 'function') {
+            name = (_device.getActiveProject() as vscode.WorkspaceFolder).name
+        }
+        super('Active Project: ' + name, vscode.TreeItemCollapsibleState.None);
         this.contextValue = 'folderItem'
     }
 
