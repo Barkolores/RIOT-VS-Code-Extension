@@ -21,6 +21,7 @@ import { RiotFileTreeProvider } from './treeView/uiFileTreeProvider';
 import { RiotBaseFileTreeProvider } from './treeView/uiBaseFileTreeProvider';
 import { VsCodeRiotCleanTask } from './tasks/VsCodeRiotCleanTask';
 import { DesktopDeviceProvider } from './treeView/uiDesktopDeviceProvider';
+import { VsCodeRiotBuildTask } from './tasks/VsCodeRiotBuildTask';
 
 
 interface ActiveDebugSession {
@@ -235,7 +236,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(vscode.tasks.onDidEndTaskProcess(async (e) => {
 		const taskName = e.execution.task.name.toLowerCase();
-		if(taskName.includes('make all') || taskName.includes('flash')) {
+		if(taskName.includes('build') || taskName.includes('flash')) {
 			const activeDevice = devicesTreeItemProvider.getActiveDevice();
 			if(activeDevice && activeDevice.appPath && activeDevice.board) {
 				try {
@@ -407,8 +408,24 @@ export async function activate(context: vscode.ExtensionContext) {
 		if(!d) { return; }
 		d.flash();
 	});
-
 	context.subscriptions.push(flashDisposable);
+
+	const buildDisposable = vscode.commands.registerCommand('riot-launcher.riotBuild', async (d : DesktopDeviceTreeItem) => {
+		if(!d) { return; }
+		const device = d.getDevice();
+		const appPath = device.appPath;
+		if(!appPath || !device) {
+			vscode.window.showErrorMessage("Application folder or device not properly selected.");
+			return;
+		}
+		const buildTask = new VsCodeRiotBuildTask(appPath.fsPath, device).getVscodeTask();
+		if(!buildTask) {
+			vscode.window.showErrorMessage("Something went wrong creating the Build Task");
+			return;
+		}
+		vscode.tasks.executeTask(buildTask);
+	});
+	context.subscriptions.push(buildDisposable);
 
 	const termDisposable = vscode.commands.registerCommand('riot-launcher.riotTerm', (d : DesktopDeviceTreeItem) => {
 		if(!d) { return; }

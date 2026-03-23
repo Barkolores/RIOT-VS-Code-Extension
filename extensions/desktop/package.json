@@ -74,6 +74,11 @@
         "title": "RIOT Detect Ports"
       },
       {
+        "command": "riot-launcher.riotBuild",
+        "title": "RIOT Build (make all)",
+        "icon": "$(tools)"
+      },
+      {
         "command": "riot-launcher.changeDescriptionDevice",
         "title": "Change Device Description"
       },
@@ -174,12 +179,12 @@
       ],
       "view/item/context": [
         {
-          "command": "riot-launcher.riotFlash",
+          "command": "riot-launcher.riotBuild",
           "when": "view == riotView && viewItem == riot-device",
           "group": "inline"
         },
         {
-          "command": "riot-launcher.riotDebug",
+          "command": "riot-launcher.riotFlash",
           "when": "view == riotView && viewItem == riot-device",
           "group": "inline"
         },
@@ -193,6 +198,12 @@
           "when": "view == riotView && viewItem == riot-device",
           "group": "inline"
         },
+        {
+          "command": "riot-launcher.riotDebug",
+          "when": "view == riotView && viewItem == riot-device",
+          "group": "inline"
+        },
+
         {
           "command": "riot-launcher.changeBoardDevice",
           "when": "view == riotView && viewItem == boardItem",
