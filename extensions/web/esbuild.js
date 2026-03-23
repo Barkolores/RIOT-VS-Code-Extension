@@ -2,6 +2,7 @@ const esbuild = require('esbuild');
 const glob = require('glob');
 const path = require('path');
 const polyfill = require('@esbuild-plugins/node-globals-polyfill');
+const nodeModulesPolyfillPlugin = require("esbuild-plugins-node-modules-polyfill");
 const copy = require('esbuild-plugin-copy').copy;
 
 const production = process.argv.includes('--production');
@@ -65,9 +66,6 @@ function getWebBuildOptions() {
 			'src/web/test/suite/extensionTests.ts',
 		],
         bundle: true,
-		alias: {
-			path: "path-browserify",
-		},
 		format: 'cjs',
 		minify: production,
 		sourcemap: !production,
@@ -94,7 +92,12 @@ function getWebBuildOptions() {
                     to: ['./dist/assets'],
                 },
                 watch: true,
-            })
+            }),
+			nodeModulesPolyfillPlugin.nodeModulesPolyfillPlugin({
+				modules: {
+					path: 'empty'
+				}
+			})
 		],
 	};
 }

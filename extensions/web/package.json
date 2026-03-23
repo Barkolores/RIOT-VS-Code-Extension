@@ -211,6 +211,7 @@
     "assert": "^2.1.0",
     "esbuild": "^0.25.12",
     "esbuild-plugin-copy": "^2.1.1",
+    "esbuild-plugins-node-modules-polyfill": "^1.8.1",
     "eslint": "^9.39.1",
     "mocha": "^11.3.0",
     "npm-run-all": "^4.1.5",
@@ -221,7 +222,6 @@
     "@zip.js/zip.js": "^2.8.23",
     "cbor-x": "^1.6.0",
     "esptool-js": "^0.5.7",
-    "path-browserify": "^1.0.1",
     "shared": "../../shared"
   },
   "overrides": {
