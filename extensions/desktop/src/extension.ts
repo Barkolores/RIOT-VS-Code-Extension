@@ -80,7 +80,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.workspaceState.update(ACTIVE_DEVICE_CACHE_KEY, activeDevice?.toConfig());
 	});
 
-	const riotFileTreeProvider = new RiotFileTreeProvider();
+	const riotFileTreeProvider = new RiotFileTreeProvider(context.extensionUri);
 	const treeView = vscode.window.createTreeView('riotFileView', {
 		treeDataProvider: riotFileTreeProvider
 	});
@@ -874,20 +874,25 @@ organization=${organization}`;
 		}
 		vscode.tasks.executeTask(compileTask);
 		await configureCompiledCommands(riotBasePath.fsPath, appFolderPath.fsPath);
-	
+		if(device.board?.includes('native')) {
+			return;
+		}
 		try {
 			const { stdout } = await execAsync(
 				`make info-debug-variable-RAM_LEN BOARD=${device.board}`,
 				{ cwd: appFolderPath.fsPath }
 			);
 			const ramLen = stdout.toString().trim();
-			let romLen = 'Unknown';
+			const ramLenDec = ramLen.startsWith('0x') ? parseInt(ramLen, 16) : parseInt(ramLen, 10);
+			const finalRam = isNaN(ramLenDec) ? ramLen : ramLenDec.toString();
+			let finalRom = 'Unknown';
 			try {
 				const { stdout: romOut } = await execAsync(
 					`make info-debug-variable-ROM_LEN BOARD=${device.board}`,
 					{ cwd: appFolderPath.fsPath }
 				);
-				romLen = romOut.toString().trim();
+				const romLenDec = romOut.startsWith('0x') ? parseInt(romOut, 16) : parseInt(romOut, 10);
+				finalRom = isNaN(romLenDec) ? romOut : romLenDec.toString();
 			}catch (err) {
 				console.log('Error fetching ROM length info: ', err);
 			}
@@ -896,7 +901,7 @@ organization=${organization}`;
 				desc = [desc as unknown as string];		
 			}
 			desc = desc.filter((d: string) => !d.startsWith('Board Memory:'));
-			desc.push(`Board Memory: ROM ${romLen}B, RAM ${ramLen}B`);
+			desc.push(`Board Memory: ROM ${finalRom}B, RAM ${finalRam}B`);
 			device.description = desc;
 		}catch (err) {
 			console.log('Error fetching RAM length info: ', err);
@@ -910,7 +915,8 @@ organization=${organization}`;
 	}
 
 	async function configureCompiledCommands(riotBasePath : string, appFolderPath : string) {	
-		
+		const vscodeFolderUri = vscode.Uri.file(path.join(appFolderPath, '.vscode'));
+		const cppPropertiesUri = vscode.Uri.joinPath(vscodeFolderUri, 'c_cpp_properties.json');
 		const config = vscode.workspace.getConfiguration('C_Cpp', vscode.Uri.file(appFolderPath));
 
 		const compileCommandsPath = path.join(riotBasePath, 'compile_commands.json');
@@ -923,7 +929,8 @@ organization=${organization}`;
 				compileCommandsPath,
 				vscode.ConfigurationTarget.Workspace
 			);
-			vscode.window.showInformationMessage("Compiled commands adapted");
+			vscode.window.showInformationMessage("C/C++ IntelliSense configured");
+
 		}else {
 			vscode.window.showInformationMessage("Compiled commands already set");
 		}

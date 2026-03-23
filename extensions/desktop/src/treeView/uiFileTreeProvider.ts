@@ -22,8 +22,10 @@ export class RiotFileTreeProvider implements vscode.TreeDataProvider<RiotTreeEle
     private rootUris: vscode.Uri[] = [];
     private activeAppUri?: vscode.Uri; 
     private fileWatcher?: vscode.FileSystemWatcher;
+    private extensionUri: vscode.Uri;
 
-    constructor() {
+    constructor(extensionUri: vscode.Uri) {
+        this.extensionUri = extensionUri;
         this.fileWatcher = vscode.workspace.createFileSystemWatcher('**/*');
         this.fileWatcher.onDidChange(uri => this.refresh());
         this.fileWatcher.onDidCreate(uri => this.refresh());
@@ -49,7 +51,6 @@ export class RiotFileTreeProvider implements vscode.TreeDataProvider<RiotTreeEle
     async getTreeItem(element: RiotTreeElement): Promise<vscode.TreeItem> {
         if (!(element instanceof vscode.Uri)) {
             const isRoot = element.type === 'modulesRoot' || element.type === 'packagesRoot';
-            
             const treeItem = new vscode.TreeItem(
                 element.label,
                 isRoot ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None
@@ -65,13 +66,13 @@ export class RiotFileTreeProvider implements vscode.TreeDataProvider<RiotTreeEle
         }
 
         try {
-            const stat = await vscode.workspace.fs.stat(element);
+            const stat = await vscode.workspace.fs.stat(element as vscode.Uri);
             const isDir = stat.type === vscode.FileType.Directory;
 
             const treeItem = new vscode.TreeItem(element, 
                 isDir ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None
             );
-            treeItem.id = element.fsPath;
+            treeItem.id = (element as vscode.Uri).fsPath;
             if(!isDir) {
                 treeItem.command = {
                     command: 'vscode.open',
@@ -81,6 +82,13 @@ export class RiotFileTreeProvider implements vscode.TreeDataProvider<RiotTreeEle
                 treeItem.contextValue = 'file';
             }else {
                 treeItem.contextValue = 'folder';
+            }
+            if(this.activeAppUri && element.toString() === this.activeAppUri.toString()) {
+                treeItem.iconPath = {
+                    light: vscode.Uri.joinPath(this.extensionUri, 'resources', '../../../shared/assets/icons/riot-logo-R.svg'),
+                    dark: vscode.Uri.joinPath(this.extensionUri, 'resources', '../../../shared/assets/icons/riot-logo-R.svg')
+                };
+                treeItem.tooltip = `${(element as vscode.Uri).fsPath} (Active Application Folder)`;
             }
             return treeItem;
         } catch (err) {           

@@ -99,6 +99,7 @@ export class DesktopDeviceTreeItem extends DeviceTreeItem {
         this.tooltip = `${this._device.board ?? 'Unknown board'} at ${this._device.portPath ?? 'unknown port'}`;
         this.label = `${this._device.title ?? 'New Board'}`;
         this.description = this._isActive ? ' (Active)' : '';
+        this._port = this._device.portPath ? `Port: ${this._device.portPath}` : `Port: None`;
     }
 
     public getDevice(): DeviceModel {

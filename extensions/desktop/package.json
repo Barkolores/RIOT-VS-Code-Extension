@@ -79,7 +79,9 @@
       },
       {
         "command": "riot-launcher.changeFolderDevice",
-        "title": "Change Application Folder"
+        "title": "Change Application Folder",
+        "icon": "$(folder)"
+
       },
       {
         "command": "riot-launcher.changePortDevice",
