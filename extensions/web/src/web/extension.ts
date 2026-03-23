@@ -205,6 +205,14 @@ export function activate(context: vscode.ExtensionContext) {
         {dispose: webSocketManager.close}
     );
 
+    //Terminal Opened Callback, set default name (important when refreshing page)
+    vscode.window.onDidOpenTerminal(async (terminal) => {
+        terminal.show(true);
+        await vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', {
+            name: WebDevice._defaultShellLabel
+        });
+    });
+
     //Terminal Closed Callback, cancel device action
     vscode.window.onDidCloseTerminal(async (terminal) => {
         const processId = await terminal.processId;
