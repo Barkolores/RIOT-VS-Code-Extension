@@ -71,7 +71,7 @@ export class NrfDevice extends SerialDevice implements FlashInterface{
             await vscode.commands.executeCommand("workbench.experimental.requestSerialPort");
             await this.rediscoverPort();
             await vscode.commands.executeCommand('riot-web-extension.eventListener.lock');
-            const result = await vscode.window.showInformationMessage('Device access has been granted. Please reset or reconnect the device.', {modal: true}, 'Done');
+            const result = await vscode.window.showInformationMessage('Device access has been granted. Please reset or reconnect the device and then press done.', {modal: true}, 'Done');
             await vscode.commands.executeCommand('riot-web-extension.eventListener.unlock');
             if ((this._webPort as SerialPort).connected || !result) {
                 vscode.window.showErrorMessage('Device has not been reset. Aborting.');
