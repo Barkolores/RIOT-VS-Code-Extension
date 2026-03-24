@@ -279,6 +279,7 @@ export abstract class WebDevice extends DeviceTreeItem {
                     this.unlockDevice();
                     return;
                 }
+                this._currentlyLockedTo = message[1];
                 await this.executeCommand(message[3]);
                 break;
             case messageTypes.IO:
