@@ -172,7 +172,7 @@ export class DeviceManager {
 
     cancelAllDeviceActions() {
         for (const device of Object.values(this._devices)) {
-            device.cancel();
+            device.cancel(false);
         }
     }
 

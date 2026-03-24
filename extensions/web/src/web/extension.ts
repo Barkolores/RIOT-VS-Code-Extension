@@ -152,7 +152,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         //cancel current Action
         vscode.commands.registerCommand('riot-web-extension.device.cancelAction', (device: WebDevice) => {
-           device.cancel();
+           device.cancel(true);
         }),
 
         //cleanUp devices
