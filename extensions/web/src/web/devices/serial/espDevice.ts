@@ -41,7 +41,10 @@ export class EspDevice extends SerialDevice implements FlashInterface{
         };
         console.log('Starting Flash');
         const espLoader: ESPLoader = new ESPLoader(loaderOptions);
-        await espLoader.main().then(value => console.log(value)).catch(e => console.error(e));
+        await espLoader.main().then(value => console.log(value)).catch(e => {
+            console.error(e);
+            throw e;
+        });
         await espLoader.writeFlash(flashOptions).catch(async (e) => {
             await loaderOptions.transport.disconnect();
             throw e;
