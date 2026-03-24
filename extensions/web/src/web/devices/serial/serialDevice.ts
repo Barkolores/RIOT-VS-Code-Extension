@@ -38,13 +38,10 @@ export class SerialDevice extends WebDevice {
             this._reader = undefined;
             this._readableStreamClosed = undefined;
         }
-        await this._webPort.readable?.cancel();
         this._webPort.close().then(() => {
             console.log('Connection to ' + this.label + ' closed');
             return true;
-        }).catch((e) => {
-            console.log(e);
-        });
+        }).catch(() => {});
     }
 
     protected async read(): Promise<void> {
