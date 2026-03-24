@@ -136,10 +136,9 @@ export abstract class WebDevice extends DeviceTreeItem {
     private unlockDevice() {
         this._requestedAction = undefined;
         if (this._currentlyLockedTo) {
-            this.renameTerminal(WebDevice._defaultShellLabel).finally(() => {
-                this._previouslyLockedTo = this._currentlyLockedTo;
-                this._currentlyLockedTo = undefined;
-            });
+            this.renameTerminal(this._currentlyLockedTo[1], WebDevice._defaultShellLabel);
+            this._previouslyLockedTo = this._currentlyLockedTo;
+            this._currentlyLockedTo = undefined;
         }
         this._logBypass = false;
         vscode.commands.executeCommand('riot-web-extension.context.device.remove', this.contextValue);
@@ -253,13 +252,15 @@ export abstract class WebDevice extends DeviceTreeItem {
             case messageTypes.ACK:
                 this._requestedAction = undefined;
                 //rename and focus shell, wait for further instructions from shell
-                await this.renameTerminal(this.label + ' | Busy', true);
+                if (this._currentlyLockedTo) {
+                    await this.renameTerminal(this._currentlyLockedTo[1], this.label + ' | Busy', true);
+                }
+
                 break;
             case messageTypes.RST:
                 if (this._requestedAction !== undefined) {
                     //shell is busy or gone, find new one
                     this._previouslyLockedTo = undefined;
-                    vscode.window.showInformationMessage(`The last shell Device ${this.label} used isn't available anymore. Spawning new shell.`);
                     this.requestShell();
                     return;
                 }
@@ -299,7 +300,9 @@ export abstract class WebDevice extends DeviceTreeItem {
                 }
                 if (await this.checkBoard(command[1])) {
                     this._flashing = true;
-                    await this.renameTerminal(this.label + ' | Flash');
+                    if (this._currentlyLockedTo) {
+                        await this.renameTerminal(this._currentlyLockedTo[1], this.label + ' | Flash');
+                    }
                     await this.flash(command[2], command[3]).then(() => {
                         if (this._currentlyLockedTo) {
                             this.sendRST(this._currentlyLockedTo, terminationTypes.SUCCESS, `Flash complete.`);
@@ -322,7 +325,9 @@ export abstract class WebDevice extends DeviceTreeItem {
                 break;
             case commandTypes.TERM:
                 if (await this.checkBoard(command[1])) {
-                    await this.renameTerminal(this.label + ' | Term');
+                    if (this._currentlyLockedTo) {
+                        await this.renameTerminal(this._currentlyLockedTo[1], this.label + ' | Term');
+                    }
                     this.term({
                         baudRate: command[2]
                     } as SerialOptions);
@@ -341,24 +346,21 @@ export abstract class WebDevice extends DeviceTreeItem {
         }
     }
 
-    async renameTerminal(newName: string, focus: boolean = false) {
-        if (this._currentlyLockedTo) {
-            const id = this._currentlyLockedTo[1];
-            const activeTerminal = vscode.window.activeTerminal;
-            for (const terminal of vscode.window.terminals) {
-                if (id === await terminal.processId) {
-                    const isDifferentTerminal = activeTerminal !== terminal;
-                    if (isDifferentTerminal) {
-                        terminal.show(true);
-                    }
-                    await vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', {
-                        name: newName
-                    });
-                    if (!focus && isDifferentTerminal) {
-                        activeTerminal?.show(true);
-                    }
-                    break;
+    async renameTerminal(terminalId: number, newName: string, focus: boolean = false) {
+        const activeTerminal = vscode.window.activeTerminal;
+        for (const terminal of vscode.window.terminals) {
+            if (terminalId === await terminal.processId) {
+                const isDifferentTerminal = activeTerminal !== terminal;
+                if (isDifferentTerminal) {
+                    terminal.show(true);
                 }
+                await vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', {
+                    name: newName
+                });
+                if (!focus && isDifferentTerminal) {
+                    activeTerminal?.show(true);
+                }
+                break;
             }
         }
     }
