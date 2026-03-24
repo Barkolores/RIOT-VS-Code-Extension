@@ -317,6 +317,29 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 	}));
 
+	function parseRiotMemory(memStr: string): number{
+		if(!memStr) { return NaN; }
+		memStr = memStr.trim().toUpperCase();
+		let multiplier = 1;
+		if(memStr.endsWith('K')) {
+			multiplier = 1024;
+			memStr = memStr.slice(0, -1);
+		} else if(memStr.endsWith('M')) {
+			multiplier = 1024 * 1024;
+			memStr = memStr.slice(0, -1);
+		}
+		const value = memStr.startsWith('0X') ? parseInt(memStr, 16) : parseInt(memStr, 10);
+		return isNaN(value) ? NaN : value * multiplier;
+
+	}
+
+	function formatBytes(bytes: number | undefined): string {
+		if(bytes === undefined || isNaN(bytes)) { return 'Unknown'; }
+		if(bytes < 1024) { return `${bytes} B`; }
+		if(bytes < 1024 * 1024) { return `${(bytes / 1024).toFixed(2)} KB`; }
+		return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+	}
+
 	async function loadBoards(appPath: vscode.Uri): Promise<string[]> {
 		try {
 			const { stdout } = await execAsync(
@@ -975,15 +998,14 @@ organization=${organization}`;
 				{ cwd: appFolderPath.fsPath }
 			);
 			const ramLen = stdout.toString().trim();
-			const ramLenDec = ramLen.startsWith('0x') ? parseInt(ramLen, 16) : parseInt(ramLen, 10);
-			let romLenDec = ramLen.startsWith('0x') ? parseInt(ramLen, 16) : parseInt(ramLen, 10);
+			const ramLenDec = parseRiotMemory(ramLen);
+			let romLenDec = NaN;
 			try {
 				const { stdout: romOut } = await execAsync(
 					`make info-debug-variable-ROM_LEN BOARD=${device.board}`,
 					{ cwd: appFolderPath.fsPath }
 				);
-				const romOutTrimmed = romOut.toString().trim();
-				romLenDec = romOutTrimmed.startsWith('0x') ? parseInt(romOutTrimmed, 16) : parseInt(romOutTrimmed, 10);
+				romLenDec = parseRiotMemory(romOut.toString().trim());
 			}catch (err) {
 				console.log('Error fetching ROM length info: ', err);
 			}
@@ -1016,8 +1038,8 @@ organization=${organization}`;
 		const mem = device._memoryState;
 
 		const formatMemLine = (type: string, app?: number, board?: number) => {
-			const appStr = app !== undefined ? `${app}B` : 'Unknown';
-			const boardStr = board !== undefined ? `${board}B` : 'Unknown';
+			const appStr = formatBytes(app);
+			const boardStr = formatBytes(board);
 			let bar = '';
 			if(app !== undefined && board !== undefined && board > 0) {
 				bar = createProgressBar(app, board);
