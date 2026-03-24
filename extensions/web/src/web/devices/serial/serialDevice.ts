@@ -41,7 +41,9 @@ export class SerialDevice extends WebDevice {
         this._webPort.close().then(() => {
             console.log('Connection to ' + this.label + ' closed');
             return true;
-        }).catch(() => {});
+        }).catch((e) => {
+            console.log(e);
+        });
     }
 
     protected async read(): Promise<void> {
