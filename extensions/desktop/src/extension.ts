@@ -6,7 +6,7 @@ import { exec } from 'child_process';
 import * as util from 'util';
 import { realpathSync } from 'fs';
 import * as path from 'path';
-import { PortDiscovery } from './boards/PortDiscoverer';
+import * as os from 'os';
 import { DeviceModel, DeviceConfig } from './treeView/deviceModel';
 import { VsCodeCompileCommandsTask } from './tasks/VsCodeCompileCommandsTask';
 import { VsCodeRiotTermTask } from './tasks/VsCodeRiotTermTask';
@@ -15,7 +15,6 @@ import { VsCodeRiotDebugTask } from './tasks/VsCodeRiotDebugTask';
 import { BoardTreeItem } from '../../../shared/ui/treeItems/boardTreeItem';
 import { PortTreeItem } from '../../../shared/ui/treeItems/portTreeItem';
 import { FolderTreeItem } from '../../../shared/ui/treeItems/folderTreeItem';
-import { DeviceProvider } from '../../../shared/ui/deviceProvider';					
 import { SerialPort } from 'serialport';
 import { RiotFileTreeProvider } from './treeView/uiFileTreeProvider';
 import { RiotBaseFileTreeProvider } from './treeView/uiBaseFileTreeProvider';
@@ -37,6 +36,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	const execAsync = util.promisify(exec);
 
 	checkAndInstallRiotgen();
+	checkAndPromptSystemTools();
 
 	const DEVICE_LIST_CACHE_KEY = 'riot-launcher.deviceList';
 	const ACTIVE_DEVICE_CACHE_KEY = 'riot-launcher.activeDevice';
@@ -143,7 +143,6 @@ export async function activate(context: vscode.ExtensionContext) {
 	async function readBundledBoards(): Promise<string[]> {
 		const fileUri = vscode.Uri.joinPath(context.extensionUri, 'resources', 'boards.txt');
 		const text : string = await fs.promises.readFile(fileUri.fsPath, 'utf8');
-		console.log("read boards " + text);
 		return text.split('\n').filter(line => line.length > 0);
 	}
 
@@ -160,7 +159,72 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(addDeviceDisposable);
 
+	async function checkSystemDependency(command: string): Promise<boolean> {
+		try{
+			await execAsync(`${command} --version`);
+			return true;
+		}catch (error) {
+			return false;
+		}
+	}
 	
+	async function checkAndPromptSystemTools() {
+		const platform = os.platform();
+		const gdbCmd = platform === 'linux' ? 'gdb-multiarch' : 'arm-none-eabihf-gdb';
+		const tools = [
+			{ name: 'GDB (ARM)', cmd: gdbCmd, key: 'gdb'},
+			{ name: 'OpenOCD', cmd: 'openocd', key: 'openocd'},
+		];
+
+		for (const tool of tools) {
+			const isInstalled = await checkSystemDependency(tool.cmd);
+			if(!isInstalled) {
+				const guideOption = 'View Installation Guide';
+				const response = await vscode.window.showWarningMessage(
+					`${tool.name} is required but not found on your system. Please install it to enable full functionality.`,
+					guideOption, "Later"
+				);
+				if(response === guideOption) {	
+					showInstallInstructions(tool.name, platform);
+				}
+			}
+		}
+	}
+
+	function showInstallInstructions(toolName: string, platform: string) {
+		let message = '';
+		let terminalCommand = '';
+		if(platform === 'linux') {
+			if(toolName.includes('gdb')) {
+				message = 'You can install gdb-multiarch using your package manager.';
+				terminalCommand = 'sudo apt install gdb-multiarch';
+			} else if (toolName.includes('openocd')) {
+				message = 'You can install OpenOCD using your package manager.';
+				terminalCommand = 'sudo apt install openocd';
+			}
+		}else if(platform === 'darwin') {
+			if(toolName.includes('gdb')) {
+				message = 'You can install gdb using Homebrew.';
+				terminalCommand = 'brew install arm-none-eabi-gdb';
+			} else if (toolName.includes('openocd')) {
+				message = 'You can install OpenOCD using Homebrew.';
+				terminalCommand = 'brew install openocd';
+			}
+		}else if(platform === 'win32') {
+			message = `Please use a WSL terminal to install ${toolName} or refer to the official installation guides as Windows is not natively supported.`;
+		}
+		if(terminalCommand) {
+			vscode.window.showInformationMessage(message, {modal : true}, 'Command copied to clipboard').then( (selection) => {
+				if(selection === 'Command copied to clipboard') {
+					vscode.env.clipboard.writeText(terminalCommand);
+					vscode.window.showInformationMessage('Installation command copied to clipboard. Please paste it in your terminal to install the required tool.');
+				}
+			});
+		}else {
+			vscode.window.showInformationMessage(message, {modal : true});
+		}
+	}
+
 	async function checkAndInstallRiotgen() {
 		try {
 			await execAsync('riotgen --version');
@@ -827,10 +891,12 @@ organization=${organization}`;
 		devicesTreeItemProvider.removeDevice(d);
 		devicesTreeItemProvider.refresh();
 	});
+	context.subscriptions.push(forgetDeviceDisposable);
 
 	const setDeviceActiveDisposable = vscode.commands.registerCommand('riot-launcher.setActive', async (d : DesktopDeviceTreeItem) => {
 		executeCompileCommandsTask(d.getDevice());
 	});
+	context.subscriptions.push(setDeviceActiveDisposable);
 
 	const changeDescriptionDisposable = vscode.commands.registerCommand('riot-launcher.changeDescriptionDevice', async (d : DesktopDeviceTreeItem) => {
 		if(!d) {
@@ -847,6 +913,7 @@ organization=${organization}`;
 			devicesTreeItemProvider.refresh();
 		}
 	});
+	context.subscriptions.push(changeDescriptionDisposable);
 
 
 	function isSubDirecttory(parent: string, dir : string) : boolean {
@@ -1012,6 +1079,7 @@ organization=${organization}`;
 		const programPath = path.join(`${absoluteAppPath}/bin/${boardName}/${elfFileName}`);
 		const debugConfigName = `RIOT Debug (${boardName} - Port ${sessionRecord.gdbPort})`;
 
+		
 		const launchConfig = {
 			name : debugConfigName,
 			type : 'cppdbg',
