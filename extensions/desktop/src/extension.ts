@@ -40,9 +40,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	const DEVICE_LIST_CACHE_KEY = 'riot-launcher.deviceList';
 	const ACTIVE_DEVICE_CACHE_KEY = 'riot-launcher.activeDevice';
-	const TRANSFER_DEVICES_KEY = 'riot-launcher.transferDevices';
 
-	const transferDevices = context.globalState.get<DeviceConfig[]>(TRANSFER_DEVICES_KEY);
 
 	const activeDebugSessions: ActiveDebugSession[] = [];
 	function getNextAvailablePort(): { gdbPort: number; telnetPort: number; tclPort: number } {
@@ -58,15 +56,6 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 
 	let initialDevicesConfig = context.workspaceState.get<DeviceConfig[]>(DEVICE_LIST_CACHE_KEY, []);
-
-	if (transferDevices && transferDevices.length > 0) {
-        console.log("Restoring devices from Global State transfer...");
-        initialDevicesConfig = transferDevices;
-        
-        await context.globalState.update(TRANSFER_DEVICES_KEY, undefined);
-        
-        await context.workspaceState.update(DEVICE_LIST_CACHE_KEY, initialDevicesConfig);
-    }
 	const activeDeviceConfig = context.workspaceState.get<DeviceConfig | undefined>(ACTIVE_DEVICE_CACHE_KEY, undefined);
 
 	const initialDevices : DeviceModel[] = initialDevicesConfig.map(d => DeviceModel.fromConfig(d));
@@ -253,14 +242,7 @@ export async function activate(context: vscode.ExtensionContext) {
 						if(!isNaN(text) && !isNaN(data) && !isNaN(bss)) {
 							const appRam = data + bss;
 							const appRom = text + data;
-							const sizeInfo = `ROM: ${appRom}B, RAM: ${appRam}B`;
-							let desc = activeDevice.description || [];
-							if(!Array.isArray(desc)) {
-								desc = [desc as unknown as string];		
-							}
-							desc = desc.filter((d: string) => !d.startsWith('ROM:'));
-							desc.push(sizeInfo);
-							activeDevice.description = desc;
+							updateDeviceMemoryUi(activeDevice as any, {appRom, appRam});
 							devicesTreeItemProvider.refresh();
 						}
 					}
@@ -901,25 +883,21 @@ organization=${organization}`;
 			);
 			const ramLen = stdout.toString().trim();
 			const ramLenDec = ramLen.startsWith('0x') ? parseInt(ramLen, 16) : parseInt(ramLen, 10);
-			const finalRam = isNaN(ramLenDec) ? ramLen : ramLenDec.toString();
-			let finalRom = 'Unknown';
+			let romLenDec = ramLen.startsWith('0x') ? parseInt(ramLen, 16) : parseInt(ramLen, 10);
 			try {
 				const { stdout: romOut } = await execAsync(
 					`make info-debug-variable-ROM_LEN BOARD=${device.board}`,
 					{ cwd: appFolderPath.fsPath }
 				);
-				const romLenDec = romOut.startsWith('0x') ? parseInt(romOut, 16) : parseInt(romOut, 10);
-				finalRom = isNaN(romLenDec) ? romOut : romLenDec.toString();
+				const romOutTrimmed = romOut.toString().trim();
+				romLenDec = romOutTrimmed.startsWith('0x') ? parseInt(romOutTrimmed, 16) : parseInt(romOutTrimmed, 10);
 			}catch (err) {
 				console.log('Error fetching ROM length info: ', err);
 			}
-			let desc = device.description || [];
-			if(!Array.isArray(desc)) {
-				desc = [desc as unknown as string];		
-			}
-			desc = desc.filter((d: string) => !d.startsWith('Board Memory:'));
-			desc.push(`Board Memory: ROM ${finalRom}B, RAM ${finalRam}B`);
-			device.description = desc;
+			updateDeviceMemoryUi(device as any, {
+				boardRam: isNaN(ramLenDec) ? undefined : ramLenDec,
+				boardRom: isNaN(romLenDec) ? undefined : romLenDec
+			});
 		}catch (err) {
 			console.log('Error fetching RAM length info: ', err);
 		}
@@ -929,6 +907,41 @@ organization=${organization}`;
 		riotBaseTreeProvider.refresh(riotBasePath);
 		riotBaseTreeView.description = riotBasePath.fsPath;
 		riotFileTreeProvider.setActiveAppUri(device.appPath);
+		devicesTreeItemProvider.refresh();
+	}
+
+	function createProgressBar(used: number, total: number, length: number = 10) : string {
+		if(total <= 0) { return `[Unknown]`; }
+		const percent = Math.min(100, Math.max(0, (used / total) * 100));
+		const filled = Math.round((percent / 100) * length);
+		const empty = length - filled;
+		return `[${'█'.repeat(filled)}${'░'.repeat(empty)}] ${percent.toFixed(1)}%`;
+	}
+
+	function updateDeviceMemoryUi(device: any, updates: {appRom?: number, appRam?: number, boardRom?: number, boardRam?: number}) {
+		device._memoryState = { ...(device._memoryState || {}), ...updates };
+		const mem = device._memoryState;
+
+		const formatMemLine = (type: string, app?: number, board?: number) => {
+			const appStr = app !== undefined ? `${app}B` : 'Unknown';
+			const boardStr = board !== undefined ? `${board}B` : 'Unknown';
+			let bar = '';
+			if(app !== undefined && board !== undefined && board > 0) {
+				bar = createProgressBar(app, board);
+			}
+			return `${type}: App ${appStr} / Board ${boardStr} ${bar}`;
+		};
+		const romLine = formatMemLine('ROM', mem.appRom, mem.boardRom);
+		const ramLine = formatMemLine('RAM', mem.appRam, mem.boardRam);
+
+		let desc = device.description || [];
+		if(!Array.isArray(desc)) {
+			desc = [desc as string];		
+		}
+		desc = desc.filter((d: string) => !d.startsWith('ROM:') && !d.startsWith('RAM:'));
+		desc.push(romLine);
+		desc.push(ramLine);
+		device.description = desc;
 	}
 
 	async function configureCompiledCommands(riotBasePath : string, appFolderPath : string) {	
@@ -1065,6 +1078,7 @@ organization=${organization}`;
 		}
 	}
 }
+
 
 // This method is called when your extension is deactivated
 export function deactivate() {}

@@ -15,7 +15,7 @@ export class FolderTreeItem extends vscode.TreeItem {
         } else {
             const desktopDevice = _device as DesktopDeviceTreeItem;
             const appUri = desktopDevice.getDevice().appPath;
-            label = `Project: ${appUri ? path.basename(appUri.fsPath) : 'Unknown application path'} `;       
+            label = `Project: ${appUri ? path.basename(appUri.fsPath) : 'None'} `;       
             tooltipText = appUri ? appUri.fsPath : "No application path set";
         }
 
