@@ -122,8 +122,12 @@ export class WebSocketManager {
                 break;
             case messageTypes.DISCONNECT:
                 this.resetApi();
-                vscode.window.showErrorMessage('Received disconnect message, reestablishing connection in 10 seconds...');
-                this._apiConnectInterval = setTimeout(this.startApiConnectInterval.bind(this), 10000);
+                vscode.window.showErrorMessage('Another Client has connected to the Server. Only one client at a time is supported. Reload the page to gain access back.', {modal:true}, 'Reload Page').then((selection) => {
+                    if (selection) {
+                        vscode.commands.executeCommand("workbench.action.reloadWindow");
+                    }
+                });
+                // this._apiConnectInterval = setTimeout(this.startApiConnectInterval.bind(this), 10000);
                 break;
             default:
                 if (this._apiConnected) {

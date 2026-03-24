@@ -35,9 +35,9 @@ export class DeviceProvider implements vscode.TreeDataProvider<vscode.TreeItem> 
                     new BoardTreeItem(device)
                 )
                 if (device.getPort() !== undefined) {
-                items.push(
-                    new PortTreeItem(device)
-                )
+                    items.push(
+                        new PortTreeItem(device)
+                    )
                 }
                 if (device.getDescription() !== undefined) {
                     items.push(
