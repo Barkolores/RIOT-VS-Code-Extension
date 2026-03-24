@@ -66,11 +66,11 @@ export abstract class WebDevice extends DeviceTreeItem {
     protected abstract term(param?: object): void;
 
     forget() {
-        this.cancel();
+        this.cancel(true);
         this._webPort.forget().then(() => console.log('Forgot ' + this.label));
     };
 
-    cancel(sendRSTMessage: boolean = true) {
+    cancel(sendRSTMessage: boolean) {
         if (this._flashing) {
             if (!sendRSTMessage) {
                 //Shell Terminated Connection, stop sending logs
@@ -321,7 +321,7 @@ export abstract class WebDevice extends DeviceTreeItem {
                         await vscode.commands.executeCommand('riot-web-extension.eventListener.unlock');
                         await vscode.commands.executeCommand('riot-web-extension.device.cleanUp');
                         this._flashing = false;
-                        this.unlockDevice();
+                        this.cancel(false);
                     });
                 } else {
                     this.cancel(true);
