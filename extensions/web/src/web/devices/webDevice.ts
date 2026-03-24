@@ -279,7 +279,10 @@ export abstract class WebDevice extends DeviceTreeItem {
                     this.unlockDevice();
                     return;
                 }
-                this._currentlyLockedTo = message[1];
+                if (!this._currentlyLockedTo) {
+                    this._currentlyLockedTo = message[1];
+                    vscode.commands.executeCommand('riot-web-extension.context.device.add', this.contextValue);
+                }
                 await this.executeCommand(message[3]);
                 break;
             case messageTypes.IO:
