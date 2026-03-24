@@ -381,6 +381,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				await vscode.workspace.fs.writeFile(newFileUri, new Uint8Array(0));
 				const doc = await vscode.workspace.openTextDocument(newFileUri);
 				await vscode.window.showTextDocument(doc);
+				riotFileTreeProvider.refresh();
 			}catch (error) {
 				vscode.window.showErrorMessage('Error creating file: ' + error);
 			}
@@ -764,6 +765,11 @@ organization=${organization}`;
 			if(selection === addToView) {
 				const newAppUri = vscode.Uri.file(targetDirPath);
 				riotFileTreeProvider.addAppFolder(newAppUri);
+				const newDevice = new DeviceModel(undefined, targetBoard.label, undefined, newAppUri, riotBaseUri[0]);
+				const newDeviceTreeItem = devicesTreeItemProvider.createDeviceTreeItem(newDevice);
+				devicesTreeItemProvider.addDevice(newDeviceTreeItem);
+				await executeCompileCommandsTask(newDevice);
+				devicesTreeItemProvider.refresh();
 				try {
 					await treeView.reveal(newAppUri, { focus: true, select: true, expand: true});
 				}catch (error) {

@@ -106,6 +106,9 @@ export class RiotFileTreeProvider implements vscode.TreeDataProvider<RiotTreeEle
             return undefined;
         }
         const parentPath = path.dirname(fsPath); 
+        if(parentPath === fsPath) {
+            return undefined;
+        }
         return vscode.Uri.file(parentPath);
     }
 
