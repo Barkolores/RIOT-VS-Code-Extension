@@ -603,8 +603,16 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		if (result && result.length > 0) {
 			const appFolderUri = result[0];
-			riotFileTreeProvider.addAppFolder(appFolderUri);
+			const desktopDeviceItem = treeItem.getParentDevice() as DesktopDeviceTreeItem;
+			const oldAppPath = desktopDeviceItem.getDevice().appPath;
 
+			riotFileTreeProvider.addAppFolder(appFolderUri);
+			desktopDeviceItem.setAppPath(appFolderUri);
+
+			devicesTreeItemProvider.refresh();
+			if(oldAppPath && oldAppPath.fsPath !== appFolderUri.fsPath) {
+				cleanupUnusedAppFolder(oldAppPath);
+			}
             vscode.window.showInformationMessage(`Selected Example Folder: ${appFolderUri.fsPath}`);
 			try {
 				const { stdout } = await execAsync(
@@ -888,8 +896,10 @@ organization=${organization}`;
 	context.subscriptions.push(changePortDisposable);
 
 	const forgetDeviceDisposable = vscode.commands.registerCommand('riot-launcher.forgetDevice', async (d : DesktopDeviceTreeItem) => {
+		const oldAppPath = d.getDevice().appPath;
 		devicesTreeItemProvider.removeDevice(d);
 		devicesTreeItemProvider.refresh();
+		cleanupUnusedAppFolder(oldAppPath);
 	});
 	context.subscriptions.push(forgetDeviceDisposable);
 
@@ -915,6 +925,16 @@ organization=${organization}`;
 	});
 	context.subscriptions.push(changeDescriptionDisposable);
 
+	function cleanupUnusedAppFolder(oldAppPath: vscode.Uri | undefined) {
+		if(!oldAppPath) { return; }
+		const allDevices = devicesTreeItemProvider.getDeviceModels();
+		const isFolderStillUsed = allDevices.some(
+			device => device.appPath && device.appPath.fsPath === oldAppPath.fsPath
+		);
+		if(!isFolderStillUsed) {
+			riotFileTreeProvider.removeAppFolder(oldAppPath);
+		}
+	}
 
 	function isSubDirecttory(parent: string, dir : string) : boolean {
 		const parentReal = realpathSync(parent);

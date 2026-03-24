@@ -164,6 +164,14 @@ export class RiotFileTreeProvider implements vscode.TreeDataProvider<RiotTreeEle
         }
     }
 
+    public removeAppFolder(uri: vscode.Uri) {
+        this.rootUris = this.rootUris.filter(r => r.fsPath !== uri.fsPath);
+        if(this.activeAppUri && this.activeAppUri.fsPath === uri.fsPath) {
+            this.activeAppUri = undefined;
+        }
+        this.refresh();
+    }
+
     public dispose() {
         if (this.fileWatcher) {
             this.fileWatcher.dispose();
