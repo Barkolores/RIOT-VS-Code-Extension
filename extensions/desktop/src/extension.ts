@@ -552,6 +552,11 @@ export async function activate(context: vscode.ExtensionContext) {
 		if(!d) { return; }
 		const device = d.getDevice();
 		const appPath = device.appPath;
+		const isNative = device.board?.includes('native');
+		if(isNative) {
+			startDebugging(device, {gdbPort: 0, telnetPort: 0, tclPort: 0, debugSessionId: undefined, taskExecution: undefined} as any);
+			return;
+		}
 		if(!appPath || !device) {
 			vscode.window.showErrorMessage("Application folder or device not properly selected.");
 			return;
@@ -575,17 +580,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 
 	context.subscriptions.push(debugDisposable);
-	//TODO
-	const searchPortsDisposable = vscode.commands.registerCommand('riot-launcher.detectPorts', async () => {
-		// const boardRegonizer = new BoardRecognizer (context, boards);
-		// const portDiscoverer = new PortDiscovery(boardRegonizer);
-		// const foundDevices = await portDiscoverer.discoverPorts();
-		// deviceProvider.refresh(foundDevices);
-		// saveDeviceListState();
-	});
-
-	context.subscriptions.push(searchPortsDisposable);
-
+	
 
 	const changeBoardDisposable = vscode.commands.registerCommand('riot-launcher.changeBoardDevice', async (treeItem : BoardTreeItem) => {
 		if(!treeItem) {
