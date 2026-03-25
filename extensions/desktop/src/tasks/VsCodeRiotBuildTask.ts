@@ -11,6 +11,6 @@ export class VsCodeRiotBuildTask extends VsCodeAbstractRiotDeviceTask {
     }
 
     protected getStringMakeCommand(): string {
-        return 'make all';
+        return 'all';
     }
 }

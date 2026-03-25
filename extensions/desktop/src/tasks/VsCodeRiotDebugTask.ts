@@ -14,7 +14,7 @@ export class VsCodeRiotDebugTask extends VsCodeAbstractRiotDeviceTask {
     }
 
     protected getStringMakeCommand(): string {
-        return 'make all && make debug-server GDB_PORT=' + this.gdbPort + ' TELNET_PORT=' + this.telnetPort + ' TCL_PORT=' + this.tclPort;
+        return 'debug-server GDB_PORT=' + this.gdbPort + ' TELNET_PORT=' + this.telnetPort + ' TCL_PORT=' + this.tclPort;
     }   
 
 }

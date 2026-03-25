@@ -11,6 +11,6 @@ export class VsCodeCompileCommandsTask extends VsCodeAbstractRiotDeviceTask {
     }
 
     protected getStringMakeCommand(): string {
-        return 'make compile-commands';
+        return 'compile-commands';
     }
 }
