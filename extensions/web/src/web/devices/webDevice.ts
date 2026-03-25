@@ -70,6 +70,13 @@ export abstract class WebDevice extends DeviceTreeItem {
         this._webPort.forget().then(() => console.log('Forgot ' + this.label));
     };
 
+    handleDisconnect() {
+        if (this._currentlyLockedTo) {
+            this.sendRST(this._currentlyLockedTo, terminationTypes.ERROR, 'User disconnected device.');
+            this.renameTerminal(this._currentlyLockedTo[1], WebDevice._defaultShellLabel);
+        }
+    }
+
     cancel(sendRSTMessage: boolean) {
         if (this._flashing) {
             if (!sendRSTMessage) {
@@ -80,7 +87,7 @@ export abstract class WebDevice extends DeviceTreeItem {
             return;
         }
         if (this._currentlyLockedTo && sendRSTMessage) {
-            this.sendRST(this._currentlyLockedTo, terminationTypes.ERROR, 'User canceled Action.');
+            this.sendRST(this._currentlyLockedTo, terminationTypes.ERROR, 'User canceled action.');
         }
         this.close();
         this.unlockDevice();

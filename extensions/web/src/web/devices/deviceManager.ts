@@ -118,7 +118,7 @@ export class DeviceManager {
             return;
         }
         const disconnectedDevice = this._devices[id];
-        this._devices.splice(id, 1);
+        this._devices.splice(id, 1)[0].handleDisconnect();
         vscode.window.showInformationMessage('Device "'+ disconnectedDevice.label +'" has been disconnected');
         this.updateDeviceProvider();
     }
