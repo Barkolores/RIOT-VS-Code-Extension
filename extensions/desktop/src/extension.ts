@@ -2,7 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { exec } from 'child_process';
+import { exec, execSync } from 'child_process';
 import * as util from 'util';
 import { realpathSync } from 'fs';
 import * as path from 'path';
@@ -138,7 +138,23 @@ export async function activate(context: vscode.ExtensionContext) {
 		activeDebugSessions.splice(sessionIndex, 1);
 	}));
 
-	
+	async function killProcessOnPort(port: number) : Promise<void> {
+		const platform = os.platform();
+		try{
+			if(platform !== 'win32') {
+				const { stdout } = await execAsync(`lsof -i :${port} -t`);
+				const pids = stdout.split('\n').filter(Boolean);
+				for(const pid of pids) {
+					await execAsync(`kill -9 ${pid}`);
+				}
+			}else {
+				vscode.window.showErrorMessage(`Ẁindows is not natively supported for debugging. Please use a WSL terminal to run the debug task or refer to the official documentation for setting up a compatible debugging environment.`);
+			}
+		}catch (error) {
+			console.log(`Error killing process on port ${port}: `, error);
+		}
+	}
+
 
 	async function readBundledBoards(): Promise<string[]> {
 		const fileUri = vscode.Uri.joinPath(context.extensionUri, 'resources', 'boards.txt');
@@ -529,6 +545,8 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 		vscode.tasks.executeTask(cleanTask);
 	});
+
+	context.subscriptions.push(cleanDisposable);
 	
 	const debugDisposable = vscode.commands.registerCommand('riot-launcher.riotDebug', async (d: DesktopDeviceTreeItem) => {
 		if(!d) { return; }
@@ -539,6 +557,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 		const ports = getNextAvailablePort();
+		await killProcessOnPort(ports.gdbPort);
 		const debugTask = new VsCodeRiotDebugTask(appPath.fsPath, device, ports.gdbPort, ports.telnetPort, ports.tclPort).getVscodeTask();
 		if(!debugTask) {
 			vscode.window.showErrorMessage("Something went wrong creating the Debug Task");
@@ -1063,7 +1082,12 @@ organization=${organization}`;
 	async function configureCompiledCommands(riotBasePath : string, appFolderPath : string) {	
 		const vscodeFolderUri = vscode.Uri.file(path.join(appFolderPath, '.vscode'));
 		const settingsUri = vscode.Uri.joinPath(vscodeFolderUri, 'settings.json');
-		const compileCommandsPath = path.join(riotBasePath, 'compile_commands.json');
+		let compileCommandsPath : string;
+		if(isSubDirecttory(riotBasePath, appFolderPath)) {
+			compileCommandsPath = path.join(riotBasePath, 'compile_commands.json');
+		}else {
+			compileCommandsPath = path.join(appFolderPath, 'compile_commands.json');
+		}
 		if(!fs.existsSync(vscodeFolderUri.fsPath)) {
 			await vscode.workspace.fs.createDirectory(vscodeFolderUri);
 		}
@@ -1204,5 +1228,4 @@ organization=${organization}`;
 export function deactivate() {}
 
 
-		
-
+	

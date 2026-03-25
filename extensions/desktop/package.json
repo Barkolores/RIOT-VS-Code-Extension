@@ -152,15 +152,18 @@
       "riotContainer": [
         {
           "id": "riotView",
-          "name": "Desktop Extension"
+          "name": "Devices",
+          "icon": "$(keyboard)"
         },
         {
           "id": "riotFileView",
-          "name": "Application Files"
+          "name": "Application Files",
+          "icon": "$(file-directory)"
         },
         {
           "id": "riotBaseFileView",
-          "name": "Active RIOT Base Path"
+          "name": "Active RIOT Base Path",
+          "icon": "$(file-directory)"
         }
       ]
     },
@@ -181,27 +184,27 @@
         {
           "command": "riot-launcher.riotBuild",
           "when": "view == riotView && viewItem == riot-device",
-          "group": "inline"
+          "group": "inline@1"
         },
         {
           "command": "riot-launcher.riotFlash",
           "when": "view == riotView && viewItem == riot-device",
-          "group": "inline"
+          "group": "inline@3"
         },
         {
           "command": "riot-launcher.riotClean",
           "when": "view == riotView && viewItem == riot-device",
-          "group": "inline"
+          "group": "inline@2"
         },
         {
           "command": "riot-launcher.riotTerm",
           "when": "view == riotView && viewItem == riot-device",
-          "group": "inline"
+          "group": "inline@4"
         },
         {
           "command": "riot-launcher.riotDebug",
           "when": "view == riotView && viewItem == riot-device",
-          "group": "inline"
+          "group": "inline@5"
         },
 
         {
