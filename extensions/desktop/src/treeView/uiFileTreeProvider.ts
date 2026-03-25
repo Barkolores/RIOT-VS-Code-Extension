@@ -88,6 +88,8 @@ export class RiotFileTreeProvider implements vscode.TreeDataProvider<RiotTreeEle
                     light: vscode.Uri.joinPath(this.extensionUri, 'resources', '../../../shared/assets/icons/riot-logo-R.svg'),
                     dark: vscode.Uri.joinPath(this.extensionUri, 'resources', '../../../shared/assets/icons/riot-logo-R.svg')
                 };
+                treeItem.description = '(Active)';
+                
                 treeItem.tooltip = `${(element as vscode.Uri).fsPath} (Active Application Folder)`;
             }
             return treeItem;

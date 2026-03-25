@@ -194,19 +194,20 @@ export async function activate(context: vscode.ExtensionContext) {
 	function showInstallInstructions(toolName: string, platform: string) {
 		let message = '';
 		let terminalCommand = '';
+		const toolNameLower = toolName.toLowerCase();
 		if(platform === 'linux') {
-			if(toolName.includes('gdb')) {
+			if(toolNameLower.includes('gdb')) {
 				message = 'You can install gdb-multiarch using your package manager.';
 				terminalCommand = 'sudo apt install gdb-multiarch';
-			} else if (toolName.includes('openocd')) {
+			} else if (toolNameLower.includes('openocd')) {
 				message = 'You can install OpenOCD using your package manager.';
 				terminalCommand = 'sudo apt install openocd';
 			}
 		}else if(platform === 'darwin') {
-			if(toolName.includes('gdb')) {
+			if(toolNameLower.includes('gdb')) {
 				message = 'You can install gdb using Homebrew.';
 				terminalCommand = 'brew install arm-none-eabi-gdb';
-			} else if (toolName.includes('openocd')) {
+			} else if (toolNameLower.includes('openocd')) {
 				message = 'You can install OpenOCD using Homebrew.';
 				terminalCommand = 'brew install openocd';
 			}
@@ -231,7 +232,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		}catch (error) {
 			console.log('riotgen not found, prompting user to install: ', error);
 			const installOption = 'Install riotgen (pip)';
-			const response = await vscode.window.showErrorMessage('The tool riotgen is required but not found in your system. Please install it to use the application creation feature.',
+			const response = await vscode.window.showWarningMessage('The tool riotgen is required but not found in your system. Please install it to use the application creation feature.',
 				installOption, "Later"
 			);
 			if (response === installOption) {
@@ -1061,23 +1062,26 @@ organization=${organization}`;
 
 	async function configureCompiledCommands(riotBasePath : string, appFolderPath : string) {	
 		const vscodeFolderUri = vscode.Uri.file(path.join(appFolderPath, '.vscode'));
-		const cppPropertiesUri = vscode.Uri.joinPath(vscodeFolderUri, 'c_cpp_properties.json');
-		const config = vscode.workspace.getConfiguration('C_Cpp', vscode.Uri.file(appFolderPath));
-
+		const settingsUri = vscode.Uri.joinPath(vscodeFolderUri, 'settings.json');
 		const compileCommandsPath = path.join(riotBasePath, 'compile_commands.json');
+		if(!fs.existsSync(vscodeFolderUri.fsPath)) {
+			await vscode.workspace.fs.createDirectory(vscodeFolderUri);
+		}
 
-		const currentSetting = config.get<string>('default.compileCommands');
-
-		if(currentSetting !== compileCommandsPath) {
-			await config.update(
-				'default.compileCommands',
-				compileCommandsPath,
-				vscode.ConfigurationTarget.Workspace
-			);
-			vscode.window.showInformationMessage("C/C++ IntelliSense configured");
-
+		let settings: any = {};
+		try {
+			const settingsData = await vscode.workspace.fs.readFile(settingsUri);
+			settings = JSON.parse(Buffer.from(settingsData).toString('utf8'));
+		}catch (err) {
+			//No settings yet, will create new one
+		}
+		if(settings['C_Cpp.default.compileCommands'] !== compileCommandsPath) {
+			settings['C_Cpp.default.compileCommands'] = compileCommandsPath;
+			const writeData = Buffer.from(JSON.stringify(settings, null, 4), 'utf8');
+			await vscode.workspace.fs.writeFile(settingsUri, writeData);
+			vscode.window.showInformationMessage('Updated compile_commands.json path in C/C++ extension settings.');
 		}else {
-			vscode.window.showInformationMessage("Compiled commands already set");
+			vscode.window.showInformationMessage('Compile commands path is already set correctly in settings.');
 		}
 	}
 
