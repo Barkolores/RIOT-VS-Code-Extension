@@ -13,7 +13,8 @@ export class DeviceProvider implements vscode.TreeDataProvider<vscode.TreeItem> 
     readonly onDidChangeTreeData = this.onDidChangeTreeDataEventEmitter.event;
 
     constructor(
-        devices? : DeviceTreeItem[]
+        devices? : DeviceTreeItem[],
+        protected _isWebContext: boolean = false
     ) {
         this._devices = devices ?? [];
     }
@@ -34,7 +35,7 @@ export class DeviceProvider implements vscode.TreeDataProvider<vscode.TreeItem> 
                     new FolderTreeItem(device),
                     new BoardTreeItem(device)
                 )
-                if (device.getPort() !== undefined) {
+                if (!this._isWebContext) {
                     items.push(
                         new PortTreeItem(device)
                     )

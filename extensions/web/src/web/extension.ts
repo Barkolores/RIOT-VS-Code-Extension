@@ -28,7 +28,7 @@ export function activate(context: vscode.ExtensionContext) {
     //switch ui buttons between flash/term and cancel
     vscode.commands.executeCommand('setContext', 'riot-web-extension.context.busyDevices', []);
 
-    const deviceProvider = new DeviceProvider();
+    const deviceProvider = new DeviceProvider([], true);
     const {port1: devicesPort, port2: websocketPort} = new MessageChannel();
     const deviceManager = new DeviceManager(deviceProvider, devicesPort);
     const webSocketManager = new WebSocketManager(deviceManager, websocketPort, context.extensionUri);
