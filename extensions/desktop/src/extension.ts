@@ -22,7 +22,11 @@ import { VsCodeRiotCleanTask } from './tasks/VsCodeRiotCleanTask';
 import { DesktopDeviceProvider } from './treeView/uiDesktopDeviceProvider';
 import { VsCodeRiotBuildTask } from './tasks/VsCodeRiotBuildTask';
 
-
+/**
+ * Represents an active debugging session.
+ * Stores assigned ports and the task execution reference to prevent port
+ * collisions and allow for clean termination of backend processes like OpenOCD/GDB.
+ */
 interface ActiveDebugSession {
 	gdbPort: number;
 	telnetPort: number;
@@ -30,8 +34,12 @@ interface ActiveDebugSession {
 	taskExecution: vscode.TaskExecution;
 	debugSessionId?: string;
 }
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+/**
+ * This method is called when the extension is activated.
+ * It initializes the system environment checks, restores saved states,
+ * registers the UI tree views, and binds all commands.
+ * @param context - A collection of utilities private to an extension.
+ */
 export async function activate(context: vscode.ExtensionContext) {
 	const execAsync = util.promisify(exec);
 
@@ -43,6 +51,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
 
 	const activeDebugSessions: ActiveDebugSession[] = [];
+	/**
+     * Finds the next available set of ports for GDB, Telnet, and TCL.
+     * Checks against currently active debug sessions to avoid port conflicts.
+     * @returns An object containing available ports.
+     */
 	function getNextAvailablePort(): { gdbPort: number; telnetPort: number; tclPort: number } {
 		let port = 3333; // Starting port
 		let telnetPort = 4444;
@@ -138,6 +151,11 @@ export async function activate(context: vscode.ExtensionContext) {
 		activeDebugSessions.splice(sessionIndex, 1);
 	}));
 
+	/**
+     * Attempts to forcefully kill processes occupying a specific port.
+     * Primarily used to clean up lingering GDB/OpenOCD servers before starting a new debug session.
+     * @param port - The port number to clear.
+     */
 	async function killProcessOnPort(port: number) : Promise<void> {
 		const platform = os.platform();
 		try{
@@ -170,11 +188,19 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(riotDropDownBoard);
 
+	/**
+     * Command: Adds a new empty device to the device view.
+     */
 	const addDeviceDisposable = vscode.commands.registerCommand('riot-launcher.addDevice', async (device : DeviceModel) => {
 		devicesTreeItemProvider.addDevice(devicesTreeItemProvider.createDeviceTreeItem(new DeviceModel(undefined, undefined, undefined, undefined)));
 	});
 	context.subscriptions.push(addDeviceDisposable);
 
+	/**
+     * Checks if a system command is available by running it with the `--version` flag.
+     * @param command - The command to check (e.g., 'openocd').
+     * @returns A promise resolving to true if the tool exists, false otherwise.
+     */
 	async function checkSystemDependency(command: string): Promise<boolean> {
 		try{
 			await execAsync(`${command} --version`);
@@ -184,6 +210,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 	}
 	
+	/**
+     * Verifies the presence of required system tools (GDB, OpenOCD) based on the OS.
+     * Prompts the user with installation instructions if tools are missing.
+     */
 	async function checkAndPromptSystemTools() {
 		const platform = os.platform();
 		const gdbCmd = platform === 'linux' ? 'gdb-multiarch' : 'arm-none-eabihf-gdb';
@@ -207,6 +237,11 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 	}
 
+	/**
+     * Displays platform-specific installation instructions for missing tools.
+     * @param toolName - The name of the tool (e.g., 'GDB').
+     * @param platform - The OS platform identifier.
+     */
 	function showInstallInstructions(toolName: string, platform: string) {
 		let message = '';
 		let terminalCommand = '';
@@ -242,6 +277,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 	}
 
+	/**
+     * Checks if `riotgen` is installed. If not, prompts the user and attempts
+     * to install it automatically via pip.
+     */
 	async function checkAndInstallRiotgen() {
 		try {
 			await execAsync('riotgen --version');
@@ -269,6 +308,9 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 	}
 
+	/**
+     * Prompts the user to clone the RIOT OS repository if the base path is not set.
+     */
 	async function checkAndCloneRiotBase() {
 		const cloneOption = 'Clone RIOT from GitHub';
 		const response = await vscode.window.showInformationMessage('RIOT Base folder is not set. Make sure the RIOT Base is cloned on your system.',
@@ -334,6 +376,11 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 	}));
 
+	/**
+     * Parses memory strings returned by RIOT Makefiles (e.g., "64K", "1M", "0x20000").
+     * @param memStr - The memory string to parse.
+     * @returns The parsed numeric value in bytes.
+     */
 	function parseRiotMemory(memStr: string): number{
 		if(!memStr) { return NaN; }
 		memStr = memStr.trim().toUpperCase();
@@ -350,6 +397,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	}
 
+	/**
+     * Formats raw byte counts into human-readable strings (B, KB, MB).
+     * @param bytes - The size in bytes.
+     * @returns Formatted string representation.
+     */
 	function formatBytes(bytes: number | undefined): string {
 		if(bytes === undefined || isNaN(bytes)) { return 'Unknown'; }
 		if(bytes < 1024) { return `${bytes} B`; }
@@ -357,6 +409,11 @@ export async function activate(context: vscode.ExtensionContext) {
 		return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 	}
 
+	/**
+     * Queries the available boards from the RIOT environment via the Makefile.
+     * @param appPath - The path to the RIOT application.
+     * @returns A promise resolving to an array of board names.
+     */
 	async function loadBoards(appPath: vscode.Uri): Promise<string[]> {
 		try {
 			const { stdout } = await execAsync(
@@ -382,6 +439,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	let clipBoardUri: vscode.Uri | undefined = undefined;
 	let isCutOperation : boolean = false;
 
+	/**
+     * Command: Copies the relative path of the selected file to the clipboard.
+     */
 	const copyRelPathDisposable = vscode.commands.registerCommand('riotFileView.copyRelativePath', async (uri: vscode.Uri) => {
 		if(!uri) { return; }
 		const relativePath = vscode.workspace.asRelativePath(uri, false);
@@ -389,6 +449,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(copyRelPathDisposable);
 
+	/**
+     * Command: Copies the absolute path of the selected file to the clipboard for file operations.
+     */
 	const copyDisposable = vscode.commands.registerCommand('riotFileView.copyFile', async (uri: vscode.Uri) => {
 		if(!uri) { return; }
 		clipBoardUri = uri;
@@ -399,6 +462,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(copyDisposable);
 
+	/**
+     * Command: Marks the selected file for a cut operation.
+     */
 	const cutDisposable = vscode.commands.registerCommand('riotFileView.cutFile', async (uri: vscode.Uri) => {
 		if(!uri) { return; }
 		clipBoardUri = uri;
@@ -409,6 +475,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(cutDisposable);
 
+	/**
+     * Command: Creates a new file in the target directory.
+     */
 	const newFileDisposable = vscode.commands.registerCommand('riotFileView.newFile', async (uri: vscode.Uri) => {
 		if(!uri) { return; }
 		const fileName = await vscode.window.showInputBox({
@@ -429,6 +498,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(newFileDisposable);
 
+	/**
+     * Command: Deletes the selected file or folder permanently (moves to trash if supported).
+     */
 	const deleteDisposable = vscode.commands.registerCommand('riotFileView.deleteFile', async (uri: vscode.Uri) => {
 		if(!uri) { return; }
 		const fileName = path.basename(uri.fsPath);
@@ -448,6 +520,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(deleteDisposable);
 
+	/**
+     * Command: Pastes a copied or cut file into the selected directory.
+     */
 	const pasteDisposable = vscode.commands.registerCommand('riotFileView.pasteFile', async (uri: vscode.Uri) => {
 		if(!uri || !clipBoardUri) { return; }
 		
@@ -491,12 +566,18 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(pasteDisposable);
 
+	/**
+     * Command: Flashes the application to the selected device.
+     */
 	const flashDisposable = vscode.commands.registerCommand('riot-launcher.riotFlash', (d : DesktopDeviceTreeItem)=> {
 		if(!d) { return; }
 		d.flash();
 	});
 	context.subscriptions.push(flashDisposable);
 
+	/**
+     * Command: Compiles (builds) the application for the selected device.
+     */
 	const buildDisposable = vscode.commands.registerCommand('riot-launcher.riotBuild', async (d : DesktopDeviceTreeItem) => {
 		if(!d) { return; }
 		const device = d.getDevice();
@@ -514,6 +595,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(buildDisposable);
 
+	/**
+     * Command: Opens a serial terminal connection to the selected device.
+     */
 	const termDisposable = vscode.commands.registerCommand('riot-launcher.riotTerm', (d : DesktopDeviceTreeItem) => {
 		if(!d) { return; }
 		const device = d.getDevice();
@@ -532,6 +616,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(termDisposable);
 	
+	/**
+     * Command: Cleans the build directory (make clean) for the selected device.
+     */
 	const cleanDisposable = vscode.commands.registerCommand('riot-launcher.riotClean', (d : DesktopDeviceTreeItem) => {const device = d.getDevice();
 		const appPath = device.appPath;
 		if(!appPath || !device) {
@@ -548,6 +635,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(cleanDisposable);
 	
+	/**
+     * Command: Starts a debug session for the selected device. Handles port allocation,
+     * backend server spinup, and debug configuration generation.
+     */
 	const debugDisposable = vscode.commands.registerCommand('riot-launcher.riotDebug', async (d: DesktopDeviceTreeItem) => {
 		if(!d) { return; }
 		const device = d.getDevice();
@@ -581,7 +672,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(debugDisposable);
 	
-
+	/**
+     * Command: Opens a quick pick to select and change the board type for a device.
+     */
 	const changeBoardDisposable = vscode.commands.registerCommand('riot-launcher.changeBoardDevice', async (treeItem : BoardTreeItem) => {
 		if(!treeItem) {
 			vscode.window.showErrorMessage("Please execute this command via RIOT panel.");
@@ -632,6 +725,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(changeBoardDisposable);
 
+	/**
+     * Command: Opens a file dialog to assign a new application folder to the device.
+     */
 	const changeApplicationFolderDisposable = vscode.commands.registerCommand('riot-launcher.changeFolderDevice', async (treeItem : FolderTreeItem) => {
 		const result = await vscode.window.showOpenDialog({
 			canSelectFiles: false,
@@ -693,6 +789,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(changeApplicationFolderDisposable);
 
+	/**
+     * Command: Wizard to create a new RIOT application. Gathers details via input boxes,
+     * writes a temporary configuration, and executes `riotgen application`.
+     */
 	const createProjectDisposable = vscode.commands.registerCommand('riot-launcher.createProject', async (treeItem : FolderTreeItem) => {
 		const appName = await vscode.window.showInputBox({
 			title: 'Create RIOT Application',
@@ -823,6 +923,10 @@ organization=${organization}`;
 		context.subscriptions.push(createProjectDisposable);
 	});
 
+	/**
+     * Command: Scans for active serial ports (COM/tty) and allows the user to
+     * assign one to the device for flashing or serial terminal.
+     */
 	const changePortDisposable = vscode.commands.registerCommand('riot-launcher.changePortDevice', async (treeItem : PortTreeItem) => {
 		if(!treeItem) {
 			vscode.window.showErrorMessage("Please execute this command via RIOT panel.");
@@ -939,6 +1043,10 @@ organization=${organization}`;
 	
 	context.subscriptions.push(changePortDisposable);
 
+	/**
+     * Command: Removes a device from the configuration view and cleans up
+     * any unused folder references in the file explorer.
+     */
 	const forgetDeviceDisposable = vscode.commands.registerCommand('riot-launcher.forgetDevice', async (d : DesktopDeviceTreeItem) => {
 		const oldAppPath = d.getDevice().appPath;
 		devicesTreeItemProvider.removeDevice(d);
@@ -947,11 +1055,18 @@ organization=${organization}`;
 	});
 	context.subscriptions.push(forgetDeviceDisposable);
 
+	/**
+     * Command: Sets the clicked device as the primary active device, triggering
+     * compile commands generation and workspace synchronization.
+     */
 	const setDeviceActiveDisposable = vscode.commands.registerCommand('riot-launcher.setActive', async (d : DesktopDeviceTreeItem) => {
 		executeCompileCommandsTask(d.getDevice());
 	});
 	context.subscriptions.push(setDeviceActiveDisposable);
 
+	/**
+     * Command: Allows the user to edit the custom description label of a device.
+     */
 	const changeDescriptionDisposable = vscode.commands.registerCommand('riot-launcher.changeDescriptionDevice', async (d : DesktopDeviceTreeItem) => {
 		if(!d) {
 			vscode.window.showErrorMessage("Please execute this command via RIOT panel.");
@@ -969,6 +1084,11 @@ organization=${organization}`;
 	});
 	context.subscriptions.push(changeDescriptionDisposable);
 
+	/**
+     * Removes an application folder from the file explorer view if no configured
+     * devices are actively using it anymore.
+     * @param oldAppPath - The URI of the application folder to potentially remove.
+     */
 	function cleanupUnusedAppFolder(oldAppPath: vscode.Uri | undefined) {
 		if(!oldAppPath) { return; }
 		const allDevices = devicesTreeItemProvider.getDeviceModels();
@@ -980,6 +1100,12 @@ organization=${organization}`;
 		}
 	}
 
+	/**
+     * Helper to verify if a path is a subdirectory of another path.
+     * @param parent - The supposed parent directory path.
+     * @param dir - The directory to check.
+     * @returns True if `dir` is inside `parent`, false otherwise.
+     */
 	function isSubDirecttory(parent: string, dir : string) : boolean {
 		const parentReal = realpathSync(parent);
 		const dirReal = realpathSync(dir);
@@ -991,6 +1117,11 @@ organization=${organization}`;
 		);
 	}
 
+	/**
+     * Executes the task to generate `compile_commands.json` to enable C/C++ IntelliSense,
+     * queries the board memory limits, and updates the UI accordingly.
+     * @param device - The target device model.
+     */
 	async function executeCompileCommandsTask(device: DeviceModel) {
 		const riotBasePath = device.riotBasePath;
 		const appFolderPath = device.appPath;
@@ -1040,6 +1171,13 @@ organization=${organization}`;
 		devicesTreeItemProvider.refresh();
 	}
 
+	/**
+     * Creates an ASCII-art style progress bar representing memory usage.
+     * @param {number} used The amount of memory used.
+     * @param {number} total The total memory available.
+     * @param {number} [length=10] The visual character length of the bar.
+     * @returns {string} The formatted progress bar string.
+     */
 	function createProgressBar(used: number, total: number, length: number = 10) : string {
 		if(total <= 0) { return `[Unknown]`; }
 		const percent = Math.min(100, Math.max(0, (used / total) * 100));
@@ -1074,6 +1212,13 @@ organization=${organization}`;
 		device.description = desc;
 	}
 
+	/**
+     * Configures the VS Code C/C++ Extension settings to point to the newly generated 
+     * `compile_commands.json` file, enabling IntelliSense features.
+     * @param {string} riotBasePath The absolute path to the RIOT OS repository.
+     * @param {string} appFolderPath The absolute path to the RIOT application directory.
+     * @returns {Promise<void>}
+     */
 	async function configureCompiledCommands(riotBasePath : string, appFolderPath : string) {	
 		const vscodeFolderUri = vscode.Uri.file(path.join(appFolderPath, '.vscode'));
 		const settingsUri = vscode.Uri.joinPath(vscodeFolderUri, 'settings.json');
@@ -1104,6 +1249,13 @@ organization=${organization}`;
 		}
 	}
 
+	/**
+     * Generates a `.vscode/launch.json` configuration and initiates the VS Code debugger session.
+     * Identifies the built ELF executable and connects it to the running GDB server.
+     * @param {DeviceModel} device The device target to debug.
+     * @param {ActiveDebugSession} sessionRecord The tracking record of the debug session, containing active ports.
+     * @returns {Promise<void>}
+     */
 	async function startDebugging(device: DeviceModel, sessionRecord : ActiveDebugSession) {
 		const appPath = device.appPath;
 		const boardName = device.board || 'native64';
