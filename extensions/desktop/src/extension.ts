@@ -908,6 +908,7 @@ organization=${organization}`;
 			if(selection === addToView) {
 				const newAppUri = vscode.Uri.file(targetDirPath);
 				riotFileTreeProvider.addAppFolder(newAppUri);
+				vscode.workspace.updateWorkspaceFolders(vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders.length : 0, 0, {uri: newAppUri});
 				const newDevice = new DeviceModel(undefined, targetBoard.label, undefined, newAppUri, riotBaseUri[0]);
 				const newDeviceTreeItem = devicesTreeItemProvider.createDeviceTreeItem(newDevice);
 				devicesTreeItemProvider.addDevice(newDeviceTreeItem);
