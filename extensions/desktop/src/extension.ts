@@ -757,6 +757,11 @@ export async function activate(context: vscode.ExtensionContext) {
 				
 				loadBoards(appFolderUri).then((loadedBoards : string[]) => boards = loadedBoards);
 
+				const existingFolders = vscode.workspace.workspaceFolders || [];
+				const isAlreadyInWorkspace = existingFolders.some(folder => folder.uri.fsPath === appFolderUri.fsPath);
+				if(!isAlreadyInWorkspace) {
+					vscode.workspace.updateWorkspaceFolders(existingFolders.length, 0, {uri: appFolderUri});
+				}
 			
 				(treeItem.getParentDevice() as DesktopDeviceTreeItem).setAppPath(appFolderUri);
 				(treeItem.getParentDevice() as DesktopDeviceTreeItem).setRiotBasePath(riotBasePath);
