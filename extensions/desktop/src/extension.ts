@@ -334,6 +334,7 @@ export async function activate(context: vscode.ExtensionContext) {
 						await execAsync(`git clone https://github.com/RIOT-OS/RIOT.git "${targetPath}"`);
 						riotBaseTreeProvider.refresh(vscode.Uri.file(targetPath));
 						riotBaseTreeView.description = targetPath;
+						vscode.workspace.updateWorkspaceFolders(0, 0, {uri: vscode.Uri.file(targetPath)});
 						vscode.window.showInformationMessage('Successfully cloned RIOT Base and updated configuration!');
 						return vscode.Uri.file(targetPath);
 					} catch(cloneError) {
