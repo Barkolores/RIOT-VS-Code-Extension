@@ -1,11 +1,13 @@
 {
   "name": "riot-launcher",
-"repository": {
+  "repository": {
     "type": "git",
     "url": "https://github.com/Barkolores/RIOT-VS-Code-Extension.git"
-  },  "displayName": "RIOT Launcher",
+  },
+  "displayName": "RIOT OS Launcher",
+  "version": "0.1.0",
+  "publisher": "maximilian-baer",
   "description": "Through this extension the user will be able to build, flash and enter the RIOT console via the User Interface of VS-Code.",
-  "version": "0.0.1",
   "engines": {
     "vscode": "^1.105.0"
   },
