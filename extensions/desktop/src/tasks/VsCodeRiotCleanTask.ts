@@ -12,6 +12,6 @@ export class VsCodeRiotCleanTask extends VsCodeAbstractRiotDeviceTask {
     }
 
     protected getStringMakeCommand(): string {
-        return 'make clean';
+        return 'clean';
     }
 }

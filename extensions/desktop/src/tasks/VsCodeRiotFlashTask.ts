@@ -11,6 +11,6 @@ export class VsCodeRiotFlashTask extends VsCodeAbstractRiotDeviceTask {
     }
 
     protected getStringMakeCommand(): string {
-        return 'make flash';
+        return 'flash';
     }
 }

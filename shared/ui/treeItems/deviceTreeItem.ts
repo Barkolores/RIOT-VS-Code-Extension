@@ -18,7 +18,7 @@ export abstract class DeviceTreeItem extends vscode.TreeItem {
     getBoard(): string | undefined {
         return this._board;
     }
-
+    
     getPort(): string | undefined {
         return this._port;
     }

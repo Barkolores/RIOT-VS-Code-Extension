@@ -1,11 +1,13 @@
 {
   "name": "riot-launcher",
-"repository": {
+  "repository": {
     "type": "git",
     "url": "https://github.com/Barkolores/RIOT-VS-Code-Extension.git"
-  },  "displayName": "RIOT Launcher",
+  },
+  "displayName": "RIOT OS Launcher",
+  "version": "0.1.0",
+  "publisher": "maximilian-baer",
   "description": "Through this extension the user will be able to build, flash and enter the RIOT console via the User Interface of VS-Code.",
-  "version": "0.0.1",
   "engines": {
     "vscode": "^1.105.0"
   },
@@ -13,7 +15,6 @@
     "Other"
   ],
   "activationEvents": [
-    "*"
   ],
   "taskDefinitions": [
     {
@@ -74,12 +75,19 @@
         "title": "RIOT Detect Ports"
       },
       {
+        "command": "riot-launcher.riotBuild",
+        "title": "RIOT Build (make all)",
+        "icon": "$(tools)"
+      },
+      {
         "command": "riot-launcher.changeDescriptionDevice",
         "title": "Change Device Description"
       },
       {
         "command": "riot-launcher.changeFolderDevice",
-        "title": "Change Application Folder"
+        "title": "Change Application Folder",
+        "icon": "$(folder)"
+
       },
       {
         "command": "riot-launcher.changePortDevice",
@@ -145,15 +153,18 @@
       "riotContainer": [
         {
           "id": "riotView",
-          "name": "Desktop Extension"
+          "name": "Devices",
+          "icon": "$(keyboard)"
         },
         {
           "id": "riotFileView",
-          "name": "Application Files"
+          "name": "Application Files",
+          "icon": "$(file-directory)"
         },
         {
           "id": "riotBaseFileView",
-          "name": "Active RIOT Base Path"
+          "name": "Active RIOT Base Path",
+          "icon": "$(file-directory)"
         }
       ]
     },
@@ -172,25 +183,31 @@
       ],
       "view/item/context": [
         {
-          "command": "riot-launcher.riotFlash",
+          "command": "riot-launcher.riotBuild",
           "when": "view == riotView && viewItem == riot-device",
-          "group": "inline"
+          "group": "inline@1"
         },
         {
-          "command": "riot-launcher.riotDebug",
+          "command": "riot-launcher.riotFlash",
           "when": "view == riotView && viewItem == riot-device",
-          "group": "inline"
+          "group": "inline@3"
         },
         {
           "command": "riot-launcher.riotClean",
           "when": "view == riotView && viewItem == riot-device",
-          "group": "inline"
+          "group": "inline@2"
         },
         {
           "command": "riot-launcher.riotTerm",
           "when": "view == riotView && viewItem == riot-device",
-          "group": "inline"
+          "group": "inline@4"
         },
+        {
+          "command": "riot-launcher.riotDebug",
+          "when": "view == riotView && viewItem == riot-device",
+          "group": "inline@5"
+        },
+
         {
           "command": "riot-launcher.changeBoardDevice",
           "when": "view == riotView && viewItem == boardItem",

@@ -12,6 +12,6 @@ export class VsCodeRiotTermTask extends VsCodeAbstractRiotDeviceTask {
     }
 
     protected getStringMakeCommand(): string {
-        return 'make term';
+        return 'term';
     }
 }
